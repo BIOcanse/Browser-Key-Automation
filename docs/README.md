@@ -32,6 +32,7 @@ Command、permission、schema、error、capability 与 Freedom Point 的机器�
 - [页面信息树](design/page-information-tree.md)：完整信息如何编成唯一操作树、按 Key 保存展开状态，以及一次性 view 的含义。
 - [Key 鉴权](design/key-auth.md)：Root/Regular、有效期、保存与权限模型。
 - [Freedom Points](design/freedom-points.md)：所有默认值、上限和可替换边界的归属。
+- [图标设计](design/icon-design.md)：已裁定的 Open Frame 现代极简图标、双主稿导出和资产验证约束。
 - [Zig 核心边界](design/zig-core.md)：扩展业务与薄本地 App 的职责分离。
 
 ### 精确接口与实现

@@ -237,7 +237,7 @@ function releaseNotes(releaseVersion, assets) {
     `1. \`${assets[0].name}\` — unpack and load the directory containing \`manifest.json\` from \`chrome://extensions\`.`,
     `2. \`${assets[1].name}\` — one local App package containing Windows x64 and Linux x64 relays, plus one shared CLI/protocol/Agent skill.`,
     "",
-    "Chrome Web Store publication is paused until the final icon design is approved. These are GitHub/manual-install packages.",
+    "Chrome Web Store publication remains paused and requires separate user authorization. These are GitHub/manual-install packages.",
     "",
     "## SHA-256",
     "",

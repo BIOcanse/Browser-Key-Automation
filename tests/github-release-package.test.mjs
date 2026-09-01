@@ -86,7 +86,7 @@ for (const [index, file] of [extensionZip, appZip].entries()) {
   assert.match(releaseNotes, new RegExp(`${digest}  ${escapeRegExp(path.basename(file))}`, "u"));
 }
 assert.match(releaseNotes, /exactly two downloads/u);
-assert.match(releaseNotes, /Chrome Web Store publication is paused/u);
+assert.match(releaseNotes, /Chrome Web Store publication remains paused and requires separate user authorization/u);
 
 console.log(JSON.stringify({ ok: true, tag: releaseAssets.tag, assetCount: 2, extensionFileCount, appFileCount, assets: releaseAssets.assets }));
 

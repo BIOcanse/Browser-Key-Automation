@@ -1,8 +1,8 @@
 # Chrome Web Store 交付切片
 
-更新：2026-08-31。
+更新：2026-09-01。
 
-> 当前状态：按用户 2026-08-31 的最新裁定暂停。现有图标仅是开发阶段临时图标；在图标设计确认前，不上传本页 ZIP、不创建 Dashboard 条目、不提交审核。当前对外交付改为 [GitHub Release 两资产](github-release-delivery.md)。
+> 当前状态：仍然暂停。现代极简图标已落地、通过资产校验并由用户确认定稿，但这不自动恢复商店流程；在用户明确恢复前，不上传本页 ZIP、不创建 Dashboard 条目、不提交审核。当前对外交付仍为 [GitHub Release 两资产](github-release-delivery.md)。
 
 本切片只增加 Chrome Web Store 发布产物与仓库发布边界，不改变扩展命令、Key 鉴权、页面树、占据、relay 路由或 `.real` 语义。
 
@@ -16,7 +16,7 @@
 
 ## 图标
 
-品牌主稿是仓库内的确定性 SVG。扩展跟踪 16、32、48、128 像素 PNG，并在清单的 `icons` 与 `action.default_icon` 中声明。128 像素图标遵循 Chrome 的商店布局：图形内容位于 96×96 中央区域，四周各保留 16 像素透明留白。
+图标采用候选 B `Open Frame` 的现代极简实现，只含 `#2563EB`、白色和透明背景，不含渐变、发光、阴影或装饰节点。仓库保留两份确定性 SVG：128 商店/列表主稿，以及为小尺寸光学校正的 16 工具栏基准稿。显式运行 `npm run render:icons` 才会生成 16、32、48、128 像素 RGBA PNG；普通构建只消费已审阅的 PNG，并在清单的 `icons` 与 `action.default_icon` 中声明。128 像素图形位于中央 96×96 区域，四周各保留 16 像素透明安全边缘。
 
 商店 listing 的截图和宣传图属于 Dashboard 元数据，不进入扩展 ZIP；后续沿用 Smart Preload 的分层方式放在独立的 `assets/chrome-web-store/` 路径，不和扩展运行资产混在一起。
 
@@ -56,7 +56,8 @@ out/chrome-web-store/
 - ZIP 根目录存在 `manifest.json`，没有额外顶层产品目录。
 - ZIP 清单没有 `key`，源码清单仍有固定 `key`。
 - `name`、`version`、`description`、`icons`、`default_locale` 和 `minimum_chrome_version` 完整。
-- 16/32/48/128 PNG 都是对应的正方形尺寸，128 图标具有透明外边缘。
+- 16/32/48/128 PNG 都是对应的正方形 RGBA 尺寸，保持居中透明边缘；128 图形边界精确位于中央 96×96 区域。
+- 两份 SVG 只使用品牌蓝和白色，不含渐变、滤镜或外部颜色引用；工具栏稿独立做光学校正，不由 128 主稿临时缩放。
 - ZIP 不含 `key.pem`、`.map`、`START-HERE.md`、`SHA256SUMS.txt`、本地 App 或仓库缓存。
 - 解压后的文件集合与打包目录完全一致，旁置 SHA-256 可复算。
 

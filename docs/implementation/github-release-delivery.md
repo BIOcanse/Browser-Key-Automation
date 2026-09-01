@@ -1,8 +1,8 @@
 # GitHub Release 两资产交付
 
-更新：2026-08-31。
+更新：2026-09-01。
 
-本切片只定义 GitHub Release 的下载结构，不改变扩展、Key、命令、relay、InstanceRef、页面树或 `.real` 的运行合同。Chrome Web Store 流程已暂停，待图标单独设计并确认后恢复。
+本切片只定义 GitHub Release 的下载结构，不改变扩展、Key、命令、relay、InstanceRef、页面树或 `.real` 的运行合同。图标已经单独设计并由用户确认；Chrome Web Store 仍保持暂停，只有用户明确恢复后才继续。
 
 ## 无损描述
 
@@ -73,4 +73,4 @@ Release tag、资产名与说明中的版本统一取扩展 `manifest.json` 的�
 
 ## Chrome Web Store 暂停边界
 
-当前仓库中的图标只作为开发阶段临时图标，不代表最终品牌裁定。`build:chrome-web-store:first-upload` 及其本地产物保留作后续流程基础，但现在不上传 Dashboard、不放 GitHub Release，也不提交审核。图标设计确认后，再恢复商店 identity、listing 素材和发布工作。
+GitHub 扩展 ZIP 使用用户已确认的现代极简正式图标。`build:chrome-web-store:first-upload` 及其本地产物只保留作后续流程基础，不上传 Dashboard、不放 GitHub Release，也不提交审核。图标确认本身不恢复商店 identity、listing 素材或发布工作。
