@@ -2,7 +2,7 @@
 
 更新：2026-09-01。
 
-> 当前状态：仍然暂停。现代极简图标已落地、通过资产校验并由用户确认定稿，但这不自动恢复商店流程；在用户明确恢复前，不上传本页 ZIP、不创建 Dashboard 条目、不提交审核。当前对外交付仍为 [GitHub Release 两资产](github-release-delivery.md)。
+> 当前状态：Dashboard 身份引导与资料填写已经恢复，初始 ZIP 已用于创建条目；但它仍不是可发布候选。在 Item ID/public key、release identity profile、两端 App exact-Origin 门禁、递增版本与真实商店安装联调完成前，不提交审核或发布。Store Listing、Privacy practices 与公开隐私政策正文见[提交材料](chrome-web-store-submission.md)。
 
 本切片只增加 Chrome Web Store 发布产物与仓库发布边界，不改变扩展命令、Key 鉴权、页面树、占据、relay 路由或 `.real` 语义。
 

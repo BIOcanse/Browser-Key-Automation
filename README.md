@@ -8,7 +8,7 @@ The extension owns Key authentication, permissions, browser references, occupati
 
 > Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release.
 
-Chrome Web Store work is paused until the final icon is designed. Use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases): each release intentionally has exactly two downloads, `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`. See the [GitHub Release contract](docs/implementation/github-release-delivery.md).
+The Chrome Web Store item is in identity-bootstrap and listing setup. Do not submit the initial upload for review until its Store Item ID and public key have been synchronized into the release identity profile and both companion Apps, followed by a version increment and real Store-install test. See the [Chrome Web Store delivery contract](docs/implementation/chrome-web-store-delivery.md) and [submission copy](docs/implementation/chrome-web-store-submission.md). Stable downloadable packages remain on [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases), with exactly two downloads per release: `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`; their structure is frozen in the [GitHub Release contract](docs/implementation/github-release-delivery.md).
 
 ## What It Can Do
 

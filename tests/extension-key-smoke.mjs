@@ -24,6 +24,10 @@ const traditionalChineseScreenshotPath = path.join(workspaceRoot, "out", "test-a
 const welcomeScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "welcome-ui.png");
 const welcomeMobileScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "welcome-ui-mobile.png");
 const welcomeSamplesPath = path.join(workspaceRoot, "out", "test-artifacts", "welcome-interaction.json");
+const storeListingRoot = path.join(workspaceRoot, "out", "chrome-web-store", "listing-assets");
+const storeWelcomeScreenshotPath = path.join(storeListingRoot, "screenshot-1-setup-1280x800.png");
+const storeKeysScreenshotPath = path.join(storeListingRoot, "screenshot-2-key-management-1280x800.png");
+const storePermissionsScreenshotPath = path.join(storeListingRoot, "screenshot-3-key-permissions-1280x800.png");
 const API_KEY_PATTERN = /^bk1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$/u;
 const builtManifest = JSON.parse(await readFile(path.join(extensionDir, "manifest.json"), "utf8"));
 const expectedExtensionId = extensionIdFromManifestKey(builtManifest.key);
@@ -246,6 +250,7 @@ async function main() {
     "--enable-unsafe-extension-debugging",
     "--headless=new",
     "--window-size=1440,1000",
+    "--lang=en-US",
     "--no-first-run",
     "--no-sandbox",
     "--no-default-browser-check",
@@ -303,6 +308,20 @@ async function main() {
     const welcomeImage = await welcomeClient.send("Page.captureScreenshot", { format: "png", fromSurface: true,
       captureBeyondViewport: true, clip: { x: 0, y: 0, width: welcomeLayout.cssContentSize.width, height: welcomeLayout.cssContentSize.height, scale: 1 } });
     await writeFile(welcomeScreenshotPath, Buffer.from(welcomeImage.data, "base64"));
+    await mkdir(storeListingRoot, { recursive: true });
+    await welcomeClient.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+    const storeWelcomeLayout = await pageEvaluate(welcomeClient, () => {
+      const locale = document.querySelector("[data-locale]");
+      locale.value = "en";
+      locale.dispatchEvent(new Event("change", { bubbles: true }));
+      const theme = document.querySelector("[data-theme]");
+      theme.value = "dark";
+      theme.dispatchEvent(new Event("change", { bubbles: true }));
+      return { lang: document.documentElement.lang, width: innerWidth, height: innerHeight };
+    });
+    assert.deepEqual(storeWelcomeLayout, { lang: "en", width: 1280, height: 800 });
+    const storeWelcomeImage = await welcomeClient.send("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(storeWelcomeScreenshotPath, Buffer.from(storeWelcomeImage.data, "base64"));
     await welcomeClient.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     const welcomeMobile = await pageEvaluate(welcomeClient, setupSnapshot);
     assert.equal(welcomeMobile.innerWidth, 390); assert.equal(welcomeMobile.scrollWidth, 390);
@@ -744,6 +763,37 @@ async function main() {
     }, { key: apiKey });
     assert.deepEqual(publicBoundary, { containsToken: false, containsStoredField: false, allHaveAvailability: true });
 
+    await mkdir(storeListingRoot, { recursive: true });
+    await pageClient.send("Emulation.setDeviceMetricsOverride", {
+      width: 1280,
+      height: 800,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    const storeAdminLayout = await pageEvaluate(pageClient, () => {
+      const locale = document.querySelector("[data-locale]");
+      locale.value = "en";
+      locale.dispatchEvent(new Event("change", { bubbles: true }));
+      const theme = document.querySelector("[data-theme]");
+      theme.value = "light";
+      theme.dispatchEvent(new Event("change", { bubbles: true }));
+      document.querySelector("[data-status]").dataset.visible = "false";
+      return { lang: document.documentElement.lang, width: innerWidth, height: innerHeight };
+    });
+    assert.deepEqual(storeAdminLayout, { lang: "en", width: 1280, height: 800 });
+    const storeKeysImage = await pageClient.send("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(storeKeysScreenshotPath, Buffer.from(storeKeysImage.data, "base64"));
+    await pageEvaluate(pageClient, () => document.querySelector("[data-open-create]")?.click());
+    const storePermissionsImage = await pageClient.send("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(storePermissionsScreenshotPath, Buffer.from(storePermissionsImage.data, "base64"));
+    await pageEvaluate(pageClient, () => {
+      document.querySelector("[data-close-create]")?.click();
+      const locale = document.querySelector("[data-locale]");
+      locale.value = "zh-CN";
+      locale.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await pageClient.send("Emulation.clearDeviceMetricsOverride");
+
     await mkdir(path.dirname(screenshotPath), { recursive: true });
     await pageEvaluate(pageClient, () => {
       const theme = document.querySelector("[data-theme]");
@@ -822,6 +872,11 @@ async function main() {
       revokedTokenRetainedForAdminReveal: true,
       publicListRedacted: true,
       authenticationStates: ["valid", "invalid", "disabled", "revoked"],
+      storeListingScreenshots: [
+        path.relative(workspaceRoot, storeWelcomeScreenshotPath),
+        path.relative(workspaceRoot, storeKeysScreenshotPath),
+        path.relative(workspaceRoot, storePermissionsScreenshotPath),
+      ],
       screenshot: path.relative(workspaceRoot, screenshotPath),
       createDialogScreenshot: path.relative(workspaceRoot, createDialogScreenshotPath),
       arabicScreenshot: path.relative(workspaceRoot, arabicScreenshotPath),

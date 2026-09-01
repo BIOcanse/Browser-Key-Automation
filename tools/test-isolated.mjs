@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,7 +13,10 @@ const suites = {
 };
 const selected = process.argv[2] ?? "all";
 const selectedArguments = process.argv.slice(3);
+const exportStoreListingAssets = selectedArguments.includes("--export-store-listing-assets");
+const forwardedArguments = selectedArguments.filter((argument) => argument !== "--export-store-listing-assets");
 assert.ok(selected === "all" || Object.hasOwn(suites, selected), "Unknown isolated smoke suite");
+assert.ok(!exportStoreListingAssets || selected === "extension", "Store listing assets can be exported only from the extension suite");
 const artifacts = path.join(workspace, "out", "test-artifacts");
 await mkdir(artifacts, { recursive: true });
 const root = await mkdtemp(path.join(artifacts, "isolated-"));
@@ -53,9 +56,24 @@ try {
   const names = selected === "all" ? Object.keys(suites) : [selected];
   for (const name of names) await run(
     process.execPath,
-    [path.join(root, "tests", suites[name]), ...(selected === "all" ? [] : selectedArguments)],
+    [path.join(root, "tests", suites[name]), ...(selected === "all" ? [] : forwardedArguments)],
     name,
   );
+  if (exportStoreListingAssets) {
+    const names = [
+      "screenshot-1-setup-1280x800.png",
+      "screenshot-2-key-management-1280x800.png",
+      "screenshot-3-key-permissions-1280x800.png",
+    ];
+    const sourceRoot = path.join(root, "out", "chrome-web-store", "listing-assets");
+    const destinationRoot = path.join(workspace, "out", "chrome-web-store", "listing-assets");
+    await mkdir(destinationRoot, { recursive: true });
+    for (const name of names) {
+      await copyFile(path.join(sourceRoot, name), path.join(destinationRoot, name));
+    }
+    evidence.exportedArtifacts = names.map((name) => path.join("out", "chrome-web-store", "listing-assets", name));
+    console.log(JSON.stringify({ ok: true, exportedStoreListingAssets: evidence.exportedArtifacts }));
+  }
   evidence.ok = true;
 } finally {
   if (reservation.listening) await new Promise((resolve) => reservation.close(resolve));

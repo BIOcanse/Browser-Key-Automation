@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280" role="img" aria-labelledby="title desc">
+  <title id="title">Browser Key Automation small promotional image</title>
+  <desc id="desc">A flat browser-and-key mark beside a compact key management interface on a dark background.</desc>
+  <rect width="440" height="280" fill="#0B1020"/>
+  <rect x="28" y="26" width="384" height="228" rx="32" fill="#131B2E"/>
+
+  <rect x="58" y="60" width="112" height="112" rx="28" fill="#2563EB"/>
+  <path d="M74 116V104C74 97.4 79.4 92 86 92H142C148.6 92 154 97.4 154 104V116" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M76 109H152" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="96" cy="143" r="15" fill="#FFFFFF"/>
+  <circle cx="96" cy="143" r="6" fill="#2563EB"/>
+  <rect x="109" y="138" width="38" height="10" rx="5" fill="#FFFFFF"/>
+  <rect x="137" y="142" width="10" height="16" rx="5" fill="#FFFFFF"/>
+  <rect x="72" y="191" width="84" height="12" rx="6" fill="#FFFFFF"/>
+  <rect x="88" y="215" width="52" height="8" rx="4" fill="#65718A"/>
+
+  <rect x="204" y="60" width="164" height="18" rx="9" fill="#FFFFFF"/>
+  <rect x="204" y="91" width="104" height="9" rx="4.5" fill="#65718A"/>
+  <rect x="204" y="116" width="164" height="48" rx="14" fill="#1C2942"/>
+  <circle cx="226" cy="140" r="8" fill="#2563EB"/>
+  <rect x="244" y="132" width="72" height="9" rx="4.5" fill="#FFFFFF"/>
+  <rect x="244" y="147" width="48" height="7" rx="3.5" fill="#65718A"/>
+  <rect x="327" y="132" width="25" height="16" rx="8" fill="#2563EB"/>
+  <rect x="204" y="176" width="164" height="48" rx="14" fill="#1C2942"/>
+  <circle cx="226" cy="200" r="8" fill="#2563EB"/>
+  <rect x="244" y="192" width="84" height="9" rx="4.5" fill="#FFFFFF"/>
+  <rect x="244" y="207" width="58" height="7" rx="3.5" fill="#65718A"/>
+  <rect x="337" y="192" width="15" height="15" rx="7.5" fill="#65718A"/>
+</svg>
