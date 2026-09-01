@@ -1,6 +1,6 @@
 # 文档索引
 
-更新：2026-08-31。本目录保存 Browser Key Automation 的产品裁定、公开合同、实现切片、验证证据和历史方案。仓库首次使用者应先阅读根目录对应语言的 README；这里面向继续开发、审查或精确调用的人。
+更新：2026-09-01。本目录保存 Browser Key Automation 的产品裁定、公开合同、实现切片、验证证据和历史方案。仓库首次使用者应先阅读根目录对应语言的 README；这里面向继续开发、审查或精确调用的人。
 
 ## 文档权威顺序
 
@@ -24,6 +24,7 @@ Command、permission、schema、error、capability 与 Freedom Point 的机器�
 - [Chrome Web Store 交付](implementation/chrome-web-store-delivery.md)：身份引导 ZIP、图标、固定 ID 衔接与自动校验边界；当前尚不可提交审核。
 - [Chrome Web Store 提交材料](implementation/chrome-web-store-submission.md)：Store Listing、权限理由、远程代码与数据披露的可粘贴原文，以及公开隐私政策阻断项。
 - [GitHub Release 两资产交付](implementation/github-release-delivery.md)：扩展 ZIP 与单一跨平台 App ZIP 的发布结构和验收。
+- [GitHub 公开首页定位](implementation/public-readme-positioning.md)：对外价值叙事、竞品比较口径、“无调试附加”的准确边界与十语言验收。
 - [Agent skill](../skills/browser-key-automation/SKILL.md)：通用 Agent 的实际连接、调用、页面树、等待、保存、截图、演示和 `.real` 规则。
 - [真实个人浏览器验证](experience/real-browser-validation.md)：早期真实安装路径和管理页体验；其中数量与功能状态以当前 registry 和本页权威顺序覆盖。
 

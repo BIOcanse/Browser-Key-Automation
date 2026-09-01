@@ -2,13 +2,36 @@
 
 [English](README.md) | 简体中文 | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation 让可信 Agent 或自动化程序通过 Manifest V3 扩展和一枚 API Key 操作已授权的本地 Chromium 浏览器。
+Browser Key Automation 把你正在使用的 Chromium 浏览器变成面向可信 Agent 和自动化程序、由 Key 划定权限的控制面。扩展只需安装一次；创建 Key 后，获授权客户端无需另开自动化浏览器，就能随时跨越现有的已登录标签页工作。
 
-扩展拥有 Key 鉴权、权限、浏览器引用、占据和浏览器操作；小型 Zig 本地 App 只负责本地路由、由 App 分配的浏览器 Instance 引用、文件落地，以及它明确声明的平台原生能力。
+主路径使用普通扩展 API，不接入 CDP、WebDriver、远程调试开关或 `chrome.debugger`。Chromium 仍负责扩展安装、站点访问和一次性的 **Allow User Scripts** 设置；完成这些正常设置后，日常浏览器指令不会附加调试器，也不会出现 Chrome 的调试连接确认或警告条。
 
-> 开发状态：当前已解压扩展开发包面向 Chrome/Chromium 138 及以上版本；它目前不是 Chrome 应用商店发布版。
+## 为什么选择 Browser Key Automation
 
-Chrome Web Store 工作已暂停，等待正式图标设计。请使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)：每个 Release 固定只有两个下载项，`browser-key-automation-extension-v0.0.0.1.zip` 与 `browser-key-automation-local-app-v0.0.0.1.zip`。详见 [GitHub Release 交付合同](docs/implementation/github-release-delivery.md)。
+- **无缝操作眼前这一个浏览器。** 随时列出、新建、选择、导航、刷新和关闭标签页，同时保留用户真实的登录状态、Cookie、扩展和手动到达的页面状态。
+- **把完整网页变成 Agent 看得懂的干净视图。** 缓存的 canonical 操作树始终保留整体结构，只展开请求的分支；每枚 Key 的展开状态会保留到文档变化，并可一次性读取指定深度、区间或子树而不改变缓存状态。
+- **用 Key 划定信任，而不是暴露调试端口。** Root/Regular Key 具有明确权限、有效期、再次显示、禁用和吊销控制。同一 Key 的调用串行，不同 Key 可以互不干扰地工作。
+- **一个后缀切换到原生点击。** Windows 上的 `dom.click.real` 会把扩展取得的元素几何信息交给本地 App，在网页拒绝合成 DOM 激活时发送操作系统级左键点击；目标仍必须存活、可见、可用且未被遮挡。
+- **文件是一等能力。** 一键保存 MHTML、截取可见视口、把资源取为有界 Artifact 并落盘、上传自包含 HTML，再无需本地 Web 服务直接在浏览器打开演示。
+- **为可信多客户端协作准备。** Key 可占据标签页或全局以避免脏状态；其他有权 Key 必须先显式解除原占据，再自行占据。
+
+### 使用路线对比
+
+连接模型核对于 2026-09-01。这里比较常规使用路线，不比较理论功能上限。
+
+| 路线 | 能否使用现有已登录 Chromium | 常规控制路径 | 最适合 |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | 可以，可跨任意已授权标签页 | 普通扩展 API + Key 鉴权；本地 App 补充路由、文件与可选 `.real` 点击 | 无需附加调试器的长期可信 Agent 控制、选择式缓存树和一体化文件流程 |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype)、[Puppeteer](https://pptr.dev/guides/browser-management)、[Selenium](https://www.selenium.dev/documentation/overview/) | 常规路线创建自动化会话，也都存在连接现有 Chromium 的方式 | Playwright/CDP、Puppeteer/CDP 或 WebDriver | 确定性测试、跨浏览器验证、CI，以及成熟的定位与调试生态 |
+| [Playwright MCP 扩展](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | 可以；profile token 可取消其自身后续连接审批 | 通过声明 Chrome `debugger` 权限的扩展转发 Playwright | 在选定现有标签页上使用 Playwright 动作与 accessibility snapshot |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | 可以，但要先开启远程调试或暴露调试端点 | DevTools/CDP；Chrome 的 auto-connect 路线每次调试会话都要求用户允许 | Console、Network、Performance、内存等深度 DevTools 诊断 |
+| [Browser MCP](https://browsermcp.io/) | 可以，但要由用户先连接当前标签页 | 扩展 + 本地 MCP，作用于显式连接的工作标签页 | 面向一个已选现有标签页的精简 MCP 能力面 |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | 可以，可跨标签页 | 扩展 + native-messaging bridge；manifest 在普通扩展权限外还请求 `debugger` | 丰富的跨标签页 MCP、网络捕获、下载与文件上传工具 |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | 可以 | 基于 Puppeteer/CDP 的浏览器内集成 Agent，用户提供 LLM provider Key | 一体化多 Agent UI，而不是与 provider 无关的浏览器控制面 |
+
+Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代 DevTools 深度诊断。它填补的是另一块：低摩擦、可配置权限地控制人正在使用的浏览器，并提供足够干净的结构和文件能力，让 Agent 完成实际任务。
+
+> 开发状态：当前已解压扩展开发包面向 Chrome/Chromium 138 及以上版本；它目前不是 Chrome 应用商店发布版。商店页面仍在准备；在它完成前请使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.1.zip` 与 `browser-key-automation-local-app-v0.0.0.1.zip`。结构以 [GitHub Release 交付合同](docs/implementation/github-release-delivery.md)为准。
 
 ## 当前能力
 
@@ -172,7 +195,7 @@ Windows/Linux App 都提供路由和文件落地；Windows 额外声明当前原
 | `npm run test:runtime` | 运行单元测试以及隔离 relay/Chromium 集成测试 |
 | `npm run build:dev-package` | 构建扩展和两个平台的 App 包 |
 | `npm run build:github-release` | 构建 GitHub Releases 实际发布的两份 ZIP |
-| `npm run build:chrome-web-store:first-upload` | 构建已暂停的身份引导产物；图标工作恢复前不要上传 |
+| `npm run build:chrome-web-store:first-upload` | 构建商店身份引导产物；提交审核前同步 Item ID/public key |
 | `npm run test:dev-package-smoke` | 验证压缩包层级、可执行文件、哈希和 skill 引用 |
 
 隔离集成测试使用临时端口、profile 和 relay 进程，不得指向个人浏览器 profile 或已有个人 App 实例。

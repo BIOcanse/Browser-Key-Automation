@@ -2,13 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | 日本語 | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation は、信頼された Agent や自動化プログラムが Manifest V3 拡張機能と API Key を使って、許可済みのローカル Chromium ブラウザーを操作するためのシステムです。
+Browser Key Automation は、普段使っている Chromium ブラウザーを、信頼する Agent や自動化プログラム向けの Key スコープ制御面に変えます。拡張機能を一度インストールして Key を作成すれば、許可されたクライアントは別の自動化ブラウザーを起動せず、ログイン済みの既存タブをまたいで操作できます。
 
-Key 認証、権限、ブラウザー参照、占有、ブラウザー操作は拡張機能が所有します。小さな Zig コンパニオン App は、ローカルルーティング、App が割り当てるブラウザー Instance 参照、ファイル保存、明示的に公開したネイティブ機能だけを提供します。
+主経路は通常の拡張機能 API を使用し、CDP、WebDriver、remote-debugging スイッチ、`chrome.debugger` を使いません。インストール、サイトアクセス、一度だけ必要な **Allow User Scripts** 設定は引き続き Chromium が管理します。設定後の日常コマンドはデバッガーを接続せず、Chrome のデバッグ接続確認や警告バーも表示しません。
 
-> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。
+## Browser Key Automation を選ぶ理由
 
-正式アイコンの設計が終わるまで Chrome Web Store 対応は一時停止しています。[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.1.zip` と `browser-key-automation-local-app-v0.0.0.1.zip` の 2 つだけです。詳細は [GitHub Release 配布契約](docs/implementation/github-release-delivery.md)を参照してください。
+- **目の前のブラウザーをそのままシームレスに操作。** ユーザーの実際のログイン状態、Cookie、拡張機能、手動で到達したページ状態を保ちながら、いつでもタブを一覧、作成、選択、移動、再読み込み、終了できます。
+- **ページ全体を Agent 向けの小さく明瞭なビューに。** キャッシュされた canonical 操作ツリーは全体構造を残したまま要求された枝だけを展開し、文書が変わるまで Key ごとの展開状態を保持します。深さ、範囲、部分ツリーの一時ビューはキャッシュ状態を変えません。
+- **開いたデバッグ端点ではなく Key で信頼を区切る。** Root/Regular Key には明示的な権限、有効期限、再表示、無効化、失効があります。同一 Key の呼び出しは直列化され、異なる Key は独立して動けます。
+- **接尾辞ひとつのネイティブクリック。** Windows の `dom.click.real` は拡張機能が得た要素座標とローカル App を組み合わせ、ページが合成 DOM 操作を拒否したときに OS レベルの左クリックを送ります。対象は存続し、可視・有効・遮蔽なしである必要があります。
+- **ファイルを第一級の機能として扱う。** MHTML 保存、表示中 viewport の撮影、リソースの有界 Artifact 化とディスク保存、自己完結 HTML のアップロード、ローカル Web サーバーなしのデモ表示を直接行えます。
+- **信頼された複数クライアントの協調。** Key はタブまたは全体を占有して不整合を防げます。別の許可済み Key は、明示的に元の占有を解放してから取得します。
+
+### ワークフロー比較
+
+接続モデルは 2026-09-01 時点で確認済みです。理論上の機能上限ではなく、通常の利用経路を比較しています。
+
+| 選択肢 | 既存のログイン済み Chromium | 通常の制御経路 | 適した用途 |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | 対応。許可された任意のタブを横断 | 通常の拡張機能 API + Key 認証。ローカル App はルーティング、ファイル、任意の `.real` クリックを追加 | デバッガーを接続しない長期 Agent 制御、選択的キャッシュツリー、統合ファイルフロー |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype)、[Puppeteer](https://pptr.dev/guides/browser-management)、[Selenium](https://www.selenium.dev/documentation/overview/) | 通常は自動化セッションを作成。既存 Chromium への接続経路もある | Playwright/CDP、Puppeteer/CDP、または WebDriver | 決定的テスト、クロスブラウザー検証、CI、成熟した locator とデバッグ環境 |
+| [Playwright MCP 拡張機能](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | 対応。profile token で自身の以後の接続承認を省略可能 | Chrome の `debugger` 権限を宣言する拡張機能経由で Playwright を中継 | 選択した既存タブでの Playwright action と accessibility snapshot |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | remote debugging の有効化またはデバッグ端点の公開後に対応 | DevTools/CDP。Chrome の auto-connect は各デバッグセッションで許可を要求 | Console、Network、Performance、memory などの深い DevTools 診断 |
+| [Browser MCP](https://browsermcp.io/) | ユーザーが現在のタブを接続した後に対応 | 拡張機能 + ローカル MCP。明示的に接続した作業タブを対象とする | 選択した既存タブひとつへの小さな MCP 操作面 |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | 対応。タブを横断 | 拡張機能 + native-messaging bridge。manifest は通常権限に加えて `debugger` を要求 | 広範なクロスタブ MCP、ネットワーク取得、ダウンロード、ファイルアップロード |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | 対応 | Puppeteer/CDP 上の統合ブラウザー Agent。ユーザーが LLM provider Key を指定 | provider-neutral な制御面ではなく、統合された multi-Agent UI |
+
+Browser Key Automation は Playwright/Selenium のテストスイートや DevTools の深い診断を置き換えません。人が使っているブラウザーを低摩擦かつ権限付きで操作し、Agent が実務を完了するための明瞭な構造とファイル機能を提供する別の役割です。
+
+> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。Store listing は準備中です。それまでは [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.1.zip` と `browser-key-automation-local-app-v0.0.0.1.zip` の 2 つだけです。構造は [GitHub Release 配布契約](docs/implementation/github-release-delivery.md)に従います。
 
 ## 主な機能
 
@@ -172,7 +195,7 @@ Windows/Linux App はどちらもルーティングとファイル保存を提�
 | `npm run test:runtime` | 単体テストと分離 relay/Chromium 統合テスト |
 | `npm run build:dev-package` | 拡張機能と両プラットフォーム App をパッケージ化 |
 | `npm run build:github-release` | GitHub Releases で公開する正確な 2 つの ZIP を構築 |
-| `npm run build:chrome-web-store:first-upload` | 一時停止中の ID 初期化成果物を構築。アイコン作業再開前はアップロードしない |
+| `npm run build:chrome-web-store:first-upload` | Store ID 初期化成果物を構築。審査送信前に Item ID/public key を同期 |
 | `npm run test:dev-package-smoke` | アーカイブ階層、実行ファイル、ハッシュ、skill 参照を検証 |
 
 分離統合テストは一時 port、profile、relay を使います。個人ブラウザー profile や既存の個人 App Instance に向けてはいけません。

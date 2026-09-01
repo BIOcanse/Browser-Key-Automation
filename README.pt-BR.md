@@ -2,13 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | Português (Brasil) | [Русский](README.ru.md)
 
-O Browser Key Automation permite que um Agent ou programa de automação confiável controle um navegador Chromium local autorizado por meio de uma extensão Manifest V3 e uma API Key.
+O Browser Key Automation transforma o navegador Chromium que você já usa em uma superfície de automação delimitada por Key para Agents e programas confiáveis. Depois de instalar a extensão uma vez e criar uma Key, um cliente autorizado pode trabalhar entre suas abas já autenticadas sem iniciar outro navegador de automação.
 
-A extensão é dona da autenticação das Keys, das permissões, das referências do navegador, das ocupações e das operações do navegador. O pequeno App complementar em Zig fornece somente roteamento local, referências de Instance atribuídas pelo App, gravação de arquivos e as capacidades nativas que ele anuncia explicitamente.
+O caminho principal usa APIs comuns de extensão, não CDP, WebDriver, opções remote-debugging ou `chrome.debugger`. O Chromium continua responsável pela instalação, acesso a sites e pela configuração única **Allow User Scripts**. Depois disso, comandos rotineiros não anexam um depurador nem exibem a confirmação ou barra de aviso de depuração do Chrome.
 
-> Estado de desenvolvimento: o build de desenvolvimento unpacked atual é voltado para Chrome/Chromium 138 ou posterior. Ele não é uma publicação da Chrome Web Store.
+## Por que usar o Browser Key Automation
 
-O trabalho da Chrome Web Store está pausado até o design do ícone final. Use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases): cada Release tem exatamente dois downloads, `browser-key-automation-extension-v0.0.0.1.zip` e `browser-key-automation-local-app-v0.0.0.1.zip`. Consulte o [contrato de entrega do GitHub Release](docs/implementation/github-release-delivery.md).
+- **Controle contínuo do navegador que já está diante de você.** Liste, crie, selecione, navegue, recarregue e feche abas a qualquer momento, mantendo sessões, cookies, extensões e estados de página alcançados manualmente.
+- **A página inteira em uma visão do tamanho certo para um Agent.** A árvore de operações canonical em cache mantém a estrutura geral visível, expande apenas os ramos solicitados e preserva o estado de cada Key até o documento mudar. Visões pontuais por profundidade, intervalo ou subárvore não alteram esse estado.
+- **Confiança delimitada por Key, não um endpoint de depuração aberto.** Keys Root e Regular têm permissões, validade, nova revelação, desativação e revogação explícitas. Chamadas da mesma Key são serializadas; Keys diferentes trabalham de forma independente.
+- **Clique nativo com um único sufixo.** No Windows, `dom.click.real` combina a geometria observada pela extensão com o App local para enviar um clique esquerdo no nível do sistema operacional quando uma página rejeita ativação DOM sintética. O alvo ainda precisa existir, estar visível, habilitado e desobstruído.
+- **Arquivos são de primeira classe.** Salve MHTML, capture o viewport visível, obtenha recursos como Artifacts limitados e grave-os em disco, envie HTML autocontido e abra-o como demonstração sem servidor Web local.
+- **Coordenação de vários clientes confiáveis.** Uma Key pode ocupar uma aba ou o escopo global para evitar estado inconsistente; outra Key autorizada precisa liberar explicitamente a ocupação antes de adquiri-la.
+
+### Comparação de fluxos de trabalho
+
+Modelos de conexão verificados em 2026-09-01. A tabela compara caminhos normais de uso, não limites teóricos de recursos.
+
+| Abordagem | Chromium existente e autenticado | Caminho normal de controle | Melhor uso |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | Sim, entre quaisquer abas autorizadas | APIs comuns de extensão + autenticação Key; o App local acrescenta roteamento, arquivos e clique `.real` opcional | Acesso Agent duradouro sem anexar depurador, árvore seletiva em cache e fluxos de arquivo integrados |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype), [Puppeteer](https://pptr.dev/guides/browser-management), [Selenium](https://www.selenium.dev/documentation/overview/) | O caminho comum cria uma sessão de automação; também é possível conectar um Chromium existente | Playwright/CDP, Puppeteer/CDP ou WebDriver | Testes determinísticos, validação entre navegadores, CI e ecossistemas maduros de locators e depuração |
+| [Extensão Playwright MCP](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | Sim; um token de perfil pode remover sua própria aprovação posterior | Playwright retransmitido por uma extensão que declara a permissão `debugger` do Chrome | Ações Playwright e accessibility snapshots em abas existentes selecionadas |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | Sim, depois de ativar remote debugging ou expor um endpoint de depuração | DevTools/CDP; o auto-connect do Chrome solicita permissão para cada sessão de depuração | Diagnóstico profundo com Console, Network, Performance, memória e outros DevTools |
+| [Browser MCP](https://browsermcp.io/) | Sim, depois que o usuário conecta a aba atual | Extensão + MCP local, limitado à aba de trabalho conectada explicitamente | Uma superfície MCP compacta para uma aba existente escolhida |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | Sim, entre abas | Extensão + native-messaging bridge; o manifest solicita `debugger` além de permissões comuns | Ferramentas MCP amplas entre abas, captura de rede, downloads e upload de arquivos |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | Sim | Agent integrado ao navegador sobre Puppeteer/CDP, com Keys do LLM provider fornecidas pelo usuário | Uma UI multi-Agent integrada, não um plano de controle independente do provider |
+
+O Browser Key Automation não substitui suítes de teste Playwright/Selenium nem diagnósticos profundos do DevTools. Ele ocupa outro papel: controle autorizado e de baixo atrito do navegador que uma pessoa já usa, com estrutura limpa e recursos de arquivo suficientes para um Agent concluir trabalho real.
+
+> Estado de desenvolvimento: o build de desenvolvimento unpacked atual é voltado para Chrome/Chromium 138 ou posterior. Ele não é uma publicação da Chrome Web Store. A listagem da Store está em preparação; até lá use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). Cada Release tem exatamente dois downloads: `browser-key-automation-extension-v0.0.0.1.zip` e `browser-key-automation-local-app-v0.0.0.1.zip`. A estrutura segue o [contrato de entrega do GitHub Release](docs/implementation/github-release-delivery.md).
 
 ## Recursos
 
@@ -172,7 +195,7 @@ Os Apps Windows e Linux fornecem roteamento e escrita de arquivos. O Windows tam
 | `npm run test:runtime` | Testes unitários mais integração isolada relay/Chromium |
 | `npm run build:dev-package` | Criar a extensão e os Apps das duas plataformas |
 | `npm run build:github-release` | Criar exatamente os dois ZIP publicados no GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Criar o artefato de identidade pausado; não fazer upload antes de retomar o trabalho do ícone |
+| `npm run build:chrome-web-store:first-upload` | Criar o artefato de identidade da Store; sincronizar Item ID/public key antes de enviar para revisão |
 | `npm run test:dev-package-smoke` | Verificar estrutura, executáveis, hashes e referências do skill |
 
 Os testes de integração isolados usam portas, perfis e processos relay temporários. Eles não devem apontar para um perfil de navegador pessoal nem para uma Instance de App pessoal existente.

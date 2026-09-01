@@ -1,9 +1,10 @@
 # 项目进度
 
-更新：2026-08-31。当前阶段：浏览器核心、页面操作树、多级等待、一键保存/截图、自包含 HTML 演示、20 语言 UI 及 Windows `dom.click.real` 已实现。当前 registry 含 46 条 active command、40 个 active permission、57 个 active Freedom Point。Key、串行、occupation、Artifact 和薄 relay 的业务归属未改变。
+更新：2026-09-01。当前阶段：浏览器核心、页面操作树、多级等待、一键保存/截图、自包含 HTML 演示、20 语言 UI 及 Windows `dom.click.real` 已实现。当前 registry 含 46 条 active command、40 个 active permission、57 个 active Freedom Point。Key、串行、occupation、Artifact 和薄 relay 的业务归属未改变。
 
 ## 当前实现批次
 
+- GitHub 公开首页已从内部状态说明改为十语言产品入口：首屏解释现有登录浏览器、普通扩展 API 主路径、完成正常设置后不附加调试器、Key 权限、选择式缓存操作树、跨标签页、Windows `.real` 与 MHTML/截图/Artifact/演示工作流。工作流对比基于 2026-09-01 官方资料，覆盖 Playwright/Puppeteer/Selenium、Playwright MCP、Chrome DevTools MCP、Browser MCP、Chrome MCP Server 与 Nanobrowser，并明确本项目不替代测试框架或 DevTools 深度诊断。九份译文中“等待图标”的旧状态已删除；Store 仍按当前身份同步门禁描述。比较口径与禁止夸大项见[公开首页定位](implementation/public-readme-positioning.md)。十语言拓扑、链接、合同 token、Key 泄露与平台语义专项检查通过，完整 `npm test` 的 81 项 Node 与 10 项 Zig 也通过。
 - GitHub Release 两资产交付已落地：保留扩展、Windows App、Linux App 三个独立开发中间包，再由薄聚合层生成 `browser-key-automation-extension-v0.0.0.1.zip` 与 `browser-key-automation-local-app-v0.0.0.1.zip`。扩展 ZIP 根部直接含 `manifest.json`；App ZIP 将 PE/ELF relay 分置 `windows-x86_64/`、`linux-x86_64/`，公共 CLI、协议与 Agent skill 只放一份。聚合前逐项验证中间包内部 SHA 与跨平台公共文件一致性，聚合后再验证 69/15 个文件、PE/ELF、exact-Origin、CLI help、ZIP 根层、临时解压和内外 SHA；Release 页面只上传这两个 ZIP，不上传旁文件。完整 81 项 Node、10 项 Zig 与三个开发分包 69/14/14 校验均通过。见[两资产交付合同](implementation/github-release-delivery.md)。
 - Chrome Web Store 身份引导与 Listing 填写已恢复，但仍未进入可提交审核状态：用户已确认候选 B 的最终现代极简图标，使用 `#2563EB`/白色开放框与 Key，不含渐变、发光、阴影或“AI 蓝紫”；白色主体经光学校正消除头重脚轻。128 主稿和 16 工具栏基准稿分别生成 128 与 16/32/48 RGBA PNG；显式渲染连续两次产生相同 SHA-256。首传 ZIP 已用于 Dashboard 条目；必须先取得 Item ID/public key、同步 Zig App exact-Origin 门禁、递增版本并做真实商店安装联调。现已增加确定性 440×280 无字宣传图与三张隔离 Chromium 真实英文 1280×800 UI 截图，并按 2026-08-01 起执行的数据披露政策冻结 Listing、权限、remote-code、数据类别与隐私政策正文。详见[图标设计](design/icon-design.md)、[交付切片](implementation/chrome-web-store-delivery.md)与[提交材料](implementation/chrome-web-store-submission.md)。
 - 仓库入口文档已按本机 Smart Preload 的已验证模式整理：默认 `README.md` 为英文，另有简体、繁体、日、韩、德、法、西、巴葡、俄语，共十份完整且互相可切换的 README；安装、Key、页面树、等待/保存/截图/演示、Windows `.real`、Linux 边界、拆分包和开发验证保持同一章节拓扑。新增 `docs/README.md` 说明文档权威顺序与阅读路径，修正 registry README 和当前进度中的旧数量/旧 `.real` 状态，并用 `test:readme-i18n` 校验文件集合、语言栏、关键合同、链接和 Key 泄露。仓库当前没有已裁定许可证，因此没有复制参考项目的许可证声明。

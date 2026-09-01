@@ -2,13 +2,36 @@
 
 English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation lets a trusted Agent or automation program operate an authorized local Chromium browser through a Manifest V3 extension and an API Key.
+Browser Key Automation turns the Chromium browser you already use into a Key-scoped automation surface for trusted Agents and programs. Install the extension once, create a Key, and an authorized client can move across your existing signed-in tabs without launching a separate automation browser.
 
-The extension owns Key authentication, permissions, browser references, occupations, and browser operations. The small Zig companion App only provides local routing, App-assigned browser Instance references, file delivery, and explicitly advertised native capabilities.
+The primary path uses ordinary extension APIs—not CDP, WebDriver, remote-debugging switches, or `chrome.debugger`. Chromium still handles installation, site access, and the one-time **Allow User Scripts** setting. After that setup, routine browser commands do not attach a debugger or show Chrome's debugging confirmation or warning bar.
 
-> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release.
+## Why Browser Key Automation
 
-The Chrome Web Store item is in identity-bootstrap and listing setup. Do not submit the initial upload for review until its Store Item ID and public key have been synchronized into the release identity profile and both companion Apps, followed by a version increment and real Store-install test. See the [Chrome Web Store delivery contract](docs/implementation/chrome-web-store-delivery.md) and [submission copy](docs/implementation/chrome-web-store-submission.md). Stable downloadable packages remain on [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases), with exactly two downloads per release: `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`; their structure is frozen in the [GitHub Release contract](docs/implementation/github-release-delivery.md).
+- **Seamless control of the browser already in front of you.** List, create, select, navigate, reload, and close tabs at any time while keeping the user's real sessions, cookies, extensions, and manually reached page state.
+- **An Agent-sized view of the whole page.** The cached canonical operation tree keeps the overall structure visible, expands only requested branches, preserves each Key's expansion state until the document changes, and offers one-shot depth, range, and subtree views without mutating that state.
+- **Key-scoped trust instead of an open debugging endpoint.** Root and Regular Keys have explicit permissions, expiry, reveal, disable, and revoke controls. Calls are serialized per Key, while different Keys can work independently.
+- **A one-suffix native click fallback.** On Windows, `dom.click.real` combines extension-observed element geometry with the local App to send an OS-level left click when a page rejects synthetic DOM activation. The target must still be live, visible, enabled, and unobstructed.
+- **Files are first-class.** Save a page as MHTML, capture the visible viewport, fetch resources into bounded Artifacts, download them to disk, upload self-contained HTML, and open it as a browser demo without running a local web server.
+- **Cooperative multi-client control.** A Key can occupy a tab or the global scope to avoid dirty state; another authorized Key must explicitly release that occupation before acquiring it.
+
+### Workflow comparison
+
+Connection models checked 2026-09-01. This compares normal workflows, not theoretical feature ceilings.
+
+| Approach | Existing signed-in Chromium | Normal control path | Best fit |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | Yes—any authorized tab, across tabs | Ordinary extension APIs + Key authentication; the local App adds routing, files, and the optional `.real` click | Long-lived trusted Agent access without a debugger attachment; selective cached tree and integrated file workflows |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype), [Puppeteer](https://pptr.dev/guides/browser-management), [Selenium](https://www.selenium.dev/documentation/overview/) | Their usual path creates an automation session; existing Chromium attachment is also available | Playwright/CDP, Puppeteer/CDP, or WebDriver | Deterministic tests, cross-browser validation, CI, mature locator and debugging ecosystems |
+| [Playwright MCP extension](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | Yes; a profile token can remove its own later connection approval | Playwright relayed through an extension that declares Chrome's `debugger` permission | Playwright actions and accessibility snapshots over selected existing tabs |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | Yes, after remote debugging is enabled or a debugging endpoint is exposed | DevTools/CDP; Chrome's auto-connect route asks the user to allow each debugging session | Console, Network, Performance, memory, and other deep DevTools diagnosis |
+| [Browser MCP](https://browsermcp.io/) | Yes, after the user connects the current tab | Extension + local MCP, scoped to the explicitly connected working tab | A compact MCP surface for one chosen existing tab |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | Yes, across tabs | Extension + native-messaging bridge; its manifest requests `debugger` alongside ordinary extension permissions | Broad cross-tab MCP tools, network capture, downloads, and file upload |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | Yes | Integrated in-browser Agent built on Puppeteer/CDP, with user-supplied LLM provider Keys | A bundled multi-Agent UI rather than a provider-neutral browser control plane |
+
+Browser Key Automation does not replace Playwright/Selenium test suites or DevTools diagnostics. It fills a different slot: low-friction, permissioned control of the browser a person is already using, with enough structure and file handling for an Agent to complete practical work.
+
+> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release. The Store listing is in preparation; until it is ready, use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`. Their layout is frozen in the [GitHub Release contract](docs/implementation/github-release-delivery.md).
 
 ## What It Can Do
 
@@ -172,7 +195,7 @@ The Windows and Linux Apps both provide routing and file delivery. Windows addit
 | `npm run test:runtime` | Run unit tests plus isolated relay/Chromium integration tests |
 | `npm run build:dev-package` | Build the extension and both platform App packages |
 | `npm run build:github-release` | Build the exact two ZIPs published on GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Build the paused identity-bootstrap artifact; do not upload it before icon work resumes |
+| `npm run build:chrome-web-store:first-upload` | Build the Store identity-bootstrap artifact; synchronize Item ID/public key before review submission |
 | `npm run test:dev-package-smoke` | Verify archive layout, executables, hashes, and packaged skill references |
 
 Isolated integration tests use temporary ports, profiles, and relay processes. They must not be pointed at a personal browser profile or an existing personal App instance.

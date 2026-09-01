@@ -2,13 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | 繁體中文 | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation 讓可信 Agent 或自動化程式透過 Manifest V3 擴充功能與一枚 API Key 操作已授權的本機 Chromium 瀏覽器。
+Browser Key Automation 把你正在使用的 Chromium 瀏覽器變成供可信 Agent 與自動化程式使用、由 Key 劃定權限的控制面。擴充功能只需安裝一次；建立 Key 後，獲授權用戶端不必另開自動化瀏覽器，就能隨時跨越現有的已登入分頁工作。
 
-擴充功能擁有 Key 驗證、權限、瀏覽器參照、佔用與瀏覽器操作；小型 Zig 本機 App 只負責本機路由、由 App 配發的瀏覽器 Instance 參照、檔案落地，以及它明確宣告的平台原生能力。
+主路徑使用一般擴充功能 API，不接入 CDP、WebDriver、遠端偵錯開關或 `chrome.debugger`。Chromium 仍負責擴充功能安裝、網站存取與一次性的 **Allow User Scripts** 設定；完成這些正常設定後，日常瀏覽器指令不會附加偵錯器，也不會顯示 Chrome 的偵錯連線確認或警告列。
 
-> 開發狀態：目前的解壓縮擴充功能開發包以 Chrome/Chromium 138 以上版本為目標；目前不是 Chrome 線上應用程式商店版本。
+## 為什麼選擇 Browser Key Automation
 
-Chrome Web Store 工作已暫停，等待正式圖示設計。請使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)：每個 Release 固定只有兩個下載項目，`browser-key-automation-extension-v0.0.0.1.zip` 與 `browser-key-automation-local-app-v0.0.0.1.zip`。詳見 [GitHub Release 交付合約](docs/implementation/github-release-delivery.md)。
+- **無縫操作眼前這一個瀏覽器。** 隨時列出、建立、選取、導覽、重新整理與關閉分頁，同時保留使用者真實的登入狀態、Cookie、擴充功能與手動到達的頁面狀態。
+- **把完整網頁變成 Agent 看得懂的乾淨視圖。** 快取的 canonical 操作樹始終保留整體結構，只展開請求的分支；每枚 Key 的展開狀態會保留到文件改變，並可一次性讀取指定深度、區間或子樹而不改變快取狀態。
+- **用 Key 劃定信任，而不是暴露偵錯端點。** Root/Regular Key 具有明確權限、有效期、再次顯示、停用與撤銷控制。同一 Key 的呼叫串行，不同 Key 可以互不干擾地工作。
+- **一個後綴切換到原生點擊。** Windows 上的 `dom.click.real` 會把擴充功能取得的元素幾何資訊交給本機 App，在網頁拒絕合成 DOM 啟用時傳送作業系統級滑鼠左鍵點擊；目標仍須存活、可見、可用且未被遮擋。
+- **檔案是一等能力。** 一鍵儲存 MHTML、擷取可見視埠、把資源取得為有界 Artifact 並落盤、上傳自包含 HTML，再無需本機 Web 服務直接在瀏覽器開啟展示。
+- **為可信多用戶端協作準備。** Key 可佔用分頁或全域以避免髒狀態；其他有權 Key 必須先明確解除原佔用，再自行取得佔用。
+
+### 使用路線比較
+
+連線模型核對於 2026-09-01。這裡比較一般使用路線，不比較理論功能上限。
+
+| 路線 | 能否使用現有已登入 Chromium | 一般控制路徑 | 最適合 |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | 可以，可跨任意已授權分頁 | 一般擴充功能 API + Key 驗證；本機 App 補充路由、檔案與可選 `.real` 點擊 | 無需附加偵錯器的長期可信 Agent 控制、選擇式快取樹與一體化檔案流程 |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype)、[Puppeteer](https://pptr.dev/guides/browser-management)、[Selenium](https://www.selenium.dev/documentation/overview/) | 一般路線建立自動化工作階段，也都存在連接現有 Chromium 的方式 | Playwright/CDP、Puppeteer/CDP 或 WebDriver | 確定性測試、跨瀏覽器驗證、CI，以及成熟的定位與偵錯生態 |
+| [Playwright MCP 擴充功能](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | 可以；profile token 可取消其自身後續連線審批 | 透過宣告 Chrome `debugger` 權限的擴充功能轉送 Playwright | 在選定現有分頁上使用 Playwright 動作與 accessibility snapshot |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | 可以，但要先開啟遠端偵錯或公開偵錯端點 | DevTools/CDP；Chrome 的 auto-connect 路線每次偵錯工作階段都要求使用者允許 | Console、Network、Performance、記憶體等深度 DevTools 診斷 |
+| [Browser MCP](https://browsermcp.io/) | 可以，但要由使用者先連接目前分頁 | 擴充功能 + 本機 MCP，作用於明確連接的工作分頁 | 面向一個已選現有分頁的精簡 MCP 能力面 |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | 可以，可跨分頁 | 擴充功能 + native-messaging bridge；manifest 在一般擴充功能權限外還要求 `debugger` | 豐富的跨分頁 MCP、網路擷取、下載與檔案上傳工具 |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | 可以 | 基於 Puppeteer/CDP 的瀏覽器內整合 Agent，使用者提供 LLM provider Key | 一體化多 Agent UI，而不是與 provider 無關的瀏覽器控制面 |
+
+Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代 DevTools 深度診斷。它填補的是另一塊：低摩擦、可設定權限地控制人正在使用的瀏覽器，並提供足夠乾淨的結構與檔案能力，讓 Agent 完成實際工作。
+
+> 開發狀態：目前的解壓縮擴充功能開發包以 Chrome/Chromium 138 以上版本為目標；目前不是 Chrome 線上應用程式商店版本。商店頁面仍在準備；完成前請使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.1.zip` 與 `browser-key-automation-local-app-v0.0.0.1.zip`。結構以 [GitHub Release 交付合約](docs/implementation/github-release-delivery.md)為準。
 
 ## 目前能力
 
@@ -172,7 +195,7 @@ Windows/Linux App 都提供路由與檔案落地；Windows 額外宣告目前的
 | `npm run test:runtime` | 執行單元測試及隔離 relay/Chromium 整合測試 |
 | `npm run build:dev-package` | 建置擴充功能與兩個平台 App 套件 |
 | `npm run build:github-release` | 建置 GitHub Releases 實際發布的兩份 ZIP |
-| `npm run build:chrome-web-store:first-upload` | 建置已暫停的身分引導產物；圖示工作恢復前請勿上傳 |
+| `npm run build:chrome-web-store:first-upload` | 建置商店身分引導產物；送審前同步 Item ID/public key |
 | `npm run test:dev-package-smoke` | 驗證壓縮檔層級、執行檔、雜湊與 skill 參照 |
 
 隔離整合測試使用暫存連接埠、profile 與 relay 程序，不得指向個人瀏覽器 profile 或既有的個人 App 執行個體。

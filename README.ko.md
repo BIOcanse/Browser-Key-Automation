@@ -2,13 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | 한국어 | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation은 신뢰할 수 있는 Agent 또는 자동화 프로그램이 Manifest V3 확장 프로그램과 API Key를 통해 권한이 부여된 로컬 Chromium 브라우저를 제어할 수 있게 합니다.
+Browser Key Automation은 지금 사용 중인 Chromium 브라우저를 신뢰하는 Agent와 자동화 프로그램을 위한 Key 범위 제어면으로 바꿉니다. 확장 프로그램을 한 번 설치하고 Key를 만들면, 권한 있는 클라이언트가 별도 자동화 브라우저를 띄우지 않고 기존 로그인 탭 사이를 오가며 작업할 수 있습니다.
 
-Key 인증, 권한, 브라우저 참조, 점유 및 브라우저 작업은 확장 프로그램이 소유합니다. 작은 Zig 동반 App은 로컬 라우팅, App이 할당한 브라우저 Instance 참조, 파일 저장, 그리고 명시적으로 광고한 네이티브 기능만 제공합니다.
+기본 경로는 일반 확장 API를 사용하며 CDP, WebDriver, remote-debugging 스위치 또는 `chrome.debugger`를 사용하지 않습니다. 설치, 사이트 접근, 한 번 필요한 **Allow User Scripts** 설정은 계속 Chromium이 담당합니다. 이 설정을 마친 뒤 일상 브라우저 명령은 디버거를 연결하지 않으며 Chrome의 디버깅 연결 확인이나 경고 막대도 표시하지 않습니다.
 
-> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다.
+## Browser Key Automation을 선택하는 이유
 
-최종 아이콘 디자인이 끝날 때까지 Chrome Web Store 작업은 중단되었습니다. [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.1.zip`과 `browser-key-automation-local-app-v0.0.0.1.zip`, 정확히 두 개의 다운로드만 있습니다. [GitHub Release 전달 계약](docs/implementation/github-release-delivery.md)을 참조하십시오.
+- **눈앞의 브라우저를 그대로 제어합니다.** 실제 로그인 상태, 쿠키, 확장 프로그램, 사람이 도달한 페이지 상태를 유지하면서 언제든 탭을 나열·생성·선택·이동·새로고침·닫을 수 있습니다.
+- **전체 페이지를 Agent 크기의 깨끗한 보기로 만듭니다.** 캐시된 canonical 작업 트리는 전체 구조를 보존하면서 요청한 가지뿐만 펼칩니다. 문서가 바뀔 때까지 Key별 펼침 상태를 유지하고, 깊이·범위·하위 트리의 일회성 보기는 캐시 상태를 바꾸지 않습니다.
+- **열린 디버깅 엔드포인트 대신 Key로 신뢰 범위를 정합니다.** Root/Regular Key에는 명시적 권한, 만료, 재표시, 비활성화, 폐기 제어가 있습니다. 같은 Key의 호출은 직렬화되고 서로 다른 Key는 독립적으로 일할 수 있습니다.
+- **접미사 하나로 네이티브 클릭을 사용합니다.** Windows의 `dom.click.real`은 확장이 관찰한 요소 좌표와 로컬 App을 결합해 페이지가 합성 DOM 활성화를 거부할 때 OS 수준 왼쪽 클릭을 보냅니다. 대상은 여전히 살아 있고 보이며 활성화되어 있고 가려지지 않아야 합니다.
+- **파일을 일급 기능으로 취급합니다.** MHTML 저장, 보이는 viewport 캡처, 리소스의 제한된 Artifact 변환과 디스크 저장, 자체 포함 HTML 업로드, 로컬 Web 서버 없는 브라우저 데모 열기를 바로 수행합니다.
+- **신뢰하는 여러 클라이언트가 협력할 수 있습니다.** Key가 탭 또는 전역을 점유해 오염 상태를 막고, 다른 권한 있는 Key는 먼저 기존 점유를 명시적으로 해제한 뒤 획득합니다.
+
+### 워크플로 비교
+
+연결 모델은 2026-09-01 기준으로 확인했습니다. 이 표는 이론적 기능 한계가 아니라 일반 사용 경로를 비교합니다.
+
+| 방식 | 기존 로그인 Chromium | 일반 제어 경로 | 가장 적합한 용도 |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | 가능, 권한 있는 탭을 자유롭게 횡단 | 일반 확장 API + Key 인증. 로컬 App은 라우팅, 파일, 선택적 `.real` 클릭 추가 | 디버거 연결 없는 장기 Agent 제어, 선택형 캐시 트리, 통합 파일 흐름 |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype), [Puppeteer](https://pptr.dev/guides/browser-management), [Selenium](https://www.selenium.dev/documentation/overview/) | 일반 경로는 자동화 세션을 만들지만 기존 Chromium 연결 경로도 제공 | Playwright/CDP, Puppeteer/CDP 또는 WebDriver | 결정적 테스트, 크로스 브라우저 검증, CI, 성숙한 locator 및 디버깅 생태계 |
+| [Playwright MCP 확장](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | 가능. profile token으로 자체 후속 연결 승인을 생략 가능 | Chrome `debugger` 권한을 선언한 확장을 통해 Playwright 중계 | 선택한 기존 탭에서 Playwright action과 accessibility snapshot 사용 |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | remote debugging을 켜거나 디버깅 엔드포인트를 노출한 뒤 가능 | DevTools/CDP. Chrome auto-connect는 디버깅 세션마다 사용자 허용 요청 | Console, Network, Performance, memory 등 깊은 DevTools 진단 |
+| [Browser MCP](https://browsermcp.io/) | 사용자가 현재 탭을 연결한 뒤 가능 | 확장 + 로컬 MCP, 명시적으로 연결한 작업 탭을 대상으로 함 | 선택한 기존 탭 하나를 위한 간결한 MCP 표면 |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | 가능, 탭 횡단 | 확장 + native-messaging bridge. manifest가 일반 권한 외에 `debugger` 요청 | 폭넓은 크로스 탭 MCP, 네트워크 캡처, 다운로드, 파일 업로드 |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | 가능 | Puppeteer/CDP 기반 통합 브라우저 Agent, 사용자가 LLM provider Key 제공 | provider-neutral 제어면이 아닌 통합 multi-Agent UI |
+
+Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevTools 진단을 대체하지 않습니다. 사람이 쓰는 브라우저를 낮은 마찰과 명시적 권한으로 제어하고, Agent가 실제 작업을 마칠 만큼 깨끗한 구조와 파일 기능을 제공하는 별도 역할입니다.
+
+> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다. Store listing은 준비 중이며, 완료 전에는 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.1.zip`과 `browser-key-automation-local-app-v0.0.0.1.zip`, 정확히 두 개의 다운로드만 있습니다. 구조는 [GitHub Release 전달 계약](docs/implementation/github-release-delivery.md)을 따릅니다.
 
 ## 주요 기능
 
@@ -172,7 +195,7 @@ Windows와 Linux App은 모두 라우팅과 파일 저장을 제공합니다. Wi
 | `npm run test:runtime` | 단위 테스트와 격리 relay/Chromium 통합 테스트 |
 | `npm run build:dev-package` | 확장 프로그램 및 두 플랫폼 App 패키지 빌드 |
 | `npm run build:github-release` | GitHub Releases에 게시할 정확히 두 ZIP 빌드 |
-| `npm run build:chrome-web-store:first-upload` | 중단된 ID 부트스트랩 산출물 빌드. 아이콘 작업 재개 전에는 업로드하지 않음 |
+| `npm run build:chrome-web-store:first-upload` | Store ID 부트스트랩 산출물 빌드. 심사 제출 전에 Item ID/public key 동기화 |
 | `npm run test:dev-package-smoke` | 아카이브 구조, 실행 파일, 해시, skill 참조 검증 |
 
 격리 통합 테스트는 임시 port, profile, relay를 사용합니다. 개인 브라우저 profile이나 기존 개인 App Instance를 대상으로 삼지 마십시오.

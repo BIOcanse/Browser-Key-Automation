@@ -2,13 +2,36 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | Français | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation permet à un Agent ou programme d'automatisation de confiance de piloter un navigateur Chromium local autorisé au moyen d'une extension Manifest V3 et d'une API Key.
+Browser Key Automation transforme le navigateur Chromium que vous utilisez déjà en surface d'automatisation délimitée par Key pour des Agents et programmes de confiance. Après une installation et la création d'une Key, un client autorisé peut travailler entre vos onglets déjà connectés sans lancer un navigateur d'automatisation séparé.
 
-L'extension possède l'authentification des Keys, les permissions, les références du navigateur, les occupations et les opérations du navigateur. La petite App compagnon en Zig fournit uniquement le routage local, les références d'Instance attribuées par l'App, l'écriture des fichiers et les capacités natives qu'elle annonce explicitement.
+Le chemin principal utilise les API ordinaires d'extension, et non CDP, WebDriver, des options remote-debugging ou `chrome.debugger`. Chromium continue de gérer l'installation, l'accès aux sites et le réglage unique **Allow User Scripts**. Après cette configuration, les commandes courantes n'attachent pas de débogueur et n'affichent ni confirmation de connexion de débogage ni barre d'avertissement de Chrome.
 
-> État de développement : la version de développement unpacked actuelle cible Chrome/Chromium 138 ou version ultérieure. Ce n'est pas une publication du Chrome Web Store.
+## Pourquoi Browser Key Automation ?
 
-Le travail Chrome Web Store est suspendu jusqu'à la conception de l'icône définitive. Utilisez [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases) : chaque Release comporte exactement deux téléchargements, `browser-key-automation-extension-v0.0.0.1.zip` et `browser-key-automation-local-app-v0.0.0.1.zip`. Voir le [contrat de livraison GitHub Release](docs/implementation/github-release-delivery.md).
+- **Contrôle transparent du navigateur déjà devant vous.** Lister, créer, sélectionner, naviguer, recharger et fermer des onglets à tout moment, tout en conservant les sessions, cookies, extensions et états de page atteints manuellement.
+- **Toute la page dans une vue adaptée à l'Agent.** L'arbre d'opérations canonical mis en cache garde la structure globale visible, ne développe que les branches demandées et conserve l'état de chaque Key jusqu'au changement de document. Les vues ponctuelles par profondeur, plage ou sous-arbre ne modifient pas cet état.
+- **Une confiance délimitée par Key plutôt qu'un endpoint de débogage ouvert.** Les Keys Root et Regular ont des permissions, une expiration, une nouvelle révélation, une désactivation et une révocation explicites. Les appels d'une même Key sont sérialisés ; des Keys différentes travaillent indépendamment.
+- **Un clic natif avec un seul suffixe.** Sous Windows, `dom.click.real` combine la géométrie d'élément observée par l'extension avec l'App locale pour envoyer un clic gauche au niveau OS lorsqu'une page refuse l'activation DOM synthétique. La cible doit rester présente, visible, active et non masquée.
+- **Les fichiers sont de première classe.** Enregistrer une page en MHTML, capturer le viewport visible, récupérer des ressources comme Artifacts bornés et les écrire sur disque, téléverser du HTML autonome et l'ouvrir comme démonstration sans serveur Web local.
+- **Coordination de plusieurs clients de confiance.** Une Key peut occuper un onglet ou la portée globale pour éviter un état incohérent ; une autre Key autorisée doit libérer explicitement cette occupation avant de l'acquérir.
+
+### Comparaison des flux de travail
+
+Modèles de connexion vérifiés le 2026-09-01. La comparaison porte sur les parcours habituels, pas sur les plafonds théoriques de fonctions.
+
+| Approche | Chromium existant et connecté | Chemin de contrôle habituel | Meilleur usage |
+| --- | --- | --- | --- |
+| **Browser Key Automation** | Oui, sur tout onglet autorisé | API ordinaires d'extension + authentification Key ; l'App locale ajoute routage, fichiers et clic `.real` facultatif | Accès Agent durable sans attachement d'un débogueur, arbre de cache sélectif et flux de fichiers intégrés |
+| [Playwright](https://playwright.dev/docs/api/class-browsertype), [Puppeteer](https://pptr.dev/guides/browser-management), [Selenium](https://www.selenium.dev/documentation/overview/) | Le parcours habituel crée une session d'automatisation ; la connexion à un Chromium existant est aussi possible | Playwright/CDP, Puppeteer/CDP ou WebDriver | Tests déterministes, validation multi-navigateurs, CI et écosystèmes matures de locators et de débogage |
+| [Extension Playwright MCP](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | Oui ; un token de profil peut supprimer sa propre approbation ultérieure | Playwright relayé par une extension qui déclare la permission Chrome `debugger` | Actions Playwright et accessibility snapshots sur des onglets existants sélectionnés |
+| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | Oui, après activation du remote debugging ou exposition d'un endpoint de débogage | DevTools/CDP ; l'auto-connect de Chrome demande l'autorisation pour chaque session de débogage | Diagnostic profond Console, Network, Performance, mémoire et autres DevTools |
+| [Browser MCP](https://browsermcp.io/) | Oui, après connexion de l'onglet courant par l'utilisateur | Extension + MCP local, limité à l'onglet de travail explicitement connecté | Une surface MCP compacte pour un onglet existant choisi |
+| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | Oui, entre les onglets | Extension + native-messaging bridge ; le manifest demande `debugger` en plus des permissions ordinaires | Outils MCP étendus entre onglets, capture réseau, téléchargements et téléversement de fichiers |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | Oui | Agent intégré au navigateur sur Puppeteer/CDP, avec Keys de LLM provider fournies par l'utilisateur | Une UI multi-Agent intégrée plutôt qu'un plan de contrôle indépendant du provider |
+
+Browser Key Automation ne remplace ni les suites de tests Playwright/Selenium ni les diagnostics DevTools approfondis. Il occupe un autre rôle : contrôler avec peu de friction et des permissions explicites le navigateur qu'une personne utilise déjà, avec une structure claire et des fichiers suffisants pour les tâches pratiques d'un Agent.
+
+> État de développement : la version de développement unpacked actuelle cible Chrome/Chromium 138 ou version ultérieure. Ce n'est pas une publication du Chrome Web Store. La fiche Store est en préparation ; en attendant, utilisez [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.1.zip` et `browser-key-automation-local-app-v0.0.0.1.zip`. Leur structure suit le [contrat de livraison GitHub Release](docs/implementation/github-release-delivery.md).
 
 ## Fonctionnalités
 
@@ -172,7 +195,7 @@ Les Apps Windows et Linux fournissent toutes deux le routage et l'écriture de f
 | `npm run test:runtime` | Tests unitaires plus intégration relay/Chromium isolée |
 | `npm run build:dev-package` | Construire l'extension et les Apps des deux plateformes |
 | `npm run build:github-release` | Construire exactement les deux ZIP publiés dans GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Construire l'artefact d'identité suspendu ; ne pas le téléverser avant la reprise du travail sur l'icône |
+| `npm run build:chrome-web-store:first-upload` | Construire l'artefact d'identité Store ; synchroniser Item ID/public key avant soumission à l'examen |
 | `npm run test:dev-package-smoke` | Vérifier la structure des archives, exécutables, hachages et références du skill |
 
 Les tests d'intégration isolés utilisent des ports, profils et processus relay temporaires. Ils ne doivent jamais cibler un profil de navigateur personnel ni une Instance d'App personnelle existante.
