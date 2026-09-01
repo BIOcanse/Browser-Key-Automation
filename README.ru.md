@@ -8,7 +8,7 @@ Browser Key Automation позволяет доверенному Agent или п
 
 > Статус разработки: текущая unpacked-сборка предназначена для Chrome/Chromium 138 и новее. Это не публикация в Chrome Web Store.
 
-Отдельный ZIP для первой загрузки позволяет создать элемент Web Store, но его нельзя публиковать до синхронизации public key из Dashboard, ID расширения и Origin-фильтра локального App. См. [контракт поставки Chrome Web Store](docs/implementation/chrome-web-store-delivery.md).
+Работа над Chrome Web Store приостановлена до разработки окончательной иконки. Используйте [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases): в каждом Release ровно две загрузки — `browser-key-automation-extension-v0.0.0.1.zip` и `browser-key-automation-local-app-v0.0.0.1.zip`. См. [контракт поставки GitHub Release](docs/implementation/github-release-delivery.md).
 
 ## Возможности
 
@@ -74,6 +74,8 @@ npm run build:dev-package
 
 Расширение и локальное App намеренно поставляются отдельно. В каждом архиве есть собственные `START-HERE.md` и `SHA256SUMS.txt`.
 
+`npm run build:github-release` объединяет эти проверенные промежуточные пакеты в два assets для GitHub: один ZIP расширения и один ZIP App с relay-каталогами `windows-x86_64/` и `linux-x86_64/`, а также одной общей копией CLI, протокола и Agent skill.
+
 ### 2. Загрузите расширение
 
 1. Полностью распакуйте архив расширения.
@@ -86,16 +88,18 @@ npm run build:dev-package
 
 ### 3. Запустите сопутствующее App
 
-Распакуйте архив для своей платформы и оставьте relay запущенным:
+Распакуйте архив App из GitHub Release и оставьте запущенным relay текущей платформы:
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+В платформенных промежуточных App-пакетах `-dev` relay по-прежнему лежит в корне архива; при их использовании следуйте вложенному `START-HERE.md`.
 
 Endpoint по умолчанию — `127.0.0.1:32189`. Если App недоступно, расширение повторяет попытки с настроенным номинальным интервалом 10 секунд до подключения. Не запускайте второе App, если фиксированный endpoint уже принадлежит совместимому экземпляру.
 
@@ -167,7 +171,8 @@ Apps для Windows и Linux предоставляют маршрутизаци
 | `npm run test:unit` | Unit-тесты UI, Key, runtime, WebSocket и Zig |
 | `npm run test:runtime` | Unit-тесты и изолированная интеграция relay/Chromium |
 | `npm run build:dev-package` | Сборка расширения и Apps для обеих платформ |
-| `npm run build:chrome-web-store:first-upload` | Сборка ZIP начальной идентичности только для создания элемента Web Store |
+| `npm run build:github-release` | Сборка ровно двух ZIP, публикуемых в GitHub Releases |
+| `npm run build:chrome-web-store:first-upload` | Сборка приостановленного артефакта идентичности; не загружать до возобновления работы над иконкой |
 | `npm run test:dev-package-smoke` | Проверка структуры архивов, исполняемых файлов, хешей и ссылок skill |
 
 Изолированные интеграционные тесты используют временные порты, профили и процессы relay. Они не должны быть направлены на личный профиль браузера или уже работающий личный Instance App.

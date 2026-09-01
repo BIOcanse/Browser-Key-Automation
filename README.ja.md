@@ -8,7 +8,7 @@ Key 認証、権限、ブラウザー参照、占有、ブラウザー操作は�
 
 > 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。
 
-Web Store アイテム作成専用の初回アップロード ZIP も生成できますが、Dashboard の public key、拡張機能 ID、ローカル App の Origin ゲートを同期するまでは公開してはいけません。詳細は [Chrome Web Store 配布契約](docs/implementation/chrome-web-store-delivery.md)を参照してください。
+正式アイコンの設計が終わるまで Chrome Web Store 対応は一時停止しています。[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.1.zip` と `browser-key-automation-local-app-v0.0.0.1.zip` の 2 つだけです。詳細は [GitHub Release 配布契約](docs/implementation/github-release-delivery.md)を参照してください。
 
 ## 主な機能
 
@@ -74,6 +74,8 @@ npm run build:dev-package
 
 拡張機能とローカル App は意図的に別配布です。各アーカイブに `START-HERE.md` と `SHA256SUMS.txt` が含まれます。
 
+`npm run build:github-release` は、検証済み中間パッケージを GitHub 用の 2 資産に集約します。拡張機能 ZIP が 1 つ、そして `windows-x86_64/` と `linux-x86_64/` の relay および共通 CLI・protocol・Agent skill を 1 部だけ含む App ZIP が 1 つです。
+
 ### 2. 拡張機能を読み込む
 
 1. 拡張機能アーカイブを完全に展開します。
@@ -86,16 +88,18 @@ npm run build:dev-package
 
 ### 3. コンパニオン App を起動
 
-該当プラットフォームの App を展開し、relay を起動したままにします。
+GitHub Release の App を展開し、現在のプラットフォーム用 relay を起動したままにします。
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+プラットフォーム別の `-dev` App 中間パッケージでは relay がアーカイブのルートにあります。その場合は同梱の `START-HERE.md` に従ってください。
 
 既定の endpoint は `127.0.0.1:32189` です。App が利用できない間、拡張機能は設定済みの公称 10 秒間隔で接続成功まで再試行します。互換 App が固定 endpoint を使用中なら、2 つ目を起動しないでください。
 
@@ -167,7 +171,8 @@ Windows/Linux App はどちらもルーティングとファイル保存を提�
 | `npm run test:unit` | UI、Key、runtime、WebSocket、Zig の単体テスト |
 | `npm run test:runtime` | 単体テストと分離 relay/Chromium 統合テスト |
 | `npm run build:dev-package` | 拡張機能と両プラットフォーム App をパッケージ化 |
-| `npm run build:chrome-web-store:first-upload` | Web Store アイテム作成専用の ID 初期化 ZIP を構築 |
+| `npm run build:github-release` | GitHub Releases で公開する正確な 2 つの ZIP を構築 |
+| `npm run build:chrome-web-store:first-upload` | 一時停止中の ID 初期化成果物を構築。アイコン作業再開前はアップロードしない |
 | `npm run test:dev-package-smoke` | アーカイブ階層、実行ファイル、ハッシュ、skill 参照を検証 |
 
 分離統合テストは一時 port、profile、relay を使います。個人ブラウザー profile や既存の個人 App Instance に向けてはいけません。

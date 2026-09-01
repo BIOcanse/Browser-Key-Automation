@@ -8,7 +8,7 @@ Browser Key Automation 让可信 Agent 或自动化程序通过 Manifest V3 扩�
 
 > 开发状态：当前已解压扩展开发包面向 Chrome/Chromium 138 及以上版本；它目前不是 Chrome 应用商店发布版。
 
-另有一个首传 ZIP 可用于创建商店条目，但在 Dashboard public key、扩展 ID 与本地 App Origin 门禁完成同步前不得发布。详见 [Chrome Web Store 交付合同](docs/implementation/chrome-web-store-delivery.md)。
+Chrome Web Store 工作已暂停，等待正式图标设计。请使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)：每个 Release 固定只有两个下载项，`browser-key-automation-extension-v0.0.0.1.zip` 与 `browser-key-automation-local-app-v0.0.0.1.zip`。详见 [GitHub Release 交付合同](docs/implementation/github-release-delivery.md)。
 
 ## 当前能力
 
@@ -74,6 +74,8 @@ npm run build:dev-package
 
 扩展和本地 App 刻意分开交付。每个包都有自己的 `START-HERE.md` 和 `SHA256SUMS.txt`。
 
+`npm run build:github-release` 会把这些已经验证的中间包聚合成 GitHub 使用的两资产结构：一个扩展 ZIP，以及一个带 `windows-x86_64/`、`linux-x86_64/` relay 目录和单份公共 CLI、协议、Agent skill 的 App ZIP。
+
 ### 2. 加载扩展
 
 1. 完整解压扩展包。
@@ -86,16 +88,18 @@ npm run build:dev-package
 
 ### 3. 启动本地 App
 
-解压对应平台的 App 包并保持 relay 运行：
+解压 GitHub Release 的 App 包，并保持当前平台的 relay 运行：
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+按平台拆分的 `-dev` App 中间包仍把 relay 放在压缩包根部；使用开发中间包时按其中的 `START-HERE.md` 操作。
 
 默认端点为 `127.0.0.1:32189`。App 不可用时，扩展会按当前配置的名义 10 秒间隔持续重连，直到连接成功。固定端点已有兼容 App 时不要再启动第二份。
 
@@ -167,7 +171,8 @@ Windows/Linux App 都提供路由和文件落地；Windows 额外声明当前原
 | `npm run test:unit` | 运行 UI、Key、runtime、WebSocket 与 Zig 单元测试 |
 | `npm run test:runtime` | 运行单元测试以及隔离 relay/Chromium 集成测试 |
 | `npm run build:dev-package` | 构建扩展和两个平台的 App 包 |
-| `npm run build:chrome-web-store:first-upload` | 构建仅用于创建商店条目的身份引导 ZIP |
+| `npm run build:github-release` | 构建 GitHub Releases 实际发布的两份 ZIP |
+| `npm run build:chrome-web-store:first-upload` | 构建已暂停的身份引导产物；图标工作恢复前不要上传 |
 | `npm run test:dev-package-smoke` | 验证压缩包层级、可执行文件、哈希和 skill 引用 |
 
 隔离集成测试使用临时端口、profile 和 relay 进程，不得指向个人浏览器 profile 或已有个人 App 实例。

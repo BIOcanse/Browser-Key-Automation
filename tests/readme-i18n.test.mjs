@@ -24,6 +24,11 @@ const REQUIRED_SHARED_TOKENS = Object.freeze([
   "browser-key-automation-extension-dev.zip",
   "browser-key-automation-local-app-windows-x86_64-dev.zip",
   "browser-key-automation-local-app-linux-x86_64-dev.zip",
+  "browser-key-automation-extension-v0.0.0.1.zip",
+  "browser-key-automation-local-app-v0.0.0.1.zip",
+  "build:github-release",
+  "windows-x86_64",
+  "linux-x86_64",
   "manifest.json",
   "Allow User Scripts",
   "BKA_API_KEY",
@@ -44,6 +49,7 @@ const REQUIRED_SHARED_TOKENS = Object.freeze([
   "docs/README.md",
   "docs/decisions.md",
   "docs/PROGRESS.md",
+  "docs/implementation/github-release-delivery.md",
   "skills/browser-key-automation/SKILL.md",
 ]);
 

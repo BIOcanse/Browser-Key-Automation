@@ -8,7 +8,7 @@ Key 인증, 권한, 브라우저 참조, 점유 및 브라우저 작업은 확�
 
 > 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다.
 
-Web Store 항목을 만들기 위한 최초 업로드 ZIP은 별도로 생성할 수 있지만 Dashboard public key, 확장 프로그램 ID, 로컬 App Origin 게이트를 동기화하기 전에는 게시하면 안 됩니다. [Chrome Web Store 전달 계약](docs/implementation/chrome-web-store-delivery.md)을 참조하십시오.
+최종 아이콘 디자인이 끝날 때까지 Chrome Web Store 작업은 중단되었습니다. [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.1.zip`과 `browser-key-automation-local-app-v0.0.0.1.zip`, 정확히 두 개의 다운로드만 있습니다. [GitHub Release 전달 계약](docs/implementation/github-release-delivery.md)을 참조하십시오.
 
 ## 주요 기능
 
@@ -74,6 +74,8 @@ npm run build:dev-package
 
 확장 프로그램과 로컬 App은 의도적으로 따로 배포됩니다. 각 아카이브에 자체 `START-HERE.md`와 `SHA256SUMS.txt`가 있습니다.
 
+`npm run build:github-release`는 검증된 중간 패키지를 GitHub용 두 자산으로 모읍니다. 확장 프로그램 ZIP 하나와 `windows-x86_64/`, `linux-x86_64/` relay 디렉터리 및 한 벌의 공용 CLI·protocol·Agent skill을 담은 App ZIP 하나입니다.
+
 ### 2. 확장 프로그램 로드
 
 1. 확장 프로그램 아카이브를 완전히 풉니다.
@@ -86,16 +88,18 @@ npm run build:dev-package
 
 ### 3. 동반 App 시작
 
-플랫폼에 맞는 App 아카이브를 풀고 relay를 계속 실행합니다.
+GitHub Release App 아카이브를 풀고 현재 플랫폼의 relay를 계속 실행합니다.
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+플랫폼별 `-dev` App 중간 패키지는 relay를 아카이브 루트에 둡니다. 개발 중간 패키지를 사용할 때는 동봉된 `START-HERE.md`를 따르십시오.
 
 기본 endpoint는 `127.0.0.1:32189`입니다. App에 연결할 수 없으면 확장 프로그램은 설정된 명목상 10초 간격으로 연결될 때까지 다시 시도합니다. 호환 App이 고정 endpoint를 이미 사용 중이면 두 번째 App을 시작하지 마십시오.
 
@@ -167,7 +171,8 @@ Windows와 Linux App은 모두 라우팅과 파일 저장을 제공합니다. Wi
 | `npm run test:unit` | UI, Key, runtime, WebSocket, Zig 단위 테스트 |
 | `npm run test:runtime` | 단위 테스트와 격리 relay/Chromium 통합 테스트 |
 | `npm run build:dev-package` | 확장 프로그램 및 두 플랫폼 App 패키지 빌드 |
-| `npm run build:chrome-web-store:first-upload` | Web Store 항목 생성 전용 ID 부트스트랩 ZIP 빌드 |
+| `npm run build:github-release` | GitHub Releases에 게시할 정확히 두 ZIP 빌드 |
+| `npm run build:chrome-web-store:first-upload` | 중단된 ID 부트스트랩 산출물 빌드. 아이콘 작업 재개 전에는 업로드하지 않음 |
 | `npm run test:dev-package-smoke` | 아카이브 구조, 실행 파일, 해시, skill 참조 검증 |
 
 격리 통합 테스트는 임시 port, profile, relay를 사용합니다. 개인 브라우저 profile이나 기존 개인 App Instance를 대상으로 삼지 마십시오.

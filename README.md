@@ -8,7 +8,7 @@ The extension owns Key authentication, permissions, browser references, occupati
 
 > Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release.
 
-A separate initial-upload ZIP can create the Web Store item, but it must not be published until the Dashboard public key, extension ID, and local App Origin gate have been synchronized. See the [Chrome Web Store delivery contract](docs/implementation/chrome-web-store-delivery.md).
+Chrome Web Store work is paused until the final icon is designed. Use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases): each release intentionally has exactly two downloads, `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`. See the [GitHub Release contract](docs/implementation/github-release-delivery.md).
 
 ## What It Can Do
 
@@ -74,6 +74,8 @@ The build produces three independent archives:
 
 The extension and local App are deliberately separate. Each archive contains its own `START-HERE.md` and `SHA256SUMS.txt`.
 
+`npm run build:github-release` turns those verified intermediates into the same two-asset layout used on GitHub: one extension ZIP and one App ZIP with `windows-x86_64/` and `linux-x86_64/` relay directories plus one shared CLI, protocol, and Agent skill.
+
 ### 2. Load the extension
 
 1. Extract the extension archive completely.
@@ -86,16 +88,18 @@ The first installation opens a local setup page. Updates and reloads do not repe
 
 ### 3. Start the companion App
 
-Extract the matching App archive and keep the relay running:
+Extract the GitHub Release App archive and keep the relay for the current platform running:
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+The per-platform `-dev` App archives place their relay at the archive root instead; follow the included `START-HERE.md` when using those developer intermediates.
 
 The default endpoint is `127.0.0.1:32189`. If the App is unavailable, the extension retries at the configured nominal 10-second interval until it connects. Do not start a second App when the fixed endpoint is already owned by a compatible instance.
 
@@ -167,7 +171,8 @@ The Windows and Linux Apps both provide routing and file delivery. Windows addit
 | `npm run test:unit` | Run UI, Key, runtime, WebSocket, and Zig unit tests |
 | `npm run test:runtime` | Run unit tests plus isolated relay/Chromium integration tests |
 | `npm run build:dev-package` | Build the extension and both platform App packages |
-| `npm run build:chrome-web-store:first-upload` | Build the identity-bootstrap ZIP used only to create the Web Store item |
+| `npm run build:github-release` | Build the exact two ZIPs published on GitHub Releases |
+| `npm run build:chrome-web-store:first-upload` | Build the paused identity-bootstrap artifact; do not upload it before icon work resumes |
 | `npm run test:dev-package-smoke` | Verify archive layout, executables, hashes, and packaged skill references |
 
 Isolated integration tests use temporary ports, profiles, and relay processes. They must not be pointed at a personal browser profile or an existing personal App instance.

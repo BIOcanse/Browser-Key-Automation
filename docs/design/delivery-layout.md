@@ -6,7 +6,7 @@
 
 - 浏览器扩展是一个独立交付物。用户解压后，把该目录本身交给 Chrome；不需要理解总包、子目录或本地 App。
 - 本地 App 是另一个独立交付物。用户按平台下载并解压，目录根部直接看到可执行文件；Agent 客户端、配套 skill、精确 command/Freedom registry references 和 transport profile 随 App 交付。
-- Windows 与 Linux 是同一个本地 App 的两个平台产物，不混装到同一个用户包。
+- Windows 与 Linux 是同一个本地 App 的两个平台产物。开发中间包仍按平台分开；GitHub Release 的单一 App 下载包只在交付层聚合，并把两个 relay 隔离在明确的平台目录。
 - 不再把 extension、Windows relay、Linux relay 和 client 套进一个 combined ZIP 作为主要安装入口。
 
 ## 当前产物
@@ -56,9 +56,13 @@ ZIP 只负责传递。Chrome 不能直接加载 ZIP；解压 extension ZIP 后�
 
 分开交付也必须分开更新；修改 extension UI 时不应因为打包器耦合而中断正在运行的本地 App。
 
+## GitHub Release 下载面
+
+开发阶段仍保留三个独立中间包，便于只重建扩展或只验证某个平台。GitHub Release 则按用户下载职责收敛为恰好两个资产：一个 extension ZIP，一个 local App ZIP。后者只合并交付层，Windows/Linux relay 仍在各自平台目录，公共 CLI、协议与 skill 只出现一次。完整结构见 [GitHub Release 两资产交付](../implementation/github-release-delivery.md)。
+
 ## Chrome Web Store 包
 
-Web Store 包不是开发扩展 ZIP 的改名副本。`npm run build:chrome-web-store:first-upload` 从同一 `out/extension` 运行产物建立独立 ZIP，只在上传副本中移除开发固定 `key`，并排除 `START-HERE.md`、内部 SHA 清单和本地 App。首次上传仅用于取得 Dashboard Item ID/public key；同步固定 ID 与 App Origin 门禁并递增版本后才能发布。完整合同和验收项见 [Chrome Web Store 交付切片](../implementation/chrome-web-store-delivery.md)。
+Web Store 包不是开发扩展 ZIP 的改名副本。`npm run build:chrome-web-store:first-upload` 从同一 `out/extension` 运行产物建立独立 ZIP，只在上传副本中移除开发固定 `key`，并排除 `START-HERE.md`、内部 SHA 清单和本地 App。该流程目前按用户裁定暂停，等待图标设计确认；现有 ZIP 不上传。恢复后首次上传仅用于取得 Dashboard Item ID/public key；同步固定 ID 与 App Origin 门禁并递增版本后才能发布。完整合同和验收项见 [Chrome Web Store 交付切片](../implementation/chrome-web-store-delivery.md)。
 
 ## 参考证据
 

@@ -2,6 +2,8 @@
 
 更新：2026-08-31。
 
+> 当前状态：按用户 2026-08-31 的最新裁定暂停。现有图标仅是开发阶段临时图标；在图标设计确认前，不上传本页 ZIP、不创建 Dashboard 条目、不提交审核。当前对外交付改为 [GitHub Release 两资产](github-release-delivery.md)。
+
 本切片只增加 Chrome Web Store 发布产物与仓库发布边界，不改变扩展命令、Key 鉴权、页面树、占据、relay 路由或 `.real` 语义。
 
 ## 目标

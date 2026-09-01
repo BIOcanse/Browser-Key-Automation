@@ -8,7 +8,7 @@ A extensão é dona da autenticação das Keys, das permissões, das referência
 
 > Estado de desenvolvimento: o build de desenvolvimento unpacked atual é voltado para Chrome/Chromium 138 ou posterior. Ele não é uma publicação da Chrome Web Store.
 
-Um ZIP separado para o primeiro upload pode criar o item da Web Store, mas não deve ser publicado antes da sincronização da public key do Dashboard, do ID da extensão e da verificação de Origin do App local. Consulte o [contrato de entrega da Chrome Web Store](docs/implementation/chrome-web-store-delivery.md).
+O trabalho da Chrome Web Store está pausado até o design do ícone final. Use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases): cada Release tem exatamente dois downloads, `browser-key-automation-extension-v0.0.0.1.zip` e `browser-key-automation-local-app-v0.0.0.1.zip`. Consulte o [contrato de entrega do GitHub Release](docs/implementation/github-release-delivery.md).
 
 ## Recursos
 
@@ -74,6 +74,8 @@ O build produz três arquivos independentes:
 
 A extensão e o App local são entregues separadamente de propósito. Cada arquivo contém seu próprio `START-HERE.md` e `SHA256SUMS.txt`.
 
+`npm run build:github-release` reúne esses intermediários verificados em dois assets do GitHub: um ZIP da extensão e um ZIP do App com os relays `windows-x86_64/` e `linux-x86_64/`, além de uma única cópia compartilhada da CLI, do protocolo e do skill do Agent.
+
 ### 2. Carregar a extensão
 
 1. Extrair completamente o arquivo da extensão.
@@ -86,16 +88,18 @@ A primeira instalação abre uma página local de configuração. Atualizações
 
 ### 3. Iniciar o App complementar
 
-Extrair o arquivo do App correspondente à plataforma e manter o relay em execução:
+Extrair o arquivo do App do GitHub Release e manter em execução o relay da plataforma atual:
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+Os intermediários App `-dev` específicos de plataforma ainda colocam o relay na raiz do arquivo; siga o `START-HERE.md` incluído ao usá-los.
 
 O endpoint padrão é `127.0.0.1:32189`. Se o App estiver indisponível, a extensão tenta novamente no intervalo nominal configurado de 10 segundos até se conectar. Não iniciar um segundo App quando uma instância compatível já possui o endpoint fixo.
 
@@ -167,7 +171,8 @@ Os Apps Windows e Linux fornecem roteamento e escrita de arquivos. O Windows tam
 | `npm run test:unit` | Testes unitários de UI, Key, runtime, WebSocket e Zig |
 | `npm run test:runtime` | Testes unitários mais integração isolada relay/Chromium |
 | `npm run build:dev-package` | Criar a extensão e os Apps das duas plataformas |
-| `npm run build:chrome-web-store:first-upload` | Criar o ZIP de identidade usado apenas para cadastrar o item da Web Store |
+| `npm run build:github-release` | Criar exatamente os dois ZIP publicados no GitHub Releases |
+| `npm run build:chrome-web-store:first-upload` | Criar o artefato de identidade pausado; não fazer upload antes de retomar o trabalho do ícone |
 | `npm run test:dev-package-smoke` | Verificar estrutura, executáveis, hashes e referências do skill |
 
 Os testes de integração isolados usam portas, perfis e processos relay temporários. Eles não devem apontar para um perfil de navegador pessoal nem para uma Instance de App pessoal existente.

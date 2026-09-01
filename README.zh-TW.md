@@ -8,7 +8,7 @@ Browser Key Automation 讓可信 Agent 或自動化程式透過 Manifest V3 擴�
 
 > 開發狀態：目前的解壓縮擴充功能開發包以 Chrome/Chromium 138 以上版本為目標；目前不是 Chrome 線上應用程式商店版本。
 
-另有一個首次上傳 ZIP 可用來建立商店項目，但在 Dashboard public key、擴充功能 ID 與本機 App Origin 閘門完成同步前不得發布。詳見 [Chrome Web Store 交付合約](docs/implementation/chrome-web-store-delivery.md)。
+Chrome Web Store 工作已暫停，等待正式圖示設計。請使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)：每個 Release 固定只有兩個下載項目，`browser-key-automation-extension-v0.0.0.1.zip` 與 `browser-key-automation-local-app-v0.0.0.1.zip`。詳見 [GitHub Release 交付合約](docs/implementation/github-release-delivery.md)。
 
 ## 目前能力
 
@@ -74,6 +74,8 @@ npm run build:dev-package
 
 擴充功能與本機 App 刻意分開交付。每個壓縮檔都有自己的 `START-HERE.md` 與 `SHA256SUMS.txt`。
 
+`npm run build:github-release` 會把這些已驗證的中間套件聚合成 GitHub 使用的兩資產結構：一個擴充功能 ZIP，以及一個含 `windows-x86_64/`、`linux-x86_64/` relay 目錄與單份共用 CLI、協定、Agent skill 的 App ZIP。
+
 ### 2. 載入擴充功能
 
 1. 完整解壓縮擴充功能套件。
@@ -86,16 +88,18 @@ npm run build:dev-package
 
 ### 3. 啟動本機 App
 
-解壓縮對應平台的 App 套件，並保持 relay 執行：
+解壓縮 GitHub Release 的 App 套件，並保持目前平台的 relay 執行：
 
 ```text
 # Windows
-.\browser-key-relay.exe
+.\windows-x86_64\browser-key-relay.exe
 
 # Linux
-chmod +x ./browser-key-relay
-./browser-key-relay
+chmod +x ./linux-x86_64/browser-key-relay
+./linux-x86_64/browser-key-relay
 ```
+
+按平台拆分的 `-dev` App 中間套件仍把 relay 放在壓縮檔根部；使用開發中間套件時請依照其中的 `START-HERE.md`。
 
 預設端點為 `127.0.0.1:32189`。App 無法使用時，擴充功能會依目前設定的名義 10 秒間隔持續重新連線，直到成功。固定端點已由相容 App 使用時，請勿再啟動第二份。
 
@@ -167,7 +171,8 @@ Windows/Linux App 都提供路由與檔案落地；Windows 額外宣告目前的
 | `npm run test:unit` | 執行 UI、Key、runtime、WebSocket 與 Zig 單元測試 |
 | `npm run test:runtime` | 執行單元測試及隔離 relay/Chromium 整合測試 |
 | `npm run build:dev-package` | 建置擴充功能與兩個平台 App 套件 |
-| `npm run build:chrome-web-store:first-upload` | 建置僅用於建立商店項目的身分引導 ZIP |
+| `npm run build:github-release` | 建置 GitHub Releases 實際發布的兩份 ZIP |
+| `npm run build:chrome-web-store:first-upload` | 建置已暫停的身分引導產物；圖示工作恢復前請勿上傳 |
 | `npm run test:dev-package-smoke` | 驗證壓縮檔層級、執行檔、雜湊與 skill 參照 |
 
 隔離整合測試使用暫存連接埠、profile 與 relay 程序，不得指向個人瀏覽器 profile 或既有的個人 App 執行個體。
