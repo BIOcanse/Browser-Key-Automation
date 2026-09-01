@@ -1,0 +1,1377 @@
+{
+  "registryId": "freedom.v1",
+  "schemaVersion": 1,
+  "points": [
+    {
+      "pointId": "build.artifact.chunk_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1048576,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 65536,
+      "maximumInteger": 8388608,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/artifact-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Commits Artifact bodies as bounded IndexedDB ArrayBuffer records so one artifact.read clones at most the chunks intersecting its requested byte range."
+    },
+    {
+      "pointId": "build.artifact.hard_maximum_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 67108864,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1048576,
+      "maximumInteger": 536870912,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/capture-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Hard upper bound for one browser/resource body before it can be committed as an Artifact."
+    },
+    {
+      "pointId": "build.artifact.hard_maximum_total_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 268435456,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1048576,
+      "maximumInteger": 2147483647,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/settings-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Hard ceiling for the configurable aggregate Artifact byte policy."
+    },
+    {
+      "pointId": "build.transport.loopback_bind",
+      "family": "build",
+      "kind": "loopback_bind",
+      "defaultInteger": null,
+      "defaultString": null,
+      "defaultLoopbackBind": {
+        "host": "127.0.0.1",
+        "port": 32189
+      },
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/client/src/main.mjs",
+        "apps/client/src/native-websocket.mjs",
+        "apps/extension/src/transport-worker.ts",
+        "apps/relay/src/server.zig"
+      ],
+      "emitTargets": [
+        "manifest",
+        "typescript",
+        "zig",
+        "javascript"
+      ],
+      "safetyContract": "One explicit numeric IPv4 address inside 127/8 and one port; no wildcard, DNS, port scan, dual-stack guess, or fallback endpoint. The active development/release value is 127.0.0.1:32189. Paths and subprotocols are versioned transport constants, not values in this point."
+    },
+    {
+      "pointId": "client.default_read_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 130000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 900000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/client/src/main.mjs"
+      ],
+      "emitTargets": [
+        "typescript",
+        "javascript"
+      ],
+      "safetyContract": "Default CLI response wait, without operation replay."
+    },
+    {
+      "pointId": "client.maximum_read_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 900000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 900000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/client/src/main.mjs"
+      ],
+      "emitTargets": [
+        "typescript",
+        "javascript"
+      ],
+      "safetyContract": "Bounded explicit CLI read timeout."
+    },
+    {
+      "pointId": "command.artifact.read.maximum_raw_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 36000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 40000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Raw Artifact bytes are base64url-expanded and still leave a fixed response-envelope margin below the 65536-byte transport frame."
+    },
+    {
+      "pointId": "command.artifact.upload.maximum_raw_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 36000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 40000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Raw upload chunk size leaves room for base64url, Key and route envelopes; returned by begin, never guessed by callers."
+    },
+    {
+      "pointId": "command.demo.open.default_active",
+      "family": "build",
+      "kind": "boolean",
+      "defaultInteger": null,
+      "defaultString": null,
+      "defaultBoolean": true,
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default selects a new or explicitly addressed demo tab, never requests OS foreground; false remains available."
+    },
+    {
+      "pointId": "command.dom.click.real.default_scroll_into_view",
+      "family": "build",
+      "kind": "boolean",
+      "defaultInteger": null,
+      "defaultString": null,
+      "defaultBoolean": true,
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default performs one immediate scrollIntoView preparation; explicit false preserves the current viewport."
+    },
+    {
+      "pointId": "command.dom.click.real.default_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default finite deadline for preparation and one native click round trip."
+    },
+    {
+      "pointId": "command.dom.click.real.maximum_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Maximum caller-selected native click deadline; no timeout path silently retries input."
+    },
+    {
+      "pointId": "command.dom.focus.default_prevent_scroll",
+      "family": "build",
+      "kind": "boolean",
+      "defaultInteger": null,
+      "defaultString": null,
+      "defaultBoolean": true,
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default focus does not change scroll; explicit false remains available."
+    },
+    {
+      "pointId": "command.dom.maximum_descriptor_text_characters",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 64,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds each projected DOM descriptor text field before structured clone and transport encoding."
+    },
+    {
+      "pointId": "command.dom.maximum_document_refs",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 512,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 16,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the service-worker DocumentRef registry; capacity failure never evicts a still-live reference early."
+    },
+    {
+      "pointId": "command.dom.maximum_node_refs_per_document",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 16,
+      "maximumInteger": 16384,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the isolated-world element token table for one document."
+    },
+    {
+      "pointId": "command.dom.maximum_value_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 32768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 256,
+      "maximumInteger": 262144,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds caller-supplied selector, value and option strings before DOM dispatch."
+    },
+    {
+      "pointId": "command.dom.query.maximum_results",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/dom-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one query result batch before NodeRef allocation and transport encoding."
+    },
+    {
+      "pointId": "command.dom.reference_ttl_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 300000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 10000,
+      "maximumInteger": 3600000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Short-lived DocumentRef and NodeRef leases fail stale after this elapsed policy; they are never guessed back from URL or selector."
+    },
+    {
+      "pointId": "command.dom.scroll.default_behavior",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "auto",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [
+        "auto",
+        "smooth"
+      ],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default scroll behavior."
+    },
+    {
+      "pointId": "command.dom.scroll.default_block",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "center",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [
+        "center",
+        "end",
+        "nearest",
+        "start"
+      ],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default vertical alignment."
+    },
+    {
+      "pointId": "command.dom.scroll.default_inline",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "nearest",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [
+        "center",
+        "end",
+        "nearest",
+        "start"
+      ],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default horizontal alignment."
+    },
+    {
+      "pointId": "command.frames.list.maximum_items",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 200,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 2000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one live frame projection and the number of DocumentRefs it can mint."
+    },
+    {
+      "pointId": "command.inline.maximum_result_json_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 49152,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 4096,
+      "maximumInteger": 61440,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts",
+        "apps/extension/src/background/capture-service.ts",
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/key-service.ts",
+        "apps/extension/src/background/page-tree-service.ts",
+        "apps/extension/src/background/tab-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Leaves protocol-envelope headroom below the 65536-byte WebSocket message ceiling; every variable inline list stops before adding an item that would cross it."
+    },
+    {
+      "pointId": "command.js.maximum_source_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 32768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 262144,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds decoded caller-supplied JavaScript source before chrome.userScripts.execute is called; the transport frame limit independently bounds its JSON wire expansion."
+    },
+    {
+      "pointId": "command.js.maximum_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 120000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 600000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Caps how long one js.execute response waits. Expiry never claims to cancel code already injected into the page."
+    },
+    {
+      "pointId": "command.js.maximum_value_json_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 45000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the JSON-escaped UTF-8 preview returned for a JavaScript completion value and leaves room for the response envelope."
+    },
+    {
+      "pointId": "command.keys.list.maximum_items",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/key-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one requested keys.list page before public Key records are projected and byte-budgeted."
+    },
+    {
+      "pointId": "command.page.dom.maximum_html_json_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 45000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the JSON-escaped UTF-8 live DOM prefix inside the injected fixed reader and leaves room for URL and protocol envelope fields."
+    },
+    {
+      "pointId": "command.page.resources.maximum_items",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 500,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 5000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds discovered DOM/performance resource references; truncated output never claims network-log completeness."
+    },
+    {
+      "pointId": "command.page.screenshot.default_format",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "png",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [
+        "jpeg",
+        "png"
+      ],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default screenshot encoding is expanded once at the extension command boundary."
+    },
+    {
+      "pointId": "command.page.screenshot.default_quality",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 80,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 100,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "JPEG quality omission default; explicit 0..100 preserved and PNG ignores quality per Chromium API."
+    },
+    {
+      "pointId": "command.page.text.maximum_json_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 45000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the JSON-escaped UTF-8 body.innerText preview and leaves room for URL and protocol envelope fields."
+    },
+    {
+      "pointId": "command.page.tree.maximum_find_scan_nodes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 20000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Canonical entries scanned per find, without changing expansion."
+    },
+    {
+      "pointId": "command.page.tree.maximum_index_depth",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 128,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 8,
+      "maximumInteger": 512,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds every caller-supplied and returned canonical indexPath without limiting the live document's underlying DOM depth."
+    },
+    {
+      "pointId": "command.page.tree.maximum_label_scan_nodes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 8,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds descendant DOM work used only to derive one deterministic row label; exact values remain available through the tree."
+    },
+    {
+      "pointId": "command.page.tree.maximum_preview_characters",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 32,
+      "maximumInteger": 2048,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one human-readable label or exact raw-value preview; truncated raw values retain a TreeRef whose explicit expansion exposes ordered value chunks."
+    },
+    {
+      "pointId": "command.page.tree.maximum_refs_per_document",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 4096,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 128,
+      "maximumInteger": 65536,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds stable live page-realm TreeRefs for one exact document; refs remain until that document ends."
+    },
+    {
+      "pointId": "command.page.tree.maximum_view_items",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 16,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds items materialized into one stateless view response; truncation returns a canonical next index when available."
+    },
+    {
+      "pointId": "command.page.tree.maximum_view_scan_nodes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 20000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 256,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-tree-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one non-recursive traversal of the already-expanded outline; hitting it truncates only this view and never expands or deletes tree state."
+    },
+    {
+      "pointId": "command.page.wait.default_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default finite page.wait deadline, expanded once at the extension boundary."
+    },
+    {
+      "pointId": "command.page.wait.default_until",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "complete",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [
+        "committed",
+        "domcontentloaded",
+        "complete"
+      ],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default milestone. Explicit condition waits are not short-circuited by complete."
+    },
+    {
+      "pointId": "command.page.wait.maximum_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Maximum requested page.wait deadline; no action retry."
+    },
+    {
+      "pointId": "command.page.wait.poll_interval_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 10,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/page-wait-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Interval between sequential read-only observations; first observation is immediate."
+    },
+    {
+      "pointId": "command.resource.fetch.maximum_headers",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the inline response-header projection; response body bytes are stored only as an Artifact."
+    },
+    {
+      "pointId": "command.resource.fetch.timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 30000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one explicit GET through response-body completion. Timeout aborts network reading, never retries the request or claims remote effects were rolled back."
+    },
+    {
+      "pointId": "command.tabs.list.maximum_items",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/tab-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one requested tabs.list page before Chrome results are projected into external TabRefs; pagination continues with the returned keyset cursor."
+    },
+    {
+      "pointId": "command.tabs.maximum_text_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 2048,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 256,
+      "maximumInteger": 16384,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts",
+        "apps/extension/src/background/capture-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/page-tree-service.ts",
+        "apps/extension/src/background/tab-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds short UTF-8 text projections such as tab title/URL, live DOM URL and JavaScript error text without splitting a Unicode code point."
+    },
+    {
+      "pointId": "runtime.artifact.default_maximum_bytes",
+      "family": "runtime",
+      "kind": "integer",
+      "defaultInteger": 33554432,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1048576,
+      "maximumInteger": 67108864,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "extension_settings",
+      "updateClass": "hot_apply",
+      "editableInSettings": true,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/settings-service.ts",
+        "apps/extension/src/background/artifact-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default per-Artifact soft limit; runtime values remain bounded by the build hard maximum."
+    },
+    {
+      "pointId": "runtime.artifact.default_maximum_count",
+      "family": "runtime",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "extension_settings",
+      "updateClass": "hot_apply",
+      "editableInSettings": true,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/settings-service.ts",
+        "apps/extension/src/background/artifact-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default count gate for committed, unexpired Artifacts."
+    },
+    {
+      "pointId": "runtime.artifact.default_maximum_total_bytes",
+      "family": "runtime",
+      "kind": "integer",
+      "defaultInteger": 134217728,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1048576,
+      "maximumInteger": 268435456,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "extension_settings",
+      "updateClass": "hot_apply",
+      "editableInSettings": true,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/settings-service.ts",
+        "apps/extension/src/background/artifact-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default aggregate byte gate for committed, unexpired Artifacts."
+    },
+    {
+      "pointId": "runtime.artifact.default_retention_ms",
+      "family": "runtime",
+      "kind": "integer",
+      "defaultInteger": 86400000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 60000,
+      "maximumInteger": 2592000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "extension_settings",
+      "updateClass": "hot_apply",
+      "editableInSettings": true,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/settings-service.ts",
+        "apps/extension/src/background/artifact-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default retention applied when a new immutable Artifact commits; lowering it does not rewrite existing expiry timestamps."
+    },
+    {
+      "pointId": "transport.handshake_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/client/src/main.mjs",
+        "apps/client/src/native-websocket.mjs",
+        "apps/extension/src/transport-worker.ts"
+      ],
+      "emitTargets": [
+        "typescript",
+        "javascript"
+      ],
+      "safetyContract": "Bounds connection and application handshake until role.ready. Failure closes this socket and resumes the independently configured fixed reconnect interval; business requests are never replayed."
+    },
+    {
+      "pointId": "transport.native_input.response_margin_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 250,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 25,
+      "maximumInteger": 2000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/real-input-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Reserves part of the caller's total deadline for the App result to return after native execution has stopped."
+    },
+    {
+      "pointId": "transport.native_input.window_match_poll_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 20,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 5,
+      "maximumInteger": 250,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/relay/src/native_input.zig"
+      ],
+      "emitTargets": [
+        "zig"
+      ],
+      "safetyContract": "Polls only the no-input window/content binding phase while a page title marker propagates; no accepted input is retried."
+    },
+    {
+      "pointId": "transport.retry_interval_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 2147483647,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/transport-worker.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "The default 10000 ms is user-confirmed. The engineering range prevents a busy loop and signed timer overflow; retry remains infinite, singleflight, and has no backoff or give-up."
+    },
+    {
+      "pointId": "ui.locale.default",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "auto",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": ["auto", "en", "zh-CN", "zh-TW", "ja", "ko", "de", "fr", "es", "pt-BR", "it", "ru", "ar", "hi", "id", "vi", "th", "tr", "pl", "nl", "uk"],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/ui/page-ui.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default UI locale preference. Auto resolves the browser language on each page load; an explicit user preference is stored separately and overrides this default."
+    }
+  ]}

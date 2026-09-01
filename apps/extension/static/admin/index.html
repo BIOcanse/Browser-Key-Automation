@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>API Keys · Browser Key Automation</title>
+    <link rel="stylesheet" href="admin.css">
+  </head>
+  <body>
+    <header class="app-bar">
+      <a class="brand" href="#keys" aria-label="Browser Key Automation"><span class="brand-mark" aria-hidden="true"><span></span></span><strong>Browser Key</strong></a>
+      <div class="app-meta">
+        <a class="guide-link" href="welcome.html" data-i18n="guide">Guide</a>
+        <span class="connection-pill"><span class="connection-dot" aria-hidden="true"></span><span data-connection>Connected</span></span>
+        <label class="select-control"><span class="sr-only" data-i18n="language">Language</span><select data-locale data-i18n-aria="language"><option value="auto">Browser · English</option></select></label>
+        <label class="select-control theme-control"><span class="sr-only" data-i18n="theme">Theme</span><select data-theme data-i18n-aria="theme"><option value="system" data-i18n="followSystem">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select></label>
+        <span class="preference-warning" data-preference-warning hidden role="status"></span>
+      </div>
+    </header>
+
+    <main id="keys" class="page-shell">
+      <section class="page-heading" aria-labelledby="page-title"><h1 id="page-title" data-i18n="pageTitle">API Keys</h1><button class="button button-primary create-key-button" data-open-create type="button"><span aria-hidden="true">＋</span><span data-i18n="createKey">Create Key</span></button></section>
+      <section class="setup-panel setup-panel-compact" data-user-scripts-setup data-i18n-aria="setupRequired"></section>
+      <section class="keys-panel" aria-labelledby="keys-heading">
+        <div class="panel-heading"><h2 id="keys-heading"><span data-i18n="keys">Keys</span> <span class="key-count" data-key-count>0</span></h2><div class="toolbar">
+          <label class="search-field"><span class="search-icon" aria-hidden="true"></span><span class="sr-only" data-i18n="search">Search name or Key ID</span><input data-search type="search" data-i18n-placeholder="search" placeholder="Search name or Key ID" autocomplete="off"></label>
+          <label class="filter-field"><span class="sr-only" data-i18n="status">Status</span><select data-status-filter data-i18n-aria="status"><option value="all" data-i18n="allStatuses">All statuses</option><option value="active" data-i18n="active">Active</option><option value="disabled" data-i18n="disabled">Disabled</option><option value="expired" data-i18n="expired">Expired</option><option value="revoked" data-i18n="revoked">Revoked</option><option value="legacy" data-i18n="legacy">Needs Key</option></select></label>
+          <button class="icon-button" data-refresh type="button" data-i18n-title="refresh" data-i18n-aria="refresh"><span class="refresh-icon" aria-hidden="true"></span></button>
+        </div></div>
+        <div class="table-scroll"><table><thead><tr><th scope="col" data-i18n="name">Name</th><th scope="col" data-i18n="key">Key</th><th scope="col" data-i18n="type">Type</th><th scope="col" data-i18n="status">Status</th><th scope="col" data-i18n="expires">Expires</th><th scope="col" class="actions-heading"><span class="sr-only" data-i18n="actions">Actions</span></th></tr></thead><tbody data-key-rows></tbody></table></div>
+        <div class="empty-state" data-empty-state hidden><span class="empty-mark" aria-hidden="true">⌁</span><h3 data-empty-title></h3><button class="button button-secondary" data-empty-create type="button" data-i18n="createKey">Create Key</button></div>
+        <div class="panel-footer"><button class="button button-quiet" data-load-more type="button" data-i18n="loadMore" hidden>Load more</button></div>
+      </section>
+      <p class="status-toast" data-status data-kind="info" role="status" aria-live="polite"></p>
+    </main>
+
+    <dialog class="modal" data-create-dialog aria-labelledby="create-title"><form data-create-form>
+      <div class="modal-header"><h2 id="create-title" data-i18n="createTitle">Create API Key</h2><button class="icon-button modal-close" data-close-create type="button" data-i18n-aria="close">×</button></div>
+      <div class="modal-body form-stack"><label class="field field-wide"><span data-i18n="name">Name</span><input data-create-name type="text" maxlength="128" required value="Agent Key"></label><div class="form-grid"><label class="field"><span data-i18n="type">Type</span><select data-create-kind><option value="regular" data-i18n="regularChoice">Regular · selected permissions</option><option value="root" data-i18n="rootChoice">Root · all permissions</option></select></label><label class="field"><span data-i18n="expiry">Expiry</span><input data-create-expiry type="datetime-local"><small data-i18n="neverHint">Leave blank for no expiry.</small></label></div><label class="switch-row"><strong data-i18n="enabledLabel">Enabled</strong><input data-create-enabled type="checkbox" checked></label><fieldset class="permission-fieldset"><legend data-i18n="permissions">Permissions</legend><div class="permission-grid" data-create-permissions></div><div class="root-permission-note" data-root-permission-note data-i18n="rootNote" hidden>Root always has every active permission.</div></fieldset></div>
+      <div class="modal-footer"><button class="button button-quiet" data-cancel-create type="button" data-i18n="cancel">Cancel</button><button class="button button-primary" data-create-submit type="submit" data-i18n="createKey">Create Key</button></div>
+    </form></dialog>
+
+    <dialog class="modal modal-secret" data-secret-dialog data-secret-panel hidden aria-labelledby="secret-title"><div class="modal-header"><h2 id="secret-title" data-i18n="createdTitle">Key created</h2><button class="icon-button modal-close" data-clear-secret type="button" data-i18n-aria="close">×</button></div><div class="modal-body"><label class="field secret-field"><span>API Key</span><span class="secret-input-wrap"><input data-secret type="text" readonly spellcheck="false" autocomplete="off"><button class="button button-secondary" data-copy-secret type="button" data-i18n="copy">Copy</button></span></label></div><div class="modal-footer"><button class="button button-primary" data-done-secret type="button" data-i18n="done">Done</button></div></dialog>
+
+    <dialog class="modal" data-edit-dialog aria-labelledby="edit-title"><form data-edit-form><div class="modal-header"><div><h2 id="edit-title" data-i18n="editTitle">Edit Key</h2><p data-edit-identity></p></div><button class="icon-button modal-close" data-close-edit type="button" data-i18n-aria="close">×</button></div><div class="modal-body form-stack"><label class="field"><span data-i18n="name">Name</span><input data-edit-name type="text" maxlength="128" required></label><label class="field"><span data-i18n="expiry">Expiry</span><input data-edit-expiry type="datetime-local"><small data-i18n="neverHint">Leave blank for no expiry.</small></label><label class="switch-row"><strong data-i18n="enabledLabel">Enabled</strong><input data-edit-enabled type="checkbox"></label><fieldset class="permission-fieldset" data-edit-permission-fieldset><legend data-i18n="permissions">Permissions</legend><div class="permission-grid" data-edit-permissions></div></fieldset></div><div class="modal-footer modal-footer-split"><button class="button button-danger-quiet" data-open-revoke type="button" data-i18n="revokeKey">Revoke Key</button><span class="footer-actions"><button class="button button-quiet" data-cancel-edit type="button" data-i18n="cancel">Cancel</button><button class="button button-primary" data-save-edit type="submit" data-i18n="save">Save</button></span></div></form></dialog>
+
+    <dialog class="modal modal-compact" data-attach-dialog aria-labelledby="attach-title"><form data-attach-form><div class="modal-header"><div><h2 id="attach-title" data-i18n="attachTitle">Save existing Key</h2><p data-attach-identity></p></div><button class="icon-button modal-close" data-close-attach type="button" data-i18n-aria="close">×</button></div><div class="modal-body form-stack"><p class="inline-note" data-i18n="attachHint">Paste the original complete Key for this older record.</p><label class="field"><span data-i18n="originalKey">Original API Key</span><input data-attach-secret class="code-input" type="password" required autocomplete="off" spellcheck="false" placeholder="bk1.…"></label></div><div class="modal-footer"><button class="button button-quiet" data-cancel-attach type="button" data-i18n="cancel">Cancel</button><button class="button button-primary" data-attach-submit type="submit" data-i18n="verifySave">Verify and save</button></div></form></dialog>
+
+    <dialog class="modal modal-compact" data-revoke-dialog aria-labelledby="revoke-title"><div class="modal-header"><div><h2 id="revoke-title" data-i18n="revokeTitle">Revoke this Key?</h2><p data-i18n="revokeWarning">This is permanent and immediately blocks access.</p></div></div><div class="revoke-summary" data-revoke-summary></div><div class="modal-footer"><button class="button button-quiet" data-cancel-revoke type="button" data-i18n="cancel">Cancel</button><button class="button button-danger" data-confirm-revoke type="button" data-i18n="revokeKey">Revoke Key</button></div></dialog>
+    <script type="module" src="admin.js"></script>
+  </body>
+</html>

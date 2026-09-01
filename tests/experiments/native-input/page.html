@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>BKA Native Input Experiment</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #eef2f7; color: #16233c; }
+    main { margin: 36px; max-width: 900px; }
+    h1 { font-size: 26px; }
+    #button { position: absolute; left: 100px; top: 180px; width: 300px; height: 120px;
+      border: 0; border-radius: 12px; background: #245dd4; color: white; font-size: 23px; }
+    #overlay { display: none; position: absolute; left: 100px; top: 180px; width: 300px;
+      height: 120px; background: #cc783e; border-radius: 12px; z-index: 2; color: white;
+      align-items: center; justify-content: center; }
+    #counts { margin-top: 220px; font-size: 21px; }
+    #status { white-space: pre-wrap; line-height: 1.6; font-family: ui-monospace, monospace; }
+    .cover { background: #e9efe8; }
+    .cover #button { background: #336f4d; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title"></h1>
+    <p>本地隔离实验；按钮只计数，不访问任何账户或外部服务。</p>
+    <button id="button">仅可信点击计入业务成功</button>
+    <div id="overlay">页面内部遮挡层</div>
+    <p id="counts">可信：0；脚本合成：0</p>
+    <pre id="status"></pre>
+  </main>
+  <script>
+    (() => {
+      const pageId = new URL(location.href).searchParams.get('page') || 'target';
+      const title = `BKA Native Probe ${pageId}`;
+      document.title = title;
+      document.querySelector('#title').textContent = title;
+      if (pageId === 'cover') document.body.classList.add('cover');
+      let caseId = 'setup';
+      let trusted = 0;
+      let untrusted = 0;
+      const events = [];
+      let sequence = 0;
+      const metrics = () => {
+        const rect = document.querySelector('#button').getBoundingClientRect();
+        return {
+          pageId, caseId, trusted, untrusted, href: location.href,
+          hasFocus: document.hasFocus(), visibility: document.visibilityState,
+          innerWidth, innerHeight, outerWidth, outerHeight, screenX, screenY, devicePixelRatio,
+          viewport: visualViewport && { width: visualViewport.width, height: visualViewport.height,
+            scale: visualViewport.scale, offsetLeft: visualViewport.offsetLeft, offsetTop: visualViewport.offsetTop },
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+          activeElement: document.activeElement?.id || document.activeElement?.tagName || null,
+          overlay: document.querySelector('#overlay').style.display || 'none',
+          disabled: document.querySelector('#button').disabled,
+        };
+      };
+      const record = (event) => {
+        const value = { pageId, caseId, sequence: ++sequence, at: Date.now(), monotonicMs: performance.now(),
+          type: event.type, target: event.target?.id || event.target?.tagName || 'window',
+          isTrusted: event.isTrusted, clientX: event.clientX ?? null, clientY: event.clientY ?? null,
+          screenX: event.screenX ?? null, screenY: event.screenY ?? null, button: event.button ?? null,
+          buttons: event.buttons ?? null, pointerType: event.pointerType ?? null,
+          hasFocus: document.hasFocus(), visibility: document.visibilityState };
+        events.push(value);
+        if (events.length > 500) events.shift();
+        fetch('/events', { method: 'POST', body: JSON.stringify(value), headers: { 'Content-Type': 'application/json' }, keepalive: true }).catch(() => {});
+      };
+      for (const type of ['pointermove','pointerdown','pointerup','mousedown','mouseup','click','dblclick','focus','blur','visibilitychange','gotpointercapture','lostpointercapture']) {
+        (type === 'focus' || type === 'blur' ? window : document).addEventListener(type, record, true);
+      }
+      document.querySelector('#button').addEventListener('click', (event) => {
+        if (event.isTrusted) trusted += 1; else untrusted += 1;
+        document.querySelector('#counts').textContent = `可信：${trusted}；脚本合成：${untrusted}`;
+        document.querySelector('#status').textContent = JSON.stringify(metrics(), null, 2);
+      });
+      globalThis.__nativeProbe = {
+        reset(id, options = {}) {
+          caseId = id; trusted = 0; untrusted = 0; events.length = 0;
+          document.querySelector('#button').disabled = options.disabled === true;
+          document.querySelector('#overlay').style.display = options.overlay === true ? 'flex' : 'none';
+          document.querySelector('#counts').textContent = '可信：0；脚本合成：0';
+          document.querySelector('#status').textContent = JSON.stringify(metrics(), null, 2);
+          return metrics();
+        },
+        snapshot() { return { ...metrics(), events: [...events] }; },
+      };
+      fetch('/events', { method: 'POST', body: JSON.stringify({ pageId, caseId, type: 'ready', at: Date.now(), metrics: metrics() }), headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+    })();
+  </script>
+</body>
+</html>

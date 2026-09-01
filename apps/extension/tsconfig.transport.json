@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "WebWorker"],
+    "rootDir": "src",
+    "outDir": "../../out/extension"
+  },
+  "include": [
+    "src/chrome.d.ts",
+    "src/offscreen.ts",
+    "src/transport-worker.ts",
+    "src/generated/**/*.ts"
+  ]
+}

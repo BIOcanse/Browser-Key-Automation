@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "BKA Native Input Experiment Fixture",
+  "version": "1.0.0",
+  "permissions": ["tabs", "scripting"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "service_worker": "worker.js" }
+}

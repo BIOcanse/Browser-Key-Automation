@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browser Key · 一键演示</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f2;color:#182923;font:16px/1.6 system-ui,sans-serif}
+main{max-width:1080px;margin:auto;padding:56px 42px}.eyebrow{font-size:12px;letter-spacing:2px;color:#486d5d;font-weight:700}
+h1{font-size:clamp(28px,5vw,48px);letter-spacing:-1.5px;line-height:1.25;margin:18px 0}p{color:#63756d;margin:0}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;margin-top:32px}.card{background:white;border:1px solid #dce4dd;border-radius:20px;padding:26px}
+.label{font-size:13px;color:#63756d}.number{font-size:64px;font-weight:650;letter-spacing:-3px;line-height:1.3;margin:14px 0}
+button{border:0;border-radius:10px;padding:12px 22px;background:#195c42;color:white;font:600 15px system-ui;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid #57b888;outline-offset:4px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.badge{color:#216c4d;background:#e8f4ec;padding:5px 10px;border-radius:20px;font-size:12px}.bar{height:12px;border-radius:10px;background:#e5ece6;margin:22px 0;overflow:hidden}
+.bar span{display:block;height:100%;width:40%;background:#59a77c}input{width:100%;accent-color:#195c42}
+footer{margin-top:22px;font-size:12px;color:#7b8b83}strong{font-weight:650}@media(max-width:640px){main{padding:28px 20px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">BROWSER KEY AUTOMATION / LIVE DEMO</div>
+  <h1>一个 HTML，直接展示。</h1>
+  <p>由扩展打开的交互演示。没有开发服务器，也没有额外安装步骤。</p>
+  <section class="grid">
+    <article class="card">
+      <div class="row"><span class="label">按钮交互</span><span class="badge" id="script-state">等待脚本</span></div>
+      <div class="number" id="count">0</div>
+      <div class="row"><button id="add" type="button">增加一次</button><span class="label">点击后立即更新</span></div>
+    </article>
+    <article class="card">
+      <div class="row"><span class="label">参数调整</span><strong id="percent">40%</strong></div>
+      <div class="bar"><span id="fill"></span></div>
+      <input id="slider" type="range" min="0" max="100" value="40" aria-label="演示百分比">
+      <p style="margin-top:22px;font-size:14px">CSS 与 JavaScript 都包含在这个文件内，可以直接刷新或提交更新。</p>
+    </article>
+  </section>
+  <footer>单文件 HTML · 扩展沙箱 · 原始文件保留在本地</footer>
+</main>
+<script>
+document.querySelector('#script-state').textContent = '脚本已运行';
+document.body.dataset.extensionApi = typeof globalThis.chrome?.runtime?.connect;
+try { void parent.document.body; document.body.dataset.parentAccess = 'accessible'; }
+catch { document.body.dataset.parentAccess = 'blocked'; }
+document.querySelector('#add').addEventListener('click', () => {
+  const count = document.querySelector('#count'); count.textContent = String(Number(count.textContent) + 1);
+});
+document.querySelector('#slider').addEventListener('input', event => {
+  const value = event.target.value + '%'; document.querySelector('#percent').textContent = value;
+  document.querySelector('#fill').style.width = value;
+});
+</script>
+</body>
+</html>

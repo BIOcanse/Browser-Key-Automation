@@ -1,0 +1,17 @@
+node_modules/
+.zig-cache/
+zig-out/
+out/
+generated/
+apps/extension/dist/
+apps/extension/src/generated/
+apps/extension/wasm/
+apps/extension/artifact.seal.json
+.codex/subagent-results/
+*.zip
+*.crx
+*.pem
+*.p12
+*.pfx
+.env
+.env.*

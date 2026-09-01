@@ -1,0 +1,14 @@
+{
+  "profileId": "browser-key-loopback-v1",
+  "protocolVersion": 1,
+  "product": "browser-key-automation",
+  "extensionPath": "/v1/extension",
+  "clientPath": "/v1/client",
+  "extensionSubprotocol": "browser-key-extension-v1",
+  "clientSubprotocol": "browser-key-client-v1",
+  "nativeInputClickCapability": "native.input.click.v1",
+  "maximumHttpHeadBytes": 8192,
+  "maximumMessageBytes": 65536,
+  "maximumOnlineExtensions": 64,
+  "maximumPendingRoutes": 128
+}

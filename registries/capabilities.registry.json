@@ -1,0 +1,341 @@
+{
+  "registryId": "capabilities.v1",
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "capabilityId": "platform.extension.alarms",
+      "kind": "platform",
+      "status": "pending",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "alarms"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "alarm_create_clear_and_overdue_wakeup_recovery",
+      "consumers": [],
+      "description": "Provide only the coarse MV3 wake-up leg of the reconnect scheduler; alarms never prove a ten-second wall-clock retry SLA."
+    },
+    {
+      "capabilityId": "platform.extension.indexeddb_strict",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "extension_origin_indexeddb_strict_transaction_abort_and_reopen",
+      "consumers": [
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/database.ts",
+        "apps/extension/src/background/key-service.ts",
+        "apps/extension/src/background/settings-service.ts"
+      ],
+      "description": "Open the extension-origin authority database and prove explicit strict transactions, abort behavior, schema reopen, and fail-closed recovery."
+    },
+    {
+      "capabilityId": "platform.extension.offscreen_transport_worker",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [
+        "dedicated_worker",
+        "offscreen_document"
+      ],
+      "manifestPermissions": [
+        "offscreen"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [
+        "'self'"
+      ],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "offscreen_worker_binary_websocket_fixed_retry_and_background_message_round_trip",
+      "consumers": [
+        "apps/extension/src/offscreen.ts",
+        "apps/extension/src/transport-worker.ts"
+      ],
+      "description": "Run the loopback WebSocket in a packaged offscreen document's dedicated worker, select ArrayBuffer binary messages, apply the generated fixed retry interval, and round-trip one bounded command through the background message bridge."
+    },
+    {
+      "capabilityId": "platform.extension.packaged_wasm",
+      "kind": "platform",
+      "status": "pending",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [
+        "'wasm-unsafe-eval'"
+      ],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "webassembly_instantiate_abi_self_test_and_generated_linear_memory_maximum_boundary",
+      "consumers": [],
+      "description": "Load and validate an extension-packaged WebAssembly core; activate only with the packaged startup self-test, ABI check, generated explicit linear-memory maximum and boundary-growth fixture, and manifest reverse check."
+    },
+    {
+      "capabilityId": "platform.extension.page_capture",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "pageCapture"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "page_capture_save_as_mhtml_blob_and_target_revalidation",
+      "consumers": [
+        "apps/extension/src/background/capture-service.ts"
+      ],
+      "description": "Capture the current tab as a Chromium MHTML Blob; this is a live archive and never represents the original HTTP response."
+    },
+    {
+      "capabilityId": "platform.extension.resource_fetch",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [
+        "<all_urls>"
+      ],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "connectSourceLiterals": [
+        "http:",
+        "https:"
+      ],
+      "runtimeProbe": "bounded_extension_origin_http_get_to_artifact",
+      "consumers": [
+        "apps/extension/src/background/capture-service.ts"
+      ],
+      "description": "Issue a new explicit HTTP(S) GET from the extension origin and bound the response body before Artifact commit."
+    },
+    {
+      "capabilityId": "platform.extension.sandbox",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [
+        "sandboxed_pages"
+      ],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "sandboxPages": [
+        "demo/sandbox.html"
+      ],
+      "sandboxContentSecurityPolicy": "sandbox allow-scripts allow-forms; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';",
+      "runtimeProbe": "self_contained_html_inline_script_button_and_visible_tab_capture",
+      "consumers": [
+        "apps/extension/src/background/demo-service.ts",
+        "apps/extension/static/demo/sandbox.html"
+      ],
+      "description": "Run submitted HTML at a unique sandbox origin without extension APIs; only the packaged outer page reads its Artifact."
+    },
+    {
+      "capabilityId": "platform.extension.scripting",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "scripting"
+      ],
+      "manifestHostPermissions": [
+        "<all_urls>"
+      ],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "fixed_isolated_document_dom_projection",
+      "consumers": [
+        "apps/extension/src/background/browser-service.ts",
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/page-tree-service.ts",
+        "apps/extension/src/background/page-wait-service.ts"
+      ],
+      "description": "Inject fixed packaged DOM readers and the page-information-tree projector into an explicitly targeted document under the extension host grant."
+    },
+    {
+      "capabilityId": "platform.extension.service_worker",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [
+        "module_service_worker"
+      ],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "packed_module_service_worker_startup_self_test",
+      "consumers": [
+        "apps/extension/src/background.ts"
+      ],
+      "description": "Run the background application in an MV3 module service worker; activate with the real entry point and packed-extension probe."
+    },
+    {
+      "capabilityId": "platform.extension.storage_session",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "storage"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "storage_session_trusted_contexts_round_trip",
+      "consumers": [
+        "apps/extension/src/background/occupation-service.ts",
+        "apps/extension/src/background/tab-service.ts"
+      ],
+      "description": "Store and read back the reconstructible TabRef runtime epoch with TRUSTED_CONTEXTS access; Key records and business authority remain in IndexedDB."
+    },
+    {
+      "capabilityId": "platform.extension.tabs",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "tabs"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "tabs_query_get_and_closed_tabref_stale_round_trip",
+      "consumers": [
+        "apps/extension/src/admin/setup.ts",
+        "apps/extension/src/background/admin-entry.ts",
+        "apps/extension/src/background/capture-service.ts",
+        "apps/extension/src/background/page-wait-service.ts",
+        "apps/extension/src/background/tab-service.ts"
+      ],
+      "description": "Read Chromium tab metadata through tabs.query/get and invalidate extension-owned TabRefs when a tab is removed or replaced."
+    },
+    {
+      "capabilityId": "platform.extension.user_scripts",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "userScripts"
+      ],
+      "manifestHostPermissions": [
+        "<all_urls>"
+      ],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "allow_user_scripts_toggle_get_scripts_and_one_shot_execute",
+      "consumers": [
+        "apps/extension/src/admin/setup.ts",
+        "apps/extension/src/background/browser-service.ts",
+        "apps/extension/src/shared/user-scripts.ts"
+      ],
+      "description": "Execute caller-supplied one-shot source through chrome.userScripts.execute in an explicit USER_SCRIPT or MAIN world; the Chrome Allow User Scripts toggle remains a runtime gate."
+    },
+    {
+      "capabilityId": "platform.extension.visible_tab_capture",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [
+        "<all_urls>"
+      ],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "capture_visible_tab_data_url_and_active_target_revalidation",
+      "consumers": [
+        "apps/extension/src/background/capture-service.ts"
+      ],
+      "description": "Capture only the currently visible viewport of a tab already active in its window; never auto-activate the target."
+    },
+    {
+      "capabilityId": "platform.extension.web_navigation",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "webNavigation"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "web_navigation_get_all_frames_with_document_ids",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/page-wait-service.ts"
+      ],
+      "description": "List the current tab frame tree and document identifiers used to mint short-lived DocumentRefs."
+    },
+    {
+      "capabilityId": "platform.extension.webcrypto",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "service_worker_sha256_known_answer_and_csprng_api_shape_and_failure",
+      "consumers": [
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/key-crypto.ts",
+        "apps/extension/src/background/tab-service.ts"
+      ],
+      "description": "Provide the bootstrap SHA-256 primitive used before packaged payload activation and the platform CSPRNG used by extension-owned high-entropy realms and tokens. The probe verifies API availability, shape, and fail-closed behavior; it does not claim to empirically prove entropy."
+    },
+    {
+      "capabilityId": "platform.relay.native_input",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "role_ready_native_input_capability_and_exact_route_owned_request",
+      "consumers": [
+        "apps/extension/src/background/transport-controller.ts",
+        "apps/relay/src/native_input.zig",
+        "apps/relay/src/native_input/windows.zig"
+      ],
+      "description": "Send one route-owned native click subrequest over the existing extension connection; only a platform build with the validated backend advertises availability."
+    },
+    {
+      "capabilityId": "platform.transport.loopback_websocket",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [
+        "build.transport.loopback_bind"
+      ],
+      "runtimeProbe": "numeric_loopback_exact_role_handshake_binary_route_and_reconnect",
+      "consumers": [
+        "apps/extension/src/transport-worker.ts",
+        "apps/relay/src/server.zig",
+        "apps/relay/src/websocket.zig"
+      ],
+      "description": "Connect to the generated numeric loopback endpoint with exact paths, subprotocols and role hello; carry bounded binary application frames and reconnect at the generated interval. The relay routes bearer-bearing application bytes but does not authorize them."
+    }
+  ]}

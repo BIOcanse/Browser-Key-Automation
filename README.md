@@ -1,0 +1,186 @@
+# Browser Key Automation
+
+English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
+
+Browser Key Automation lets a trusted Agent or automation program operate an authorized local Chromium browser through a Manifest V3 extension and an API Key.
+
+The extension owns Key authentication, permissions, browser references, occupations, and browser operations. The small Zig companion App only provides local routing, App-assigned browser Instance references, file delivery, and explicitly advertised native capabilities.
+
+> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release.
+
+A separate initial-upload ZIP can create the Web Store item, but it must not be published until the Dashboard public key, extension ID, and local App Origin gate have been synchronized. See the [Chrome Web Store delivery contract](docs/implementation/chrome-web-store-delivery.md).
+
+## What It Can Do
+
+- Create, reveal, copy, update, disable, and revoke Root or Regular Keys in a local management page. A saved full Key can be revealed again; it is not restricted to a one-time display.
+- List tabs and use runtime-bound `TabRef`, `DocumentRef`, `NodeRef`, `TreeRef`, and `ArtifactRef` values instead of raw browser IDs.
+- Explore a cached page operation tree. Expansion state belongs to each Key and survives switching away from a page until that document is refreshed or replaced.
+- Find nodes without expanding the tree, request one-time depth/range/subtree views, read bounded live DOM, describe nodes, and run DOM actions.
+- Execute JavaScript in an explicit `USER_SCRIPT` or `MAIN` world when Chromium's **Allow User Scripts** switch is enabled.
+- Wait for navigation, `interactive`, `complete`, DOM, or text conditions.
+- Save the current page as MHTML, capture a verified viewport image, transfer bounded Artifacts, and open self-contained HTML demonstrations without a local HTTP server.
+- Send an explicit Windows native left-click with `dom.click.real`. It has a permission independent from ordinary `dom.click`.
+- Let one Key occupy a tab or the global scope. Another authorized Key must explicitly release that occupation before acquiring it.
+
+The command registry is the public source of truth for exact methods, schemas, permissions, and errors. `system.describe` reports the active build and the calling Key's effective permissions.
+
+## Architecture
+
+```text
+Agent / automation
+        |
+        | BKA_API_KEY + command
+        v
+Windows or Linux Zig companion App
+        |
+        | local loopback route + App-assigned InstanceRef
+        v
+MV3 offscreen transport
+        |
+        v
+Extension service worker
+        |
+        +-- Key authentication and permissions
+        +-- occupations and runtime references
+        +-- tabs, page tree, DOM, JavaScript and Artifacts
+        `-- optional platform capability request
+```
+
+The extension is the only business-state owner. The companion App does not keep a Key database and does not decide browser permissions. Every successfully connected extension is assigned an Instance reference by the App; the extension never invents or persists its own instance number.
+
+The primary path uses ordinary extension permissions. CDP/DevTools can remain a separate optional capability, but Chromium's own debugging confirmation cannot be removed by this project.
+
+## Quick Start
+
+### Requirements
+
+- Chrome or another compatible Chromium browser, version 138 or later
+- Windows x86_64 or Linux x86_64 for the companion App
+- Node.js 20 or later for the packaged CLI
+- Zig only when building the companion App from source
+
+### 1. Build the split packages
+
+```text
+npm ci
+npm run build:dev-package
+```
+
+The build produces three independent archives:
+
+- `out/browser-key-automation-extension-dev.zip`
+- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
+- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
+
+The extension and local App are deliberately separate. Each archive contains its own `START-HERE.md` and `SHA256SUMS.txt`.
+
+### 2. Load the extension
+
+1. Extract the extension archive completely.
+2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
+3. Select the extracted directory whose root directly contains `manifest.json`.
+4. On the extension details page, enable **Allow User Scripts**, then reload the extension. This browser-owned switch is required only for `js.execute`; Key management, DOM, and the page tree remain available without it.
+5. Open **Browser Key Automation** from the toolbar. Create a Root Key for full trusted control or a Regular Key with only the required permissions.
+
+The first installation opens a local setup page. Updates and reloads do not repeatedly open it.
+
+### 3. Start the companion App
+
+Extract the matching App archive and keep the relay running:
+
+```text
+# Windows
+.\browser-key-relay.exe
+
+# Linux
+chmod +x ./browser-key-relay
+./browser-key-relay
+```
+
+The default endpoint is `127.0.0.1:32189`. If the App is unavailable, the extension retries at the configured nominal 10-second interval until it connects. Do not start a second App when the fixed endpoint is already owned by a compatible instance.
+
+### 4. Connect the CLI
+
+Run these commands from the extracted local App directory:
+
+```text
+node client/browser-key-cli.mjs instances
+```
+
+This command does not require a Key. Zero instances means that no extension is connected yet. With multiple instances, select an explicit current `relayEpoch/instanceNumber`; never try a bearer Key against every instance.
+
+Set the Key through an environment variable, never through argv:
+
+```powershell
+# PowerShell
+$env:BKA_API_KEY = "bk1.<key-id>.<secret>"
+node .\client\browser-key-cli.mjs call --method system.describe --schema-version 1 --params-json "{}"
+```
+
+```bash
+# Bash
+export BKA_API_KEY='bk1.<key-id>.<secret>'
+node client/browser-key-cli.mjs call --method system.describe --schema-version 1 --params-json '{}'
+```
+
+The CLI re-enumerates instances before reading the Key. If delivery is reported as `unknown`, treat it as unknown and do not automatically retry an effectful command.
+
+## Common Workflows
+
+- Page discovery: `tabs.list` → `page.tree.open` → `page.tree.find` or `page.tree.expand.v2` → `page.tree.view.get`.
+- Page synchronization: use `page.wait`; omitted timeout means 10 seconds, and an already-satisfied condition returns immediately.
+- Save a page: `node client/browser-key-cli.mjs page-save --tab-ref <TabRef> --output ./page.mhtml`.
+- Capture the viewport: `node client/browser-key-cli.mjs page-shot --tab-ref <TabRef> --output ./page.png`.
+- Open a demonstration: `node client/browser-key-cli.mjs demo-open ./demo.html`.
+- Inspect an unfamiliar command in `skills/browser-key-automation/references/commands.registry.json` before calling it. The packaged Agent skill contains the same generated references.
+
+### Native `.real` Click
+
+`dom.click.real` is explicit and independent from `dom.click`. On Windows it asks Chromium to activate the target tab and focus its browser window, verifies that the referenced element is live, visible, enabled, and unobstructed, then asks the companion App to send one native left-click to the matched Chromium content window.
+
+`{ "status": "input_sent" }` means that one input sequence was accepted, not that the website completed the requested business action. Observe the page afterwards. Never automatically replay an unknown or failed native input. The Linux App currently does not advertise `native.input.click.v1`, so the extension rejects `.real` before page preparation there.
+
+## Keys, Permissions, and Control
+
+- A Key is the sole external identity. Agent brand, process, account, socket, and App instance are not additional authorization identities.
+- Root dynamically receives every active permission. A Regular Key receives only explicitly selected permissions.
+- JavaScript, ordinary DOM actions, native `.real` input, network access, and future debugging backends are parallel permissions; granting one does not silently grant another.
+- Same-Key commands are serialized in the live extension runtime. Different Keys have independent lanes, but their effects on the same webpage can still race.
+- Occupation is owned by a Key. There is no hidden takeover, force, or replace command: release first, then acquire.
+- The full Key stays inside the extension. The trusted management page and callers separately authorized for `keys.create` or `keys.reveal` can receive it; public lists and normal diagnostics do not include it. The CLI reads it only from `BKA_API_KEY` (or an explicitly selected environment variable).
+
+Treat a powerful Key like a local browser-control credential. Give it only to trusted Agents or automation programs. A Key's technical permission never replaces the user's authorization for payments, posting, sending messages, account changes, deletion, or other consequential actions.
+
+## Browser and Platform Boundaries
+
+Chromium still controls host access, restricted pages, file URL access, the **Allow User Scripts** switch, extension enablement, and any DevTools debugging confirmation. Root cannot bypass those browser-owned boundaries.
+
+The Windows and Linux Apps both provide routing and file delivery. Windows additionally advertises the current native click backend. Linux does not claim that backend yet. Incognito behavior and Chromium derivatives must be verified for their own profile and policy configuration.
+
+## Development
+
+| Command | Purpose |
+|---|---|
+| `npm run generate` | Generate command, UI, transport, capability, and Freedom Point projections |
+| `npm run check:extension` | Regenerate and type-check all extension realms |
+| `npm run build` | Build the extension and the current-platform Zig App |
+| `npm run test:unit` | Run UI, Key, runtime, WebSocket, and Zig unit tests |
+| `npm run test:runtime` | Run unit tests plus isolated relay/Chromium integration tests |
+| `npm run build:dev-package` | Build the extension and both platform App packages |
+| `npm run build:chrome-web-store:first-upload` | Build the identity-bootstrap ZIP used only to create the Web Store item |
+| `npm run test:dev-package-smoke` | Verify archive layout, executables, hashes, and packaged skill references |
+
+Isolated integration tests use temporary ports, profiles, and relay processes. They must not be pointed at a personal browser profile or an existing personal App instance.
+
+## Documentation
+
+- [Documentation index](docs/README.md)
+- [Current decisions](docs/decisions.md)
+- [Progress and verified status](docs/PROGRESS.md)
+- [Command contract](docs/contracts/commands.md)
+- [Page operation tree](docs/design/page-information-tree.md)
+- [Freedom Points](docs/design/freedom-points.md)
+- [Delivery layout](docs/design/delivery-layout.md)
+- [Agent skill](skills/browser-key-automation/SKILL.md)
+
+Historical Cleaner/PageIR proposals remain under `docs/historical/` and are not current product behavior.

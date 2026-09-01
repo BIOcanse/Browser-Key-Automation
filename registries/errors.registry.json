@@ -1,0 +1,332 @@
+{
+  "registryId": "errors.v1",
+  "schemaVersion": 1,
+  "errors": [
+    {
+      "errorId": "ADMIN_MUTATION_CONFLICT",
+      "code": 1015,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Never reuse the same mutation ID for a different intent.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The supplied AdminMutationId was already committed for a different canonical Key mutation intent."
+    },
+    {
+      "errorId": "ARTIFACT_NOT_FOUND",
+      "code": 1016,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Only with an owner-visible live ArtifactRef and a valid offset.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_values",
+      "description": "The Artifact is unknown, expired, released, outside its body range, or owned by another Key; the response does not disclose which."
+    },
+    {
+      "errorId": "ARTIFACT_UPLOAD_INVALID",
+      "code": 1023,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Correct the reported input/state; do not silently repeat a possibly delivered effect.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The upload transition fails chunk, offset, length, completeness or integrity checks."
+    },
+    {
+      "errorId": "CAPABILITY_UNAVAILABLE",
+      "code": 1002,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Only after the reported capability fact changes.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The required Chromium API, host grant or user-controlled platform toggle is unavailable before command effect dispatch."
+    },
+    {
+      "errorId": "CLOCK_UNTRUSTED",
+      "code": 1011,
+      "status": "pending",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after the wall clock returns to the derived safe representable domain.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The extension cannot safely advance or compare its monotonic security time. This code is emitted only before a browser, page, network, or debug effect; an operation accepted earlier may be durably settled KnownNoEffect before its dispatch fence."
+    },
+    {
+      "errorId": "COMMAND_NOT_FOUND",
+      "code": 1001,
+      "status": "pending",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only with a declared method and schemaVersion.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The exact method and schemaVersion pair is not declared in this build."
+    },
+    {
+      "errorId": "CONTROL_OCCUPIED",
+      "code": 1014,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after the reported foreign occupation is released.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "Another Key owns a global or exact-tab occupation that blocks this acquire or page-effect dispatch."
+    },
+    {
+      "errorId": "DEMO_INPUT_INVALID",
+      "code": 1024,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Correct the reported input/state; do not silently repeat a possibly delivered effect.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The input is not HTML or the explicitly selected tab is not an eligible demo tab."
+    },
+    {
+      "errorId": "DOM_OPERATION_FAILED",
+      "code": 1017,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Only after correcting the selector, node kind, value, or page state.",
+      "effectEvidence": "PhaseSensitive",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A fixed DOM query or action could not be applied to the current target element."
+    },
+    {
+      "errorId": "FORBIDDEN",
+      "code": 1009,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after the authenticated Key permission facts change.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The authenticated Key does not satisfy the command permission expression."
+    },
+    {
+      "errorId": "INTERNAL_ERROR",
+      "code": 1003,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Never infer retry safety from this code; inspect phase evidence.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_values",
+      "description": "A bounded internal failure occurred in a currently active no-effect command."
+    },
+    {
+      "errorId": "KEY_DISABLED",
+      "code": 1007,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after this authenticated Key is explicitly enabled.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The correctly authenticated Key is currently disabled."
+    },
+    {
+      "errorId": "KEY_EXPIRED",
+      "code": 1008,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after an authorized expiry mutation or use of another valid Key.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The correctly authenticated Key has reached its half-open expiry boundary."
+    },
+    {
+      "errorId": "KEY_NOT_FOUND",
+      "code": 1018,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Only with an existing KeyId.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "An authorized Key management command targeted a KeyId that does not exist."
+    },
+    {
+      "errorId": "KEY_REVOKED",
+      "code": 1019,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Never update a revoked Key; create a new Key if needed.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The target Key is irrevocably revoked and cannot accept the requested mutation."
+    },
+    {
+      "errorId": "LEDGER_NOT_READY",
+      "code": 1004,
+      "status": "pending",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Only after the same extension instance reports authority hydration ready.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The extension authority and operation storage have not completed safe hydration."
+    },
+    {
+      "errorId": "LIMIT_EXCEEDED",
+      "code": 1020,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform",
+        "storage"
+      ],
+      "retryCondition": "After releasing/expiring stored results, reducing the request, or changing a registered limit.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A registered count, byte, reference, or Artifact capacity limit would be exceeded."
+    },
+    {
+      "errorId": "NATIVE_INPUT_FAILED",
+      "code": 1025,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Correct the reported state; never silently replay when clickState is unknown.",
+      "effectEvidence": "PhaseSensitive",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The native click could not be safely addressed or fully confirmed; details state the phase and whether input is known absent."
+    },
+    {
+      "errorId": "RESULT_WITHHELD",
+      "code": 1010,
+      "status": "retired",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after a currently authorized Key explicitly queries an owner-visible result.",
+      "effectEvidence": "PhaseSensitive",
+      "secretRedaction": "all_values",
+      "description": "Final disclosure authorization changed after work began, so result content is withheld while phase evidence remains truthful."
+    },
+    {
+      "errorId": "REVISION_CONFLICT",
+      "code": 1013,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Reload the current Key record and retry an admin mutation with its new revision.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A Key admin mutation supplied a stale expected record revision. Tabs paging no longer uses this error."
+    },
+    {
+      "errorId": "SCHEMA_INVALID",
+      "code": 1000,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "After correcting the request schema.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "An incoming transport-to-command envelope or command parameter failed its closed schema before admission and before any command effect. Generated plans, adapter results, receipts, and response values must use a phase-sensitive typed error instead."
+    },
+    {
+      "errorId": "SECRET_NOT_RECOVERABLE",
+      "code": 1021,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Only after the trusted local admin attaches the original token to a legacy Key record.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_values",
+      "description": "The target legacy Key has verifier material but no stored API Key token that can be revealed."
+    },
+    {
+      "errorId": "STORAGE_UNAVAILABLE",
+      "code": 1005,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Only after the reported storage, quota, schema, or integrity condition changes.",
+      "effectEvidence": "PhaseSensitive",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "Required authority storage cannot currently provide the declared safety contract; the response carries phase-specific effect evidence."
+    },
+    {
+      "errorId": "TAB_REF_STALE",
+      "code": 1012,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Call tabs.list again and use a newly returned TabRef.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The syntactically valid TabRef belongs to an unprovable runtime or no longer resolves to its original live Chromium tab."
+    },
+    {
+      "errorId": "TARGET_REF_STALE",
+      "code": 1022,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Call frames.list and dom.query again to obtain current references.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "The DocumentRef or NodeRef no longer resolves to its original live document or isolated-world node token."
+    },
+    {
+      "errorId": "UNAUTHENTICATED",
+      "code": 1006,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only with a valid active Key credential.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_values",
+      "description": "The supplied credential is malformed, unknown, revoked, unsupported, or has the wrong secret."
+    }
+  ]}

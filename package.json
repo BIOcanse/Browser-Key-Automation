@@ -1,0 +1,48 @@
+{
+  "name": "browser-key-automation",
+  "version": "0.0.0-p0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "toolchain:typescript": "tsc --version",
+    "generate:ui": "node tools/generate-ui-config.mjs",
+    "generate:transport": "node tools/generate-transport-config.mjs",
+    "generate:commands": "node tools/generate-command-config.mjs",
+    "generate": "npm run generate:ui && npm run generate:transport && npm run generate:commands",
+    "check:extension": "npm run generate && tsc -p apps/extension/tsconfig.background.json --noEmit && tsc -p apps/extension/tsconfig.admin.json --noEmit && tsc -p apps/extension/tsconfig.transport.json --noEmit",
+    "build:extension": "node tools/build-extension.mjs",
+    "build:relay": "zig build",
+    "build:relay:windows-x64": "zig build -Dtarget=x86_64-windows-gnu -Doptimize=ReleaseSafe --prefix out/cross/windows-x86_64",
+    "build:relay:linux-x64": "zig build -Dtarget=x86_64-linux-gnu -Doptimize=ReleaseSafe --prefix out/cross/linux-x86_64",
+    "build:relay:release": "npm run build:relay:windows-x64 && npm run build:relay:linux-x64",
+    "capture:page-tree": "node tools/capture-live-page-tree.mjs",
+    "build:dev-package:extension": "npm run build:extension && node tools/package-dev.mjs extension",
+    "build:dev-package:local-app": "npm run build:relay:release && node tools/package-dev.mjs local-app",
+    "build:dev-package": "npm run build:extension && npm run build:relay:release && node tools/package-dev.mjs",
+    "build:chrome-web-store:first-upload": "npm run build:extension && node tools/package-chrome-web-store.mjs",
+    "client": "node apps/client/src/main.mjs",
+    "test:extension-smoke": "node tools/test-isolated.mjs extension",
+    "test:relay-smoke": "node tools/test-isolated.mjs protocol",
+    "test:client-cli-smoke": "node tools/test-isolated.mjs client",
+    "test:client-websocket": "node --test tests/native-websocket-client.test.mjs",
+    "test:ui-i18n": "node --test tests/ui-i18n.test.mjs",
+    "test:readme-i18n": "node --test tests/readme-i18n.test.mjs",
+    "test:dev-package-smoke": "node tests/dev-package-smoke.mjs",
+    "test:chrome-web-store-package": "node tools/package-chrome-web-store.mjs && node --test tests/chrome-web-store-package.test.mjs",
+    "test:extension-relay-smoke": "node tools/test-isolated.mjs extension-relay",
+    "test:key-core": "node --test tests/key-core.test.mjs",
+    "test:runtime-core": "node --test tests/transport-context.test.mjs tests/offscreen-diagnostic.test.mjs tests/onboarding.test.mjs tests/tab-service-races.test.mjs tests/occupation-service.test.mjs tests/browser-service.test.mjs tests/page-tree-session.test.mjs tests/page-tree-projection.test.mjs tests/page-tree-find.test.mjs tests/page-wait.test.mjs tests/command-defaults.test.mjs tests/dom-actions.test.mjs tests/artifact-files.test.mjs tests/demo-files.test.mjs tests/artifact-upload.test.mjs tests/demo-service.test.mjs tests/storage-services.test.mjs tests/capture-service.test.mjs",
+    "test:relay": "zig build test",
+    "build": "npm run build:extension && npm run build:relay",
+    "test:unit": "npm run build:extension && npm run test:ui-i18n && npm run test:readme-i18n && npm run test:key-core && npm run test:runtime-core && npm run test:client-websocket && npm run test:chrome-web-store-package && npm run test:relay",
+    "test:runtime": "npm run test:unit && node tools/test-isolated.mjs all",
+    "test": "npm run test:unit"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.5",
+    "typescript": "7.0.2"
+  }
+}

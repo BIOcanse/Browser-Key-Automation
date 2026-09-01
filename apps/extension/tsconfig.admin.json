@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "rootDir": "src",
+    "outDir": "../../out/extension"
+  },
+  "include": [
+    "src/chrome.d.ts",
+    "src/admin/**/*.ts",
+    "src/demo/**/*.ts",
+    "src/shared/**/*.ts"
+  ]
+}
