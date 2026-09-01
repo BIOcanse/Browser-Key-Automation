@@ -34,4 +34,4 @@ Only explicit `control.acquire` and `control.release` are supported. No hidden t
 
 Strict JSON syntax, active ordering/references, declared typed defaults, bounds, budget checks and manifest projections are implemented. General decoded duplicate-key/unknown-field meta-schema checks and complete source-consumer reverse analysis are not. Keep identifiers canonical, do not reuse retired IDs, and verify changed paths with tests.
 
-`active` means implemented, generated and routed; it is not a planning wishlist. Chromium runtime capabilities still require runtime evidence. Historical plans are under `docs/historical/` and are not mandatory implementation work.
+`active` means implemented, generated and routed; it is not a planning wishlist. Chromium runtime capabilities still require runtime evidence.

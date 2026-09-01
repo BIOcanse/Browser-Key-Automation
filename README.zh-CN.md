@@ -31,7 +31,7 @@ Browser Key Automation 把你正在使用的 Chromium 浏览器变成面向可�
 
 Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代 DevTools 深度诊断。它填补的是另一块：低摩擦、可配置权限地控制人正在使用的浏览器，并提供足够干净的结构和文件能力，让 Agent 完成实际任务。
 
-> 开发状态：当前已解压扩展开发包面向 Chrome/Chromium 138 及以上版本；它目前不是 Chrome 应用商店发布版。商店页面仍在准备；在它完成前请使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.1.zip` 与 `browser-key-automation-local-app-v0.0.0.1.zip`。结构以 [GitHub Release 交付合同](docs/implementation/github-release-delivery.md)为准。
+> 开发状态：当前已解压扩展开发包面向 Chrome/Chromium 138 及以上版本；它目前不是 Chrome 应用商店发布版。商店页面仍在准备；在它完成前请使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.1.zip` 与 `browser-key-automation-local-app-v0.0.0.1.zip`。
 
 ## 当前能力
 
@@ -47,32 +47,6 @@ Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代
 
 精确方法、schema、权限和错误以 Command Registry 为准。`system.describe` 会返回当前构建和调用 Key 的实际有效权限。
 
-## 架构
-
-```text
-Agent / 自动化程序
-        |
-        | BKA_API_KEY + 指令
-        v
-Windows 或 Linux Zig 本地 App
-        |
-        | 本地 loopback 路由 + App 分配的 InstanceRef
-        v
-MV3 offscreen transport
-        |
-        v
-扩展 service worker
-        |
-        +-- Key 鉴权和权限
-        +-- 占据与运行期引用
-        +-- 标签页、页面树、DOM、JavaScript、Artifact
-        `-- 可选的平台能力请求
-```
-
-扩展是唯一业务状态 owner。本地 App 不保存 Key 数据库，也不决定浏览器权限。每个成功连接的扩展由 App 分配 Instance 引用；扩展不会自行生成或持久化实例编号。
-
-主路径使用普通扩展权限。CDP/DevTools 可以保持为并行可选能力，但 Chromium 自己的调试确认无法由本项目取消。
-
 ## 快速开始
 
 ### 环境要求
@@ -80,24 +54,15 @@ MV3 offscreen transport
 - Chrome 或兼容的 Chromium 浏览器，138 及以上版本
 - Windows x86_64 或 Linux x86_64 本地 App
 - 包内 CLI 需要 Node.js 20 及以上版本
-- 只有从源码构建本地 App 时才需要 Zig
 
-### 1. 构建拆分包
+### 1. 下载扩展和 App
 
-```text
-npm ci
-npm run build:dev-package
-```
+从[最新 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 下载两个 ZIP，分别解压到独立目录。
 
-构建会产生三个互相独立的压缩包：
+- 扩展: `browser-key-automation-extension-v0.0.0.1.zip`
+- 本地 App: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-扩展和本地 App 刻意分开交付。每个包都有自己的 `START-HERE.md` 和 `SHA256SUMS.txt`。
-
-`npm run build:github-release` 会把这些已经验证的中间包聚合成 GitHub 使用的两资产结构：一个扩展 ZIP，以及一个带 `windows-x86_64/`、`linux-x86_64/` relay 目录和单份公共 CLI、协议、Agent skill 的 App ZIP。
+App ZIP 内含 `windows-x86_64/`、`linux-x86_64/`、CLI 和 Agent skill，无需自行编译。
 
 ### 2. 加载扩展
 
@@ -121,8 +86,6 @@ npm run build:dev-package
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-按平台拆分的 `-dev` App 中间包仍把 relay 放在压缩包根部；使用开发中间包时按其中的 `START-HERE.md` 操作。
 
 默认端点为 `127.0.0.1:32189`。App 不可用时，扩展会按当前配置的名义 10 秒间隔持续重连，直到连接成功。固定端点已有兼容 App 时不要再启动第二份。
 
@@ -184,31 +147,6 @@ Chromium 仍然拥有 host access、受限页面、file URL 访问、**允许用
 
 Windows/Linux App 都提供路由和文件落地；Windows 额外声明当前原生点击后端，Linux 暂不声明。无痕模式和其他 Chromium 衍生浏览器必须按各自 profile 与策略实际验证。
 
-## 开发
+Agent 接入：[Browser Key Automation skill](skills/browser-key-automation/SKILL.md)。
 
-| 指令 | 用途 |
-|---|---|
-| `npm run generate` | 生成命令、UI、传输、capability 与 Freedom Point 投影 |
-| `npm run check:extension` | 重新生成并类型检查全部扩展 realm |
-| `npm run build` | 构建扩展与当前平台 Zig App |
-| `npm run test:unit` | 运行 UI、Key、runtime、WebSocket 与 Zig 单元测试 |
-| `npm run test:runtime` | 运行单元测试以及隔离 relay/Chromium 集成测试 |
-| `npm run build:dev-package` | 构建扩展和两个平台的 App 包 |
-| `npm run build:github-release` | 构建 GitHub Releases 实际发布的两份 ZIP |
-| `npm run build:chrome-web-store:first-upload` | 构建商店身份引导产物；提交审核前同步 Item ID/public key |
-| `npm run test:dev-package-smoke` | 验证压缩包层级、可执行文件、哈希和 skill 引用 |
-
-隔离集成测试使用临时端口、profile 和 relay 进程，不得指向个人浏览器 profile 或已有个人 App 实例。
-
-## 文档
-
-- [文档索引](docs/README.md)
-- [当前裁定](docs/decisions.md)
-- [进度与已验证状态](docs/PROGRESS.md)
-- [指令合同](docs/contracts/commands.md)
-- [页面操作树](docs/design/page-information-tree.md)
-- [Freedom Point](docs/design/freedom-points.md)
-- [交付结构](docs/design/delivery-layout.md)
-- [Agent skill](skills/browser-key-automation/SKILL.md)
-
-旧 Cleaner/PageIR 候选只保留在 `docs/historical/`，不代表当前产品行为。
+本项目由作者维护，不接受外部贡献或 Pull Request。

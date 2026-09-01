@@ -21,12 +21,8 @@ const LOCALES = Object.freeze([
 const REQUIRED_SHARED_TOKENS = Object.freeze([
   "Browser Key Automation",
   "138",
-  "browser-key-automation-extension-dev.zip",
-  "browser-key-automation-local-app-windows-x86_64-dev.zip",
-  "browser-key-automation-local-app-linux-x86_64-dev.zip",
   "browser-key-automation-extension-v0.0.0.1.zip",
   "browser-key-automation-local-app-v0.0.0.1.zip",
-  "build:github-release",
   "windows-x86_64",
   "linux-x86_64",
   "manifest.json",
@@ -55,16 +51,13 @@ const REQUIRED_SHARED_TOKENS = Object.freeze([
   "Nanobrowser",
   "Root",
   "Regular",
-  "docs/README.md",
-  "docs/decisions.md",
-  "docs/PROGRESS.md",
-  "docs/implementation/github-release-delivery.md",
   "skills/browser-key-automation/SKILL.md",
 ]);
 
 const API_KEY_PATTERN = /bk1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}/u;
 const SEMANTIC_SENTINELS = Object.freeze({
   "README.md": [
+    "This project is maintained by the author. External contributions and pull requests are not accepted.",
     "routine browser commands do not attach a debugger",
     "asks Chromium to activate the target tab and focus its browser window",
     "Linux App currently does not advertise",
@@ -72,6 +65,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "not a Chrome Web Store release",
   ],
   "README.zh-CN.md": [
+    "本项目由作者维护，不接受外部贡献或 Pull Request。",
     "日常浏览器指令不会附加调试器",
     "请求 Chromium 激活目标标签页并聚焦对应浏览器窗口",
     "Linux App 当前不声明",
@@ -79,6 +73,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "不是 Chrome 应用商店发布版",
   ],
   "README.zh-TW.md": [
+    "本專案由作者維護，不接受外部貢獻或 Pull Request。",
     "日常瀏覽器指令不會附加偵錯器",
     "要求啟用目標分頁並聚焦其瀏覽器視窗",
     "Linux App 目前不宣告",
@@ -86,6 +81,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "目前不是 Chrome 線上應用程式商店版本",
   ],
   "README.ja.md": [
+    "このプロジェクトは作者が保守します。外部からの貢献や Pull Request は受け付けていません。",
     "日常コマンドはデバッガーを接続せず",
     "対象タブのアクティブ化とブラウザーウィンドウのフォーカスを Chromium に要求",
     "Linux App は現在 `native.input.click.v1` を公開しない",
@@ -93,6 +89,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "Chrome ウェブストア版ではありません",
   ],
   "README.ko.md": [
+    "이 프로젝트는 작성자가 유지 관리하며 외부 기여와 Pull Request를 받지 않습니다.",
     "일상 브라우저 명령은 디버거를 연결하지 않으며",
     "Chromium에 대상 탭 활성화와 브라우저 창 포커스를 요청",
     "Linux App은 현재 `native.input.click.v1`을 광고하지 않",
@@ -100,6 +97,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "Chrome 웹 스토어 릴리스가 아닙니다",
   ],
   "README.de.md": [
+    "Dieses Projekt wird vom Autor gepflegt. Externe Beiträge und Pull Requests werden nicht angenommen.",
     "alltägliche Browserbefehle keinen Debugger an",
     "fordert es Chromium auf, den Ziel-Tab zu aktivieren und sein Browserfenster zu fokussieren",
     "Linux-App kündigt `native.input.click.v1` derzeit nicht an",
@@ -107,6 +105,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "keine Veröffentlichung im Chrome Web Store",
   ],
   "README.fr.md": [
+    "Ce projet est maintenu par son auteur. Les contributions externes et les Pull Requests ne sont pas acceptées.",
     "les commandes courantes n'attachent pas de débogueur",
     "demande à Chromium d'activer l'onglet cible et de focaliser sa fenêtre",
     "L'App Linux n'annonce actuellement pas `native.input.click.v1`",
@@ -114,6 +113,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "Ce n'est pas une publication du Chrome Web Store",
   ],
   "README.es.md": [
+    "Este proyecto lo mantiene su autor. No se aceptan contribuciones externas ni Pull Requests.",
     "los comandos habituales no adjuntan un depurador",
     "solicita a Chromium activar la pestaña de destino y enfocar su ventana",
     "La App de Linux no anuncia actualmente `native.input.click.v1`",
@@ -121,6 +121,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "No es una publicación de Chrome Web Store",
   ],
   "README.pt-BR.md": [
+    "Este projeto é mantido pelo autor. Contribuições externas e Pull Requests não são aceitas.",
     "comandos rotineiros não anexam um depurador",
     "solicita ao Chromium que ative a aba de destino e dê foco à janela",
     "O App Linux atualmente não anuncia `native.input.click.v1`",
@@ -128,6 +129,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "não é uma publicação da Chrome Web Store",
   ],
   "README.ru.md": [
+    "Проект поддерживает автор. Внешние вклады и Pull Request не принимаются.",
     "обычные команды не подключают отладчик",
     "просит Chromium активировать целевую вкладку и сфокусировать окно браузера",
     "Linux App сейчас не объявляет `native.input.click.v1`",
@@ -168,7 +170,7 @@ test("each README keeps exact language navigation and a complete shared contract
   const baseline = readRepositoryFile("README.md");
   const expectedH2 = headingCount(baseline, 2);
   const expectedH3 = headingCount(baseline, 3);
-  assert.equal(expectedH2, 9);
+  assert.equal(expectedH2, 6);
   assert.equal(expectedH3, 7);
 
   for (const current of LOCALES) {
@@ -204,6 +206,7 @@ test("all local README links resolve inside the repository", () => {
     for (const match of text.matchAll(/\[[^\]]+\]\(([^)]+)\)/gu)) {
       const target = match[1].split("#", 1)[0];
       if (target.length === 0 || /^[a-z]+:/iu.test(target)) continue;
+      assert.equal(target.startsWith("docs/"), false, `${file}: internal documentation must not be a public dependency`);
       const absolute = resolve(REPOSITORY_ROOT, target);
       assert.equal(relative(REPOSITORY_ROOT, absolute).startsWith(".."), false, `${file}: link escapes repository`);
       assert.ok(existsSync(absolute), `${file}: missing link target ${target}`);
@@ -211,16 +214,13 @@ test("all local README links resolve inside the repository", () => {
   }
 });
 
-test("the documentation index links only to existing repository files", () => {
-  const file = "docs/README.md";
-  const text = readRepositoryFile(file);
-  assert.equal(text.includes("\\\`"), false, `${file}: escaped Markdown backtick remains`);
-  for (const match of text.matchAll(/\[[^\]]+\]\(([^)]+)\)/gu)) {
-    const target = match[1].split("#", 1)[0];
-    if (target.length === 0 || /^[a-z]+:/iu.test(target)) continue;
-    const absolute = resolve(REPOSITORY_ROOT, "docs", target);
-    assert.equal(relative(REPOSITORY_ROOT, absolute).startsWith(".."), false, `${file}: link escapes repository`);
-    assert.ok(existsSync(absolute), `${file}: missing link target ${target}`);
+test("public READMEs install released packages without internal build documentation", () => {
+  for (const { file } of LOCALES) {
+    const text = readRepositoryFile(file);
+    assert.ok(text.includes("https://github.com/BIOcanse/Browser-Key-Automation/releases/latest"), file);
+    assert.equal(text.includes("docs/historical/"), false, file);
+    assert.equal(/npm (?:ci|run build:)/u.test(text), false, file);
+    assert.equal(text.includes("-dev.zip"), false, file);
   }
 });
 

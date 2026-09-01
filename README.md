@@ -31,7 +31,7 @@ Connection models checked 2026-09-01. This compares normal workflows, not theore
 
 Browser Key Automation does not replace Playwright/Selenium test suites or DevTools diagnostics. It fills a different slot: low-friction, permissioned control of the browser a person is already using, with enough structure and file handling for an Agent to complete practical work.
 
-> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release. The Store listing is in preparation; until it is ready, use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`. Their layout is frozen in the [GitHub Release contract](docs/implementation/github-release-delivery.md).
+> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release. The Store listing is in preparation; until it is ready, use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`.
 
 ## What It Can Do
 
@@ -47,32 +47,6 @@ Browser Key Automation does not replace Playwright/Selenium test suites or DevTo
 
 The command registry is the public source of truth for exact methods, schemas, permissions, and errors. `system.describe` reports the active build and the calling Key's effective permissions.
 
-## Architecture
-
-```text
-Agent / automation
-        |
-        | BKA_API_KEY + command
-        v
-Windows or Linux Zig companion App
-        |
-        | local loopback route + App-assigned InstanceRef
-        v
-MV3 offscreen transport
-        |
-        v
-Extension service worker
-        |
-        +-- Key authentication and permissions
-        +-- occupations and runtime references
-        +-- tabs, page tree, DOM, JavaScript and Artifacts
-        `-- optional platform capability request
-```
-
-The extension is the only business-state owner. The companion App does not keep a Key database and does not decide browser permissions. Every successfully connected extension is assigned an Instance reference by the App; the extension never invents or persists its own instance number.
-
-The primary path uses ordinary extension permissions. CDP/DevTools can remain a separate optional capability, but Chromium's own debugging confirmation cannot be removed by this project.
-
 ## Quick Start
 
 ### Requirements
@@ -80,24 +54,15 @@ The primary path uses ordinary extension permissions. CDP/DevTools can remain a 
 - Chrome or another compatible Chromium browser, version 138 or later
 - Windows x86_64 or Linux x86_64 for the companion App
 - Node.js 20 or later for the packaged CLI
-- Zig only when building the companion App from source
 
-### 1. Build the split packages
+### 1. Download the extension and App
 
-```text
-npm ci
-npm run build:dev-package
-```
+Download both ZIPs from the [latest release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), then extract each into its own directory.
 
-The build produces three independent archives:
+- Extension: `browser-key-automation-extension-v0.0.0.1.zip`
+- Local App: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-The extension and local App are deliberately separate. Each archive contains its own `START-HERE.md` and `SHA256SUMS.txt`.
-
-`npm run build:github-release` turns those verified intermediates into the same two-asset layout used on GitHub: one extension ZIP and one App ZIP with `windows-x86_64/` and `linux-x86_64/` relay directories plus one shared CLI, protocol, and Agent skill.
+The App ZIP includes `windows-x86_64/` and `linux-x86_64/`, plus the CLI and Agent skill. No source build is needed.
 
 ### 2. Load the extension
 
@@ -121,8 +86,6 @@ Extract the GitHub Release App archive and keep the relay for the current platfo
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-The per-platform `-dev` App archives place their relay at the archive root instead; follow the included `START-HERE.md` when using those developer intermediates.
 
 The default endpoint is `127.0.0.1:32189`. If the App is unavailable, the extension retries at the configured nominal 10-second interval until it connects. Do not start a second App when the fixed endpoint is already owned by a compatible instance.
 
@@ -184,31 +147,6 @@ Chromium still controls host access, restricted pages, file URL access, the **Al
 
 The Windows and Linux Apps both provide routing and file delivery. Windows additionally advertises the current native click backend. Linux does not claim that backend yet. Incognito behavior and Chromium derivatives must be verified for their own profile and policy configuration.
 
-## Development
+Agent setup: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 
-| Command | Purpose |
-|---|---|
-| `npm run generate` | Generate command, UI, transport, capability, and Freedom Point projections |
-| `npm run check:extension` | Regenerate and type-check all extension realms |
-| `npm run build` | Build the extension and the current-platform Zig App |
-| `npm run test:unit` | Run UI, Key, runtime, WebSocket, and Zig unit tests |
-| `npm run test:runtime` | Run unit tests plus isolated relay/Chromium integration tests |
-| `npm run build:dev-package` | Build the extension and both platform App packages |
-| `npm run build:github-release` | Build the exact two ZIPs published on GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Build the Store identity-bootstrap artifact; synchronize Item ID/public key before review submission |
-| `npm run test:dev-package-smoke` | Verify archive layout, executables, hashes, and packaged skill references |
-
-Isolated integration tests use temporary ports, profiles, and relay processes. They must not be pointed at a personal browser profile or an existing personal App instance.
-
-## Documentation
-
-- [Documentation index](docs/README.md)
-- [Current decisions](docs/decisions.md)
-- [Progress and verified status](docs/PROGRESS.md)
-- [Command contract](docs/contracts/commands.md)
-- [Page operation tree](docs/design/page-information-tree.md)
-- [Freedom Points](docs/design/freedom-points.md)
-- [Delivery layout](docs/design/delivery-layout.md)
-- [Agent skill](skills/browser-key-automation/SKILL.md)
-
-Historical Cleaner/PageIR proposals remain under `docs/historical/` and are not current product behavior.
+This project is maintained by the author. External contributions and pull requests are not accepted.

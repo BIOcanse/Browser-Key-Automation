@@ -31,7 +31,7 @@ Browser Key Automation превращает уже используемый бр
 
 Browser Key Automation не заменяет тестовые наборы Playwright/Selenium или глубокую диагностику DevTools. Его роль иная: управление с низким трением и явными разрешениями браузером, который уже использует человек, с чистой структурой и файловыми возможностями для реальной работы Agent.
 
-> Статус разработки: текущая unpacked-сборка предназначена для Chrome/Chromium 138 и новее. Это не публикация в Chrome Web Store. Страница Store готовится; до её завершения используйте [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). В каждом Release ровно две загрузки: `browser-key-automation-extension-v0.0.0.1.zip` и `browser-key-automation-local-app-v0.0.0.1.zip`. Структура следует [контракту поставки GitHub Release](docs/implementation/github-release-delivery.md).
+> Статус разработки: текущая unpacked-сборка предназначена для Chrome/Chromium 138 и новее. Это не публикация в Chrome Web Store. Страница Store готовится; до её завершения используйте [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). В каждом Release ровно две загрузки: `browser-key-automation-extension-v0.0.0.1.zip` и `browser-key-automation-local-app-v0.0.0.1.zip`.
 
 ## Возможности
 
@@ -47,32 +47,6 @@ Browser Key Automation не заменяет тестовые наборы Playw
 
 Command Registry является источником истины для точных методов, schemas, разрешений и ошибок. `system.describe` возвращает активную сборку и эффективные разрешения вызывающего Key.
 
-## Архитектура
-
-```text
-Agent / автоматизация
-        |
-        | BKA_API_KEY + command
-        v
-Сопутствующее Zig App для Windows или Linux
-        |
-        | локальный loopback route + назначенный App InstanceRef
-        v
-MV3 offscreen transport
-        |
-        v
-service worker расширения
-        |
-        +-- аутентификация Keys и разрешения
-        +-- занятия и runtime-ссылки
-        +-- вкладки, дерево страницы, DOM, JavaScript и Artifacts
-        `-- необязательный запрос платформенной возможности
-```
-
-Расширение — единственный владелец бизнес-состояния. Сопутствующее App не хранит базу Keys и не принимает решений о разрешениях браузера. App назначает ссылку Instance каждому подключённому расширению; расширение не создаёт и не сохраняет собственный номер экземпляра.
-
-Основной путь использует обычные разрешения расширения. CDP/DevTools может оставаться отдельной необязательной возможностью, но проект не может убрать собственное подтверждение отладки Chromium.
-
 ## Быстрый старт
 
 ### Требования
@@ -80,24 +54,15 @@ service worker расширения
 - Chrome или совместимый браузер Chromium версии 138 или новее
 - Сопутствующее App для Windows x86_64 или Linux x86_64
 - Node.js 20 или новее для включённой CLI
-- Zig требуется только для сборки App из исходников
 
-### 1. Соберите раздельные пакеты
+### 1. Скачать расширение и App
 
-```text
-npm ci
-npm run build:dev-package
-```
+Скачайте оба ZIP из [последнего Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) и распакуйте каждый в отдельный каталог.
 
-Сборка создаёт три независимых архива:
+- Расширение: `browser-key-automation-extension-v0.0.0.1.zip`
+- Локальное App: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-Расширение и локальное App намеренно поставляются отдельно. В каждом архиве есть собственные `START-HERE.md` и `SHA256SUMS.txt`.
-
-`npm run build:github-release` объединяет эти проверенные промежуточные пакеты в два assets для GitHub: один ZIP расширения и один ZIP App с relay-каталогами `windows-x86_64/` и `linux-x86_64/`, а также одной общей копией CLI, протокола и Agent skill.
+ZIP App содержит `windows-x86_64/` и `linux-x86_64/`, а также CLI и Agent skill. Собирать проект из исходников не нужно.
 
 ### 2. Загрузите расширение
 
@@ -121,8 +86,6 @@ npm run build:dev-package
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-В платформенных промежуточных App-пакетах `-dev` relay по-прежнему лежит в корне архива; при их использовании следуйте вложенному `START-HERE.md`.
 
 Endpoint по умолчанию — `127.0.0.1:32189`. Если App недоступно, расширение повторяет попытки с настроенным номинальным интервалом 10 секунд до подключения. Не запускайте второе App, если фиксированный endpoint уже принадлежит совместимому экземпляру.
 
@@ -184,31 +147,6 @@ Chromium по-прежнему управляет host access, ограниче�
 
 Apps для Windows и Linux предоставляют маршрутизацию и сохранение файлов. Windows дополнительно объявляет текущий backend нативного клика; Linux пока нет. Режим инкогнито и производные Chromium необходимо проверять с их собственными профилями и политиками.
 
-## Разработка
+Подключение Agent: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 
-| Команда | Назначение |
-|---|---|
-| `npm run generate` | Генерация проекций команд, UI, транспорта, capabilities и Freedom Points |
-| `npm run check:extension` | Повторная генерация и проверка типов всех realms расширения |
-| `npm run build` | Сборка расширения и Zig App для текущей платформы |
-| `npm run test:unit` | Unit-тесты UI, Key, runtime, WebSocket и Zig |
-| `npm run test:runtime` | Unit-тесты и изолированная интеграция relay/Chromium |
-| `npm run build:dev-package` | Сборка расширения и Apps для обеих платформ |
-| `npm run build:github-release` | Сборка ровно двух ZIP, публикуемых в GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Сборка артефакта идентичности Store; синхронизировать Item ID/public key до отправки на проверку |
-| `npm run test:dev-package-smoke` | Проверка структуры архивов, исполняемых файлов, хешей и ссылок skill |
-
-Изолированные интеграционные тесты используют временные порты, профили и процессы relay. Они не должны быть направлены на личный профиль браузера или уже работающий личный Instance App.
-
-## Документация
-
-- [Указатель документации](docs/README.md)
-- [Текущие решения](docs/decisions.md)
-- [Прогресс и проверенный статус](docs/PROGRESS.md)
-- [Контракт команд](docs/contracts/commands.md)
-- [Дерево операций страницы](docs/design/page-information-tree.md)
-- [Freedom Points](docs/design/freedom-points.md)
-- [Структура поставки](docs/design/delivery-layout.md)
-- [Agent skill](skills/browser-key-automation/SKILL.md)
-
-Старые предложения Cleaner/PageIR сохранены только в `docs/historical/` и не описывают текущее поведение продукта.
+Проект поддерживает автор. Внешние вклады и Pull Request не принимаются.

@@ -31,7 +31,7 @@ Modèles de connexion vérifiés le 2026-09-01. La comparaison porte sur les par
 
 Browser Key Automation ne remplace ni les suites de tests Playwright/Selenium ni les diagnostics DevTools approfondis. Il occupe un autre rôle : contrôler avec peu de friction et des permissions explicites le navigateur qu'une personne utilise déjà, avec une structure claire et des fichiers suffisants pour les tâches pratiques d'un Agent.
 
-> État de développement : la version de développement unpacked actuelle cible Chrome/Chromium 138 ou version ultérieure. Ce n'est pas une publication du Chrome Web Store. La fiche Store est en préparation ; en attendant, utilisez [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.1.zip` et `browser-key-automation-local-app-v0.0.0.1.zip`. Leur structure suit le [contrat de livraison GitHub Release](docs/implementation/github-release-delivery.md).
+> État de développement : la version de développement unpacked actuelle cible Chrome/Chromium 138 ou version ultérieure. Ce n'est pas une publication du Chrome Web Store. La fiche Store est en préparation ; en attendant, utilisez [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.1.zip` et `browser-key-automation-local-app-v0.0.0.1.zip`.
 
 ## Fonctionnalités
 
@@ -47,32 +47,6 @@ Browser Key Automation ne remplace ni les suites de tests Playwright/Selenium ni
 
 La Command Registry est la source de vérité pour les méthodes, schemas, permissions et erreurs exacts. `system.describe` renvoie le build actif et les permissions effectives de la Key appelante.
 
-## Architecture
-
-```text
-Agent / automatisation
-        |
-        | BKA_API_KEY + command
-        v
-App compagnon Zig Windows ou Linux
-        |
-        | route loopback locale + InstanceRef attribuée par l'App
-        v
-MV3 offscreen transport
-        |
-        v
-service worker de l'extension
-        |
-        +-- authentification et permissions des Keys
-        +-- occupations et références runtime
-        +-- onglets, arbre de page, DOM, JavaScript et Artifacts
-        `-- demande facultative de capacité de plateforme
-```
-
-L'extension est l'unique propriétaire de l'état métier. L'App compagnon ne conserve pas de base de Keys et ne décide pas des permissions du navigateur. Chaque extension connectée reçoit sa référence d'Instance de l'App ; l'extension n'invente ni ne persiste son propre numéro.
-
-Le chemin principal utilise les permissions ordinaires d'une extension. CDP/DevTools peut rester une capacité facultative distincte, mais ce projet ne peut pas supprimer la confirmation de débogage propre à Chromium.
-
 ## Démarrage rapide
 
 ### Prérequis
@@ -80,24 +54,15 @@ Le chemin principal utilise les permissions ordinaires d'une extension. CDP/DevT
 - Chrome ou un navigateur Chromium compatible, version 138 ou ultérieure
 - App compagnon Windows x86_64 ou Linux x86_64
 - Node.js 20 ou ultérieur pour la CLI fournie
-- Zig uniquement pour compiler l'App depuis les sources
 
-### 1. Construire les paquets séparés
+### 1. Télécharger l'extension et l'App
 
-```text
-npm ci
-npm run build:dev-package
-```
+Téléchargez les deux ZIP de la [dernière Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), puis extrayez chacun dans un dossier distinct.
 
-La construction produit trois archives indépendantes :
+- Extension: `browser-key-automation-extension-v0.0.0.1.zip`
+- App locale: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-L'extension et l'App locale sont volontairement distribuées séparément. Chaque archive contient son propre `START-HERE.md` et `SHA256SUMS.txt`.
-
-`npm run build:github-release` regroupe ces intermédiaires vérifiés en deux assets GitHub : un ZIP d'extension et un ZIP d'App contenant les relais `windows-x86_64/` et `linux-x86_64/`, ainsi qu'un seul exemplaire commun de la CLI, du protocole et du skill Agent.
+Le ZIP de l'App contient `windows-x86_64/` et `linux-x86_64/`, ainsi que la CLI et le skill Agent. Aucune compilation des sources n'est nécessaire.
 
 ### 2. Charger l'extension
 
@@ -121,8 +86,6 @@ Extraire l'archive App de GitHub Release et laisser actif le relay de la platefo
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-Les intermédiaires App `-dev` propres à chaque plateforme placent encore le relay à la racine de l'archive ; suivez leur `START-HERE.md` inclus.
 
 L'endpoint par défaut est `127.0.0.1:32189`. Si l'App est indisponible, l'extension réessaie selon l'intervalle nominal configuré de 10 secondes jusqu'à la connexion. Ne pas démarrer une seconde App si une instance compatible possède déjà cet endpoint fixe.
 
@@ -184,31 +147,6 @@ Chromium contrôle toujours le host access, les pages restreintes, l'accès aux 
 
 Les Apps Windows et Linux fournissent toutes deux le routage et l'écriture de fichiers. Windows annonce en plus le backend actuel de clic natif ; Linux ne l'annonce pas encore. Le mode navigation privée et les dérivés Chromium doivent être vérifiés avec leur propre profil et leurs propres politiques.
 
-## Développement
+Configuration de l'Agent : [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 
-| Commande | Rôle |
-|---|---|
-| `npm run generate` | Générer les projections de commandes, UI, transport, capacités et Freedom Points |
-| `npm run check:extension` | Régénérer et vérifier les types de tous les realms de l'extension |
-| `npm run build` | Construire l'extension et l'App Zig de la plateforme courante |
-| `npm run test:unit` | Tests unitaires UI, Key, runtime, WebSocket et Zig |
-| `npm run test:runtime` | Tests unitaires plus intégration relay/Chromium isolée |
-| `npm run build:dev-package` | Construire l'extension et les Apps des deux plateformes |
-| `npm run build:github-release` | Construire exactement les deux ZIP publiés dans GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Construire l'artefact d'identité Store ; synchroniser Item ID/public key avant soumission à l'examen |
-| `npm run test:dev-package-smoke` | Vérifier la structure des archives, exécutables, hachages et références du skill |
-
-Les tests d'intégration isolés utilisent des ports, profils et processus relay temporaires. Ils ne doivent jamais cibler un profil de navigateur personnel ni une Instance d'App personnelle existante.
-
-## Documentation
-
-- [Index de la documentation](docs/README.md)
-- [Décisions actuelles](docs/decisions.md)
-- [Progression et état vérifié](docs/PROGRESS.md)
-- [Contrat des commandes](docs/contracts/commands.md)
-- [Arbre d'opérations de page](docs/design/page-information-tree.md)
-- [Freedom Points](docs/design/freedom-points.md)
-- [Structure de livraison](docs/design/delivery-layout.md)
-- [Skill Agent](skills/browser-key-automation/SKILL.md)
-
-Les anciens projets Cleaner/PageIR restent uniquement sous `docs/historical/` et ne décrivent pas le comportement actuel du produit.
+Ce projet est maintenu par son auteur. Les contributions externes et les Pull Requests ne sont pas acceptées.

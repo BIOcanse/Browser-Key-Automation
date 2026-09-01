@@ -31,7 +31,7 @@ Browser Key Automation은 지금 사용 중인 Chromium 브라우저를 신뢰�
 
 Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevTools 진단을 대체하지 않습니다. 사람이 쓰는 브라우저를 낮은 마찰과 명시적 권한으로 제어하고, Agent가 실제 작업을 마칠 만큼 깨끗한 구조와 파일 기능을 제공하는 별도 역할입니다.
 
-> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다. Store listing은 준비 중이며, 완료 전에는 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.1.zip`과 `browser-key-automation-local-app-v0.0.0.1.zip`, 정확히 두 개의 다운로드만 있습니다. 구조는 [GitHub Release 전달 계약](docs/implementation/github-release-delivery.md)을 따릅니다.
+> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다. Store listing은 준비 중이며, 완료 전에는 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.1.zip`과 `browser-key-automation-local-app-v0.0.0.1.zip`, 정확히 두 개의 다운로드만 있습니다.
 
 ## 주요 기능
 
@@ -47,32 +47,6 @@ Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevT
 
 정확한 메서드, schema, 권한, 오류의 기준은 Command Registry입니다. `system.describe`는 활성 빌드와 호출 Key의 실제 권한을 반환합니다.
 
-## 아키텍처
-
-```text
-Agent / 자동화
-        |
-        | BKA_API_KEY + command
-        v
-Windows 또는 Linux Zig 동반 App
-        |
-        | 로컬 loopback route + App 할당 InstanceRef
-        v
-MV3 offscreen transport
-        |
-        v
-확장 프로그램 service worker
-        |
-        +-- Key 인증과 권한
-        +-- 점유와 런타임 참조
-        +-- 탭, 페이지 트리, DOM, JavaScript, Artifact
-        `-- 선택적 플랫폼 기능 요청
-```
-
-확장 프로그램만 비즈니스 상태를 소유합니다. 동반 App은 Key 데이터베이스를 보관하지 않고 브라우저 권한도 결정하지 않습니다. 성공적으로 연결된 각 확장 프로그램의 Instance 참조는 App이 할당하며, 확장 프로그램이 자체 번호를 만들거나 저장하지 않습니다.
-
-주 경로는 일반 확장 프로그램 권한을 사용합니다. CDP/DevTools는 별도의 선택 기능으로 둘 수 있지만 Chromium 자체의 디버깅 확인은 이 프로젝트가 제거할 수 없습니다.
-
 ## 빠른 시작
 
 ### 요구 사항
@@ -80,24 +54,15 @@ MV3 offscreen transport
 - Chrome 또는 호환 Chromium 브라우저 138 이상
 - Windows x86_64 또는 Linux x86_64 동반 App
 - 패키지 CLI용 Node.js 20 이상
-- 소스에서 App을 빌드할 때만 Zig
 
-### 1. 분리 패키지 빌드
+### 1. 확장 프로그램과 App 다운로드
 
-```text
-npm ci
-npm run build:dev-package
-```
+[최신 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)에서 ZIP 두 개를 다운로드하고 각각 별도 디렉터리에 압축을 풉니다.
 
-서로 독립된 세 개의 아카이브가 생성됩니다.
+- 확장 프로그램: `browser-key-automation-extension-v0.0.0.1.zip`
+- 로컬 App: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-확장 프로그램과 로컬 App은 의도적으로 따로 배포됩니다. 각 아카이브에 자체 `START-HERE.md`와 `SHA256SUMS.txt`가 있습니다.
-
-`npm run build:github-release`는 검증된 중간 패키지를 GitHub용 두 자산으로 모읍니다. 확장 프로그램 ZIP 하나와 `windows-x86_64/`, `linux-x86_64/` relay 디렉터리 및 한 벌의 공용 CLI·protocol·Agent skill을 담은 App ZIP 하나입니다.
+App ZIP에는 `windows-x86_64/`, `linux-x86_64/`, CLI와 Agent skill이 포함되어 있습니다. 소스 빌드는 필요하지 않습니다.
 
 ### 2. 확장 프로그램 로드
 
@@ -121,8 +86,6 @@ GitHub Release App 아카이브를 풀고 현재 플랫폼의 relay를 계속 �
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-플랫폼별 `-dev` App 중간 패키지는 relay를 아카이브 루트에 둡니다. 개발 중간 패키지를 사용할 때는 동봉된 `START-HERE.md`를 따르십시오.
 
 기본 endpoint는 `127.0.0.1:32189`입니다. App에 연결할 수 없으면 확장 프로그램은 설정된 명목상 10초 간격으로 연결될 때까지 다시 시도합니다. 호환 App이 고정 endpoint를 이미 사용 중이면 두 번째 App을 시작하지 마십시오.
 
@@ -184,31 +147,6 @@ host access, 제한된 페이지, file URL 접근, **Allow User Scripts**, 확�
 
 Windows와 Linux App은 모두 라우팅과 파일 저장을 제공합니다. Windows는 현재 네이티브 클릭 backend도 광고하지만 Linux는 아직 광고하지 않습니다. 시크릿 모드와 Chromium 파생 브라우저는 각각의 profile과 policy에서 검증해야 합니다.
 
-## 개발
+Agent 연결: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 
-| 명령 | 목적 |
-|---|---|
-| `npm run generate` | command, UI, transport, capability, Freedom Point 투영 생성 |
-| `npm run check:extension` | 재생성 후 모든 확장 프로그램 realm 타입 검사 |
-| `npm run build` | 확장 프로그램과 현재 플랫폼 Zig App 빌드 |
-| `npm run test:unit` | UI, Key, runtime, WebSocket, Zig 단위 테스트 |
-| `npm run test:runtime` | 단위 테스트와 격리 relay/Chromium 통합 테스트 |
-| `npm run build:dev-package` | 확장 프로그램 및 두 플랫폼 App 패키지 빌드 |
-| `npm run build:github-release` | GitHub Releases에 게시할 정확히 두 ZIP 빌드 |
-| `npm run build:chrome-web-store:first-upload` | Store ID 부트스트랩 산출물 빌드. 심사 제출 전에 Item ID/public key 동기화 |
-| `npm run test:dev-package-smoke` | 아카이브 구조, 실행 파일, 해시, skill 참조 검증 |
-
-격리 통합 테스트는 임시 port, profile, relay를 사용합니다. 개인 브라우저 profile이나 기존 개인 App Instance를 대상으로 삼지 마십시오.
-
-## 문서
-
-- [문서 색인](docs/README.md)
-- [현재 결정](docs/decisions.md)
-- [진행 및 검증 상태](docs/PROGRESS.md)
-- [명령 계약](docs/contracts/commands.md)
-- [페이지 작업 트리](docs/design/page-information-tree.md)
-- [Freedom Points](docs/design/freedom-points.md)
-- [배포 구조](docs/design/delivery-layout.md)
-- [Agent skill](skills/browser-key-automation/SKILL.md)
-
-이전 Cleaner/PageIR 제안은 `docs/historical/`에만 보관되며 현재 제품 동작이 아닙니다.
+이 프로젝트는 작성자가 유지 관리하며 외부 기여와 Pull Request를 받지 않습니다.

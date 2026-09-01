@@ -31,7 +31,7 @@ Modelos de conexión verificados el 2026-09-01. Se comparan rutas de uso normale
 
 Browser Key Automation no sustituye las suites de pruebas Playwright/Selenium ni el diagnóstico profundo de DevTools. Cumple otra función: control autorizado y de baja fricción del navegador que una persona ya usa, con una estructura limpia y archivos suficientes para que un Agent complete trabajo real.
 
-> Estado de desarrollo: la compilación de desarrollo unpacked actual está dirigida a Chrome/Chromium 138 o posterior. No es una publicación de Chrome Web Store. La ficha de Store se está preparando; hasta entonces usa [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases). Cada Release tiene exactamente dos descargas: `browser-key-automation-extension-v0.0.0.1.zip` y `browser-key-automation-local-app-v0.0.0.1.zip`. Su estructura sigue el [contrato de entrega de GitHub Release](docs/implementation/github-release-delivery.md).
+> Estado de desarrollo: la compilación de desarrollo unpacked actual está dirigida a Chrome/Chromium 138 o posterior. No es una publicación de Chrome Web Store. La ficha de Store se está preparando; hasta entonces usa [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Cada Release tiene exactamente dos descargas: `browser-key-automation-extension-v0.0.0.1.zip` y `browser-key-automation-local-app-v0.0.0.1.zip`.
 
 ## Funciones
 
@@ -47,32 +47,6 @@ Browser Key Automation no sustituye las suites de pruebas Playwright/Selenium ni
 
 Command Registry es la fuente de verdad para los métodos, schemas, permisos y errores exactos. `system.describe` devuelve la compilación activa y los permisos efectivos de la Key que llama.
 
-## Arquitectura
-
-```text
-Agent / automatización
-        |
-        | BKA_API_KEY + command
-        v
-App complementaria Zig para Windows o Linux
-        |
-        | route loopback local + InstanceRef asignada por la App
-        v
-MV3 offscreen transport
-        |
-        v
-service worker de la extensión
-        |
-        +-- autenticación de Keys y permisos
-        +-- ocupaciones y referencias runtime
-        +-- pestañas, árbol de página, DOM, JavaScript y Artifacts
-        `-- solicitud opcional de capacidad de plataforma
-```
-
-La extensión es la única propietaria del estado de negocio. La App complementaria no conserva una base de datos de Keys ni decide permisos del navegador. La App asigna la referencia de Instance a cada extensión conectada; la extensión nunca inventa ni persiste su propio número de instancia.
-
-La ruta principal utiliza permisos normales de extensión. CDP/DevTools puede seguir siendo una capacidad opcional separada, pero este proyecto no puede eliminar la confirmación de depuración de Chromium.
-
 ## Inicio rápido
 
 ### Requisitos
@@ -80,24 +54,15 @@ La ruta principal utiliza permisos normales de extensión. CDP/DevTools puede se
 - Chrome o un navegador Chromium compatible, versión 138 o posterior
 - App complementaria para Windows x86_64 o Linux x86_64
 - Node.js 20 o posterior para la CLI incluida
-- Zig solo para compilar la App desde el código fuente
 
-### 1. Compilar los paquetes separados
+### 1. Descargar la extensión y la App
 
-```text
-npm ci
-npm run build:dev-package
-```
+Descarga los dos ZIP de la [última Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) y extrae cada uno en una carpeta independiente.
 
-La compilación produce tres archivos independientes:
+- Extensión: `browser-key-automation-extension-v0.0.0.1.zip`
+- App local: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-La extensión y la App local se entregan por separado de forma deliberada. Cada archivo contiene su propio `START-HERE.md` y `SHA256SUMS.txt`.
-
-`npm run build:github-release` agrupa esos intermedios verificados en dos assets para GitHub: un ZIP de extensión y un ZIP de App con los relays `windows-x86_64/` y `linux-x86_64/`, más una sola copia compartida de la CLI, el protocolo y el skill de Agent.
+El ZIP de la App incluye `windows-x86_64/` y `linux-x86_64/`, además de la CLI y el skill de Agent. No hace falta compilar el código fuente.
 
 ### 2. Cargar la extensión
 
@@ -121,8 +86,6 @@ Extraer el archivo App de GitHub Release y mantener en ejecución el relay de la
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-Los intermedios App `-dev` por plataforma aún colocan el relay en la raíz del archivo; sigue el `START-HERE.md` incluido al usarlos.
 
 El endpoint predeterminado es `127.0.0.1:32189`. Si la App no está disponible, la extensión vuelve a intentarlo con el intervalo nominal configurado de 10 segundos hasta conectarse. No iniciar una segunda App si una instancia compatible ya posee el endpoint fijo.
 
@@ -184,31 +147,6 @@ Chromium sigue controlando host access, páginas restringidas, acceso a file URL
 
 Las Apps de Windows y Linux ofrecen enrutamiento y escritura de archivos. Windows anuncia además el backend nativo de clic actual; Linux todavía no. El modo incógnito y los derivados de Chromium deben verificarse con su propio perfil y políticas.
 
-## Desarrollo
+Configuración del Agent: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 
-| Comando | Propósito |
-|---|---|
-| `npm run generate` | Generar proyecciones de comandos, UI, transporte, capacidades y Freedom Points |
-| `npm run check:extension` | Regenerar y comprobar tipos de todos los realms de la extensión |
-| `npm run build` | Compilar la extensión y la App Zig de la plataforma actual |
-| `npm run test:unit` | Pruebas unitarias de UI, Key, runtime, WebSocket y Zig |
-| `npm run test:runtime` | Pruebas unitarias más integración aislada relay/Chromium |
-| `npm run build:dev-package` | Crear la extensión y las Apps de ambas plataformas |
-| `npm run build:github-release` | Crear exactamente los dos ZIP publicados en GitHub Releases |
-| `npm run build:chrome-web-store:first-upload` | Crear el artefacto de identidad de Store; sincronizar Item ID/public key antes de enviarlo a revisión |
-| `npm run test:dev-package-smoke` | Verificar estructura, ejecutables, hashes y referencias del skill |
-
-Las pruebas de integración aisladas usan puertos, perfiles y procesos relay temporales. No deben apuntar a un perfil de navegador personal ni a una Instance de App personal ya existente.
-
-## Documentación
-
-- [Índice de documentación](docs/README.md)
-- [Decisiones actuales](docs/decisions.md)
-- [Progreso y estado verificado](docs/PROGRESS.md)
-- [Contrato de comandos](docs/contracts/commands.md)
-- [Árbol de operaciones de página](docs/design/page-information-tree.md)
-- [Freedom Points](docs/design/freedom-points.md)
-- [Estructura de entrega](docs/design/delivery-layout.md)
-- [Skill de Agent](skills/browser-key-automation/SKILL.md)
-
-Las propuestas antiguas Cleaner/PageIR se conservan únicamente en `docs/historical/` y no describen el comportamiento actual del producto.
+Este proyecto lo mantiene su autor. No se aceptan contribuciones externas ni Pull Requests.

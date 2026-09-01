@@ -31,7 +31,7 @@ Browser Key Automation は、普段使っている Chromium ブラウザーを�
 
 Browser Key Automation は Playwright/Selenium のテストスイートや DevTools の深い診断を置き換えません。人が使っているブラウザーを低摩擦かつ権限付きで操作し、Agent が実務を完了するための明瞭な構造とファイル機能を提供する別の役割です。
 
-> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。Store listing は準備中です。それまでは [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.1.zip` と `browser-key-automation-local-app-v0.0.0.1.zip` の 2 つだけです。構造は [GitHub Release 配布契約](docs/implementation/github-release-delivery.md)に従います。
+> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。Store listing は準備中です。それまでは [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.1.zip` と `browser-key-automation-local-app-v0.0.0.1.zip` の 2 つだけです。
 
 ## 主な機能
 
@@ -47,32 +47,6 @@ Browser Key Automation は Playwright/Selenium のテストスイートや DevTo
 
 正確なメソッド、schema、権限、エラーは Command Registry が正本です。`system.describe` は現在のビルドと呼び出し元 Key の実効権限を返します。
 
-## アーキテクチャ
-
-```text
-Agent / 自動化
-        |
-        | BKA_API_KEY + command
-        v
-Windows / Linux Zig コンパニオン App
-        |
-        | ローカル loopback route + App 割り当て InstanceRef
-        v
-MV3 offscreen transport
-        |
-        v
-拡張機能 service worker
-        |
-        +-- Key 認証と権限
-        +-- 占有と実行時参照
-        +-- タブ、ページツリー、DOM、JavaScript、Artifact
-        `-- オプションのプラットフォーム機能要求
-```
-
-業務状態の唯一の所有者は拡張機能です。コンパニオン App は Key データベースを保持せず、ブラウザー権限も決定しません。接続に成功した拡張機能ごとに App が Instance 参照を割り当てます。拡張機能自身が番号を生成・永続化することはありません。
-
-主経路は通常の拡張機能権限を使用します。CDP/DevTools は並列のオプション機能として追加できますが、Chromium 自身のデバッグ確認を本プロジェクトが取り除くことはできません。
-
 ## クイックスタート
 
 ### 必要環境
@@ -80,24 +54,15 @@ MV3 offscreen transport
 - Chrome または互換 Chromium ブラウザー 138 以降
 - Windows x86_64 または Linux x86_64 のコンパニオン App
 - 同梱 CLI 用の Node.js 20 以降
-- ソースから App をビルドする場合のみ Zig
 
-### 1. 分割パッケージをビルド
+### 1. 拡張機能と App をダウンロード
 
-```text
-npm ci
-npm run build:dev-package
-```
+[最新の Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) から 2 つの ZIP をダウンロードし、それぞれ別のディレクトリに展開します。
 
-3 つの独立したアーカイブが生成されます。
+- 拡張機能: `browser-key-automation-extension-v0.0.0.1.zip`
+- ローカル App: `browser-key-automation-local-app-v0.0.0.1.zip`
 
-- `out/browser-key-automation-extension-dev.zip`
-- `out/browser-key-automation-local-app-windows-x86_64-dev.zip`
-- `out/browser-key-automation-local-app-linux-x86_64-dev.zip`
-
-拡張機能とローカル App は意図的に別配布です。各アーカイブに `START-HERE.md` と `SHA256SUMS.txt` が含まれます。
-
-`npm run build:github-release` は、検証済み中間パッケージを GitHub 用の 2 資産に集約します。拡張機能 ZIP が 1 つ、そして `windows-x86_64/` と `linux-x86_64/` の relay および共通 CLI・protocol・Agent skill を 1 部だけ含む App ZIP が 1 つです。
+App ZIP には `windows-x86_64/`、`linux-x86_64/`、CLI、Agent skill が含まれます。ソースからのビルドは不要です。
 
 ### 2. 拡張機能を読み込む
 
@@ -121,8 +86,6 @@ GitHub Release の App を展開し、現在のプラットフォーム用 relay
 chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
-
-プラットフォーム別の `-dev` App 中間パッケージでは relay がアーカイブのルートにあります。その場合は同梱の `START-HERE.md` に従ってください。
 
 既定の endpoint は `127.0.0.1:32189` です。App が利用できない間、拡張機能は設定済みの公称 10 秒間隔で接続成功まで再試行します。互換 App が固定 endpoint を使用中なら、2 つ目を起動しないでください。
 
@@ -184,31 +147,6 @@ host access、制限ページ、file URL、**Allow User Scripts**、拡張機能
 
 Windows/Linux App はどちらもルーティングとファイル保存を提供します。Windows は現在のネイティブクリック backend も公開し、Linux はまだ公開しません。シークレットモードや Chromium 派生ブラウザーは、それぞれの profile と policy で検証が必要です。
 
-## 開発
+Agent の接続：[Browser Key Automation skill](skills/browser-key-automation/SKILL.md)。
 
-| コマンド | 目的 |
-|---|---|
-| `npm run generate` | command、UI、transport、capability、Freedom Point の投影を生成 |
-| `npm run check:extension` | 再生成して全拡張機能 realm を型チェック |
-| `npm run build` | 拡張機能と現在プラットフォームの Zig App をビルド |
-| `npm run test:unit` | UI、Key、runtime、WebSocket、Zig の単体テスト |
-| `npm run test:runtime` | 単体テストと分離 relay/Chromium 統合テスト |
-| `npm run build:dev-package` | 拡張機能と両プラットフォーム App をパッケージ化 |
-| `npm run build:github-release` | GitHub Releases で公開する正確な 2 つの ZIP を構築 |
-| `npm run build:chrome-web-store:first-upload` | Store ID 初期化成果物を構築。審査送信前に Item ID/public key を同期 |
-| `npm run test:dev-package-smoke` | アーカイブ階層、実行ファイル、ハッシュ、skill 参照を検証 |
-
-分離統合テストは一時 port、profile、relay を使います。個人ブラウザー profile や既存の個人 App Instance に向けてはいけません。
-
-## ドキュメント
-
-- [ドキュメント索引](docs/README.md)
-- [現在の決定](docs/decisions.md)
-- [進捗と検証状況](docs/PROGRESS.md)
-- [コマンド契約](docs/contracts/commands.md)
-- [ページ操作ツリー](docs/design/page-information-tree.md)
-- [Freedom Points](docs/design/freedom-points.md)
-- [配布構造](docs/design/delivery-layout.md)
-- [Agent skill](skills/browser-key-automation/SKILL.md)
-
-旧 Cleaner/PageIR 案は `docs/historical/` にだけ保存され、現在の製品動作ではありません。
+このプロジェクトは作者が保守します。外部からの貢献や Pull Request は受け付けていません。
