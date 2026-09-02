@@ -31,7 +31,7 @@ Browser Key Automation は、普段使っている Chromium ブラウザーを�
 
 Browser Key Automation は Playwright/Selenium のテストスイートや DevTools の深い診断を置き換えません。人が使っているブラウザーを低摩擦かつ権限付きで操作し、Agent が実務を完了するための明瞭な構造とファイル機能を提供する別の役割です。
 
-> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。Store listing は準備中です。それまでは [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.1.zip` と `browser-key-automation-local-app-v0.0.0.1.zip` の 2 つだけです。
+> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。Store listing は準備中です。それまでは [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.2.zip` と `browser-key-automation-local-app-v0.0.0.2.zip` の 2 つだけです。
 
 ## 主な機能
 
@@ -59,8 +59,8 @@ Browser Key Automation は Playwright/Selenium のテストスイートや DevTo
 
 [最新の Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) から 2 つの ZIP をダウンロードし、それぞれ別のディレクトリに展開します。
 
-- 拡張機能: `browser-key-automation-extension-v0.0.0.1.zip`
-- ローカル App: `browser-key-automation-local-app-v0.0.0.1.zip`
+- 拡張機能: `browser-key-automation-extension-v0.0.0.2.zip`
+- ローカル App: `browser-key-automation-local-app-v0.0.0.2.zip`
 
 App ZIP には `windows-x86_64/`、`linux-x86_64/`、CLI、Agent skill が含まれます。ソースからのビルドは不要です。
 

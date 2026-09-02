@@ -406,12 +406,28 @@ tbody tr:hover td { background: var(--surface-hover); }
 .permission-fieldset { min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); }
 .permission-fieldset legend { padding: 0 6px; color: var(--text); font-size: .78rem; font-weight: 680; }
 .permission-fieldset > p { margin: -2px 0 12px; color: var(--text-tertiary); font-size: .69rem; }
-.permission-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.permission-picker { display: grid; gap: 6px; }
+.permission-select-all, .permission-group-select { display: flex; min-width: 0; align-items: center; gap: 10px; color: var(--text); cursor: pointer; font-size: .76rem; font-weight: 600; }
+.permission-select-all { padding: 5px 12px 11px; }
+.permission-select-all input, .permission-group-select input { flex: 0 0 auto; margin: 0; accent-color: var(--accent); }
+.permission-select-all > span, .permission-group-select > span { min-width: 0; overflow-wrap: anywhere; }
+.permission-selection-count { flex: 0 0 auto; margin-inline-start: auto; color: var(--text-tertiary); font-size: .7rem; font-weight: 450; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.permission-group { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.permission-group-header { display: flex; min-height: 40px; align-items: center; }
+.permission-group-select { flex: 1; padding: 10px 12px; }
+.permission-group-expand { display: grid; width: 32px; height: 32px; flex: 0 0 auto; margin-inline-end: 4px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.permission-group-expand::before { width: 6px; height: 6px; transform: rotate(-45deg); border-right: 1.6px solid currentcolor; border-bottom: 1.6px solid currentcolor; content: ""; }
+.permission-group-expand[aria-expanded="true"]::before { transform: rotate(45deg); }
+:root[dir="rtl"] .permission-group-expand[aria-expanded="false"]::before { transform: rotate(135deg); }
+.permission-group-expand:hover:not(:disabled) { background: var(--surface-muted); }
+.permission-group-expand:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.permission-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.permission-group-members { padding: 8px; border-top: 1px solid var(--border); background: var(--surface-muted); }
 .permission-option { display: flex; min-width: 0; align-items: flex-start; gap: 9px; padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); cursor: pointer; }
 .permission-option:has(input:checked) { border-color: var(--accent-border); background: var(--accent-soft); }
 .permission-option input { margin: 3px 0 0; accent-color: var(--accent); }
 .permission-copy { display: grid; min-width: 0; gap: 1px; }
-.permission-copy strong { overflow: hidden; color: var(--text); font-family: var(--font-mono); font-size: .69rem; font-weight: 600; text-overflow: ellipsis; }
+.permission-copy strong { overflow: hidden; color: var(--text); direction: ltr; unicode-bidi: isolate; text-align: left; font-family: var(--font-mono); font-size: .69rem; font-weight: 600; text-overflow: ellipsis; }
 .permission-copy small { color: var(--text-tertiary); font-size: .64rem; }
 .root-permission-note, .inline-note { margin: 0; padding: 11px 12px; border: 1px solid var(--accent-border); border-radius: 9px; background: var(--accent-soft); color: var(--text-secondary); font-size: .72rem; }
 .success-mark, .danger-mark { display: grid; width: 36px; height: 36px; margin-bottom: 14px; place-items: center; border-radius: 11px; font-size: 1rem; font-weight: 800; }

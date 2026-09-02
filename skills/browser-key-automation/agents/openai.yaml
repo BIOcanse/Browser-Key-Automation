@@ -1,0 +1,7 @@
+interface:
+  display_name: "Browser Key Automation"
+  short_description: "Use an existing signed-in Chromium session"
+  default_prompt: "Use $browser-key-automation to continue this task in my existing signed-in Chromium browser."
+
+policy:
+  allow_implicit_invocation: true

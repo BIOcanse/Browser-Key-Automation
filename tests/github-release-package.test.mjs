@@ -32,7 +32,7 @@ assert.equal(packagedManifest.key, manifest.key);
 const extensionStart = await readFile(path.join(extensionRoot, "START-HERE.md"), "utf8");
 assert.match(extensionStart, new RegExp(`版本：\`${escapeRegExp(version)}\``, "u"));
 assert.match(extensionStart, new RegExp(`${escapeRegExp(appName)}\\.zip`, "u"));
-assert.match(extensionStart, /Chrome Web Store 发布当前暂停/u);
+assert.match(extensionStart, /Chrome Web Store 发布仍按独立的商店身份与审核流程推进/u);
 
 assert.deepEqual((await readdir(appRoot)).sort(), [
   "SHA256SUMS.txt",

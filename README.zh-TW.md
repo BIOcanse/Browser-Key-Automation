@@ -31,7 +31,7 @@ Browser Key Automation 把你正在使用的 Chromium 瀏覽器變成供可信 A
 
 Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代 DevTools 深度診斷。它填補的是另一塊：低摩擦、可設定權限地控制人正在使用的瀏覽器，並提供足夠乾淨的結構與檔案能力，讓 Agent 完成實際工作。
 
-> 開發狀態：目前的解壓縮擴充功能開發包以 Chrome/Chromium 138 以上版本為目標；目前不是 Chrome 線上應用程式商店版本。商店頁面仍在準備；完成前請使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.1.zip` 與 `browser-key-automation-local-app-v0.0.0.1.zip`。
+> 開發狀態：目前的解壓縮擴充功能開發包以 Chrome/Chromium 138 以上版本為目標；目前不是 Chrome 線上應用程式商店版本。商店頁面仍在準備；完成前請使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.2.zip` 與 `browser-key-automation-local-app-v0.0.0.2.zip`。
 
 ## 目前能力
 
@@ -59,8 +59,8 @@ Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代
 
 從[最新 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 下載兩個 ZIP，分別解壓縮到獨立目錄。
 
-- 擴充功能: `browser-key-automation-extension-v0.0.0.1.zip`
-- 本機 App: `browser-key-automation-local-app-v0.0.0.1.zip`
+- 擴充功能: `browser-key-automation-extension-v0.0.0.2.zip`
+- 本機 App: `browser-key-automation-local-app-v0.0.0.2.zip`
 
 App ZIP 內含 `windows-x86_64/`、`linux-x86_64/`、CLI 與 Agent skill，無需自行編譯。
 

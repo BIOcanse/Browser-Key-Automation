@@ -31,7 +31,7 @@ Browser Key Automation은 지금 사용 중인 Chromium 브라우저를 신뢰�
 
 Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevTools 진단을 대체하지 않습니다. 사람이 쓰는 브라우저를 낮은 마찰과 명시적 권한으로 제어하고, Agent가 실제 작업을 마칠 만큼 깨끗한 구조와 파일 기능을 제공하는 별도 역할입니다.
 
-> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다. Store listing은 준비 중이며, 완료 전에는 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.1.zip`과 `browser-key-automation-local-app-v0.0.0.1.zip`, 정확히 두 개의 다운로드만 있습니다.
+> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다. Store listing은 준비 중이며, 완료 전에는 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.2.zip`과 `browser-key-automation-local-app-v0.0.0.2.zip`, 정확히 두 개의 다운로드만 있습니다.
 
 ## 주요 기능
 
@@ -59,8 +59,8 @@ Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevT
 
 [최신 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)에서 ZIP 두 개를 다운로드하고 각각 별도 디렉터리에 압축을 풉니다.
 
-- 확장 프로그램: `browser-key-automation-extension-v0.0.0.1.zip`
-- 로컬 App: `browser-key-automation-local-app-v0.0.0.1.zip`
+- 확장 프로그램: `browser-key-automation-extension-v0.0.0.2.zip`
+- 로컬 App: `browser-key-automation-local-app-v0.0.0.2.zip`
 
 App ZIP에는 `windows-x86_64/`, `linux-x86_64/`, CLI와 Agent skill이 포함되어 있습니다. 소스 빌드는 필요하지 않습니다.
 

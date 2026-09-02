@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { CdpClient, pageEvaluate, runtimeEvaluate } from "./lib/cdp-client.mjs";
+import { probePermissionGroups } from "./lib/permission-groups-probe.mjs";
 
 const currentFile = fileURLToPath(import.meta.url);
 const workspaceRoot = path.resolve(path.dirname(currentFile), "..");
@@ -18,6 +19,8 @@ const runRoot = path.join(workspaceRoot, "out", "test-artifacts", `key-smoke-${p
 const profileDir = path.join(runRoot, "profile");
 const screenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "admin-ui-smoke.png");
 const createDialogScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "admin-ui-create-light.png");
+const permissionGroupsScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "admin-ui-permission-groups.png");
+const permissionGroupsSamplesPath = path.join(workspaceRoot, "out", "test-artifacts", "permission-groups-interaction.json");
 const mobileScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "admin-ui-mobile.png");
 const arabicScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "admin-ui-arabic-rtl.png");
 const traditionalChineseScreenshotPath = path.join(workspaceRoot, "out", "test-artifacts", "admin-ui-traditional-chinese.png");
@@ -427,8 +430,14 @@ async function main() {
     workerClient = restartedWorker.client;
     assert.equal(extensionIdFromUrl(restartedWorker.target.url), extensionId);
 
+    await pageEvaluate(pageClient, () => document.querySelector("[data-open-create]")?.click());
+    const permissionGroupsSamples = await probePermissionGroups(pageClient);
+    await mkdir(path.dirname(permissionGroupsSamplesPath), { recursive: true });
+    await writeFile(permissionGroupsSamplesPath, JSON.stringify(permissionGroupsSamples, null, 2) + "\n");
+    await pageEvaluate(pageClient, () => document.querySelector("[data-create-permissions]").scrollIntoView({ block: "start" }));
+    const permissionGroupsImage = await pageClient.send("Page.captureScreenshot", { format: "png", fromSurface: true });
+    await writeFile(permissionGroupsScreenshotPath, Buffer.from(permissionGroupsImage.data, "base64"));
     await pageEvaluate(pageClient, () => {
-      document.querySelector("[data-open-create]")?.click();
       document.querySelector("[data-create-name]").value = "Smoke Regular";
       document.querySelector("[data-create-kind]").value = "regular";
       document.querySelector("[data-create-form]").requestSubmit();
@@ -445,6 +454,12 @@ async function main() {
     );
     const apiKey = createdSnapshot.apiKey;
     const keyId = apiKey.split(".")[1];
+
+    const scopedPermissions = await pageEvaluate(pageClient, async ({ id }) => {
+      const service = await import(chrome.runtime.getURL("background/key-service.js"));
+      return (await service.getPublicKey(id)).permissions;
+    }, { id: keyId });
+    assert.deepEqual(scopedPermissions, permissionGroupsSamples.finalSelection);
 
     const authBefore = await pageEvaluate(pageClient, async ({ apiKey: key }) => {
       const service = await import(chrome.runtime.getURL("background/key-service.js"));
@@ -564,6 +579,29 @@ async function main() {
     }), { key: apiKey });
     assert.deepEqual(reloadLeakCheck, { bodyHasSecret: false, formName: "Duplicate Probe", pendingStored: true });
 
+    const recoveredPermissions = await pageEvaluate(pageClient, () => ({
+      selected: [...document.querySelectorAll("[data-create-permissions] [data-permission-id]:checked")].map((input) => input.dataset.permissionId),
+      pageGroupMixed: document.querySelector('[data-create-permissions] [data-permission-group-toggle="page-read"]').indeterminate,
+      allMixed: document.querySelector("[data-create-permissions] [data-permissions-all]").indeterminate,
+    }));
+    assert.deepEqual(recoveredPermissions, { selected: ["system.read"], pageGroupMixed: true, allMixed: true });
+
+    const recoveryConflict = await pageEvaluate(pageClient, () => {
+      document.querySelector("[data-open-create]").click();
+      document.querySelector('[data-create-permissions] [data-permission-group-toggle="javascript"]').click();
+      document.querySelector("[data-create-form]").requestSubmit();
+      return {
+        selected: [...document.querySelectorAll("[data-create-permissions] [data-permission-id]:checked")].map((input) => input.dataset.permissionId),
+        pageGroupMixed: document.querySelector('[data-create-permissions] [data-permission-group-toggle="page-read"]').indeterminate,
+        scriptChecked: document.querySelector('[data-create-permissions] [data-permission-group-toggle="javascript"]').checked,
+        rowCount: document.querySelectorAll("[data-key-rows] tr").length,
+        dialogOpen: document.querySelector("[data-create-dialog]").open,
+        error: document.querySelector("[data-status]").dataset.kind,
+      };
+    });
+    assert.deepEqual(recoveryConflict, { selected: ["system.read"], pageGroupMixed: true, scriptChecked: false,
+      rowCount: 2, dialogOpen: true, error: "error" });
+
     await pageEvaluate(pageClient, () => {
       document.querySelector("[data-open-create]")?.click();
       document.querySelector("[data-create-form]")?.requestSubmit();
@@ -649,11 +687,24 @@ async function main() {
       { id: keyId },
     );
 
-    await pageEvaluate(pageClient, ({ id }) => {
+    const editSelection = await pageEvaluate(pageClient, ({ id }) => {
+      document.querySelector('[data-key-name="Duplicate Probe"] [data-key-edit]').click();
+      const otherSelected = [...document.querySelectorAll("[data-edit-permissions] [data-permission-id]:checked")].map((input) => input.dataset.permissionId);
+      document.querySelector('[data-edit-permissions] [data-permission-group-toggle="javascript"]').click();
+      document.querySelector("[data-cancel-edit]").click();
       document.querySelector(`[data-key-id="${id}"] [data-key-edit]`)?.click();
+      return {
+        otherSelected,
+        selected: [...document.querySelectorAll("[data-edit-permissions] [data-permission-id]:checked")].map((input) => input.dataset.permissionId).sort(),
+        domMixed: document.querySelector('[data-edit-permissions] [data-permission-group-toggle="dom"]').indeterminate,
+      };
+    }, { id: keyId });
+    assert.deepEqual(editSelection, { otherSelected: ["system.read"], selected: permissionGroupsSamples.finalSelection, domMixed: true });
+    await pageEvaluate(pageClient, () => {
+      document.querySelector('[data-edit-permissions] [data-permission-group-toggle="javascript"]').click();
       document.querySelector("[data-edit-enabled]").checked = false;
       document.querySelector("[data-edit-form]")?.requestSubmit();
-    }, { id: keyId });
+    });
     await waitForCondition(
       pageClient,
       ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-state]`)?.dataset.keyState ?? "",
@@ -679,6 +730,14 @@ async function main() {
       "Key re-enable update",
       { id: keyId },
     );
+
+    const editedPermissions = await pageEvaluate(pageClient, async ({ id, key }) => {
+      const service = await import(chrome.runtime.getURL("background/key-service.js"));
+      return { permissions: (await service.getPublicKey(id)).permissions,
+        javascript: (await service.authenticateApiKey(key, "js.execute")).ok,
+        native: (await service.authenticateApiKey(key, "dom.click.real")).ok };
+    }, { id: keyId, key: apiKey });
+    assert.deepEqual(editedPermissions, { permissions: [...permissionGroupsSamples.finalSelection, "js.execute"].sort(), javascript: true, native: false });
 
     const revokeDialogOpened = await pageEvaluate(pageClient, ({ id }) => {
       document.querySelector(`[data-key-id="${id}"] [data-key-edit]`)?.click();
@@ -871,6 +930,8 @@ async function main() {
       revokeUsesConfirmationDialog: true,
       revokedTokenRetainedForAdminReveal: true,
       publicListRedacted: true,
+      permissionGroups: { groups: permissionGroupsSamples.initial.groups, scopedPermissions: scopedPermissions.length,
+        samples: path.relative(workspaceRoot, permissionGroupsSamplesPath), screenshot: path.relative(workspaceRoot, permissionGroupsScreenshotPath) },
       authenticationStates: ["valid", "invalid", "disabled", "revoked"],
       storeListingScreenshots: [
         path.relative(workspaceRoot, storeWelcomeScreenshotPath),

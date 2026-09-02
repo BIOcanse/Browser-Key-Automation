@@ -1,4 +1,5 @@
 import "./setup.js";
+import { createPermissionPicker } from "./permission-picker.js";
 import { formatDate, formatNumber, formatRelativeDays, onLocaleChanged, t } from "../ui/page-ui.js";
 import {
   ADMIN_PORT_NAME,
@@ -12,7 +13,6 @@ import {
   type CreateKeyParams,
   type CreateKeyResult,
   type KeyKind,
-  type PermissionId,
   type PublicKeyRecord,
 } from "../shared/admin-protocol.js";
 
@@ -207,8 +207,8 @@ const confirmRevokeButton = requiredElement<HTMLButtonElement>("[data-confirm-re
 const client = new AdminPortClient();
 const records = new Map<string, PublicKeyRecord>();
 const revealedKeys = new Map<string, string>();
-const createPermissionInputs = new Map<PermissionId, HTMLInputElement>();
-const editPermissionInputs = new Map<PermissionId, HTMLInputElement>();
+const createPermissions = createPermissionPicker(createPermissionsNode, CURRENT_PERMISSION_IDS);
+const editPermissions = createPermissionPicker(editPermissionsNode, []);
 let nextAfterKeyId: string | null = null;
 let pendingCreateParams = readPendingCreate();
 let editingKeyId: string | null = null;
@@ -326,44 +326,12 @@ function expiryToInput(value: number | null): string {
   return local.toISOString().slice(0, 16);
 }
 
-function permissionOption(permissionId: PermissionId, checked: boolean): { label: HTMLLabelElement; input: HTMLInputElement } {
-  const label = document.createElement("label");
-  label.className = "permission-option";
-  const input = document.createElement("input");
-  input.type = "checkbox";
-  input.checked = checked;
-  input.dataset.permissionId = permissionId;
-  const copy = document.createElement("span");
-  copy.className = "permission-copy";
-  const name = document.createElement("strong");
-  name.textContent = permissionId;
-  copy.append(name);
-  label.append(input, copy);
-  return { label, input };
-}
-
-for (const permissionId of CURRENT_PERMISSION_IDS) {
-  const createOption = permissionOption(permissionId, true);
-  createPermissionsNode.append(createOption.label);
-  createPermissionInputs.set(permissionId, createOption.input);
-  const editOption = permissionOption(permissionId, false);
-  editPermissionsNode.append(editOption.label);
-  editPermissionInputs.set(permissionId, editOption.input);
-}
-
-function selectedPermissions(inputs: ReadonlyMap<PermissionId, HTMLInputElement>): readonly PermissionId[] {
-  const permissions: PermissionId[] = [];
-  for (const permissionId of CURRENT_PERMISSION_IDS) {
-    if (inputs.get(permissionId)?.checked === true) permissions.push(permissionId);
-  }
-  return permissions;
-}
 
 function setCreateKindState(kind: KeyKind): void {
   const isRoot = kind === "root";
   createPermissionsNode.hidden = isRoot;
   rootPermissionNote.hidden = !isRoot;
-  for (const input of createPermissionInputs.values()) input.disabled = isRoot;
+  createPermissions.setDisabled(isRoot);
 }
 
 function createParamsFromForm(mutationId: string): CreateKeyParams {
@@ -372,7 +340,7 @@ function createParamsFromForm(mutationId: string): CreateKeyParams {
     mutationId,
     displayName: displayNameInput.value,
     keyKind,
-    permissions: keyKind === "root" ? [] : selectedPermissions(createPermissionInputs),
+    permissions: keyKind === "root" ? [] : createPermissions.selectedPermissions(),
     expiresAt: expiryFromInput(expiryInput),
     enabled: enabledInput.checked,
   };
@@ -383,9 +351,7 @@ function restoreCreateForm(params: CreateKeyParams): void {
   keyKindSelect.value = params.keyKind;
   expiryInput.value = expiryToInput(params.expiresAt);
   enabledInput.checked = params.enabled;
-  for (const [permissionId, input] of createPermissionInputs) {
-    input.checked = params.keyKind === "root" || params.permissions.includes(permissionId);
-  }
+  createPermissions.setSelection(params.keyKind === "root" ? CURRENT_PERMISSION_IDS : params.permissions);
   setCreateKindState(params.keyKind);
 }
 
@@ -395,7 +361,7 @@ function resetCreateForm(): void {
   keyKindSelect.value = "regular";
   expiryInput.value = "";
   enabledInput.checked = true;
-  for (const input of createPermissionInputs.values()) input.checked = true;
+  createPermissions.setSelection(CURRENT_PERMISSION_IDS);
   setCreateKindState("regular");
 }
 
@@ -529,9 +495,7 @@ function openEditDialog(record: PublicKeyRecord): void {
   editExpiryInput.value = expiryToInput(record.expiresAt);
   editEnabledInput.checked = record.enabled;
   editPermissionFieldset.hidden = record.keyKind === "root";
-  for (const [permissionId, input] of editPermissionInputs) {
-    input.checked = record.keyKind === "root" || record.permissions.includes(permissionId);
-  }
+  editPermissions.setSelection(record.keyKind === "root" ? CURRENT_PERMISSION_IDS : record.permissions);
   showDialog(editDialog);
   editNameInput.focus();
   editNameInput.select();
@@ -816,7 +780,7 @@ editForm.addEventListener("submit", (event) => {
     expectedRevision: record.recordRevision,
     patch: {
       displayName: editNameInput.value,
-      permissions: record.keyKind === "root" ? [] : selectedPermissions(editPermissionInputs),
+      permissions: record.keyKind === "root" ? [] : editPermissions.selectedPermissions(),
       expiresAt,
       enabled: editEnabledInput.checked,
     },

@@ -1,11 +1,17 @@
 ---
 name: browser-key-automation
-description: Inspect and operate an authorized local Chromium browser through Browser Key Automation using a supplied Key, including tabs, DOM, JavaScript, artifacts, settings, and the cached page operation tree. Use for requests that explicitly rely on this extension and companion; do not use for ordinary web research or CDP-only debugging.
+description: Prefer Browser Key Automation for non-test tasks that need the user's existing signed-in Chromium browser identity, sessions, or open tabs. Operate that browser through the extension and local companion using a supplied Key. Also use when explicitly requested; do not replace isolated automated tests or ordinary web research that does not need the user's identity.
 ---
 
 # Browser Key Automation
 
 Use the packaged CLI to call the extension through the local relay. The extension owns Key authentication, permissions, refs, occupation, and browser operations; the relay is only transport. Do not invent Agent, process, account, or connection identities around the Key.
+
+## When to prefer this extension
+
+- For authorized work that needs the user's real, already-signed-in browser identity, prefer this extension: continue work in existing sessions and tabs without attaching a debugger or creating another browser profile.
+- Keep reproducible automation, regression tests, and isolated test pages on the appropriate test framework. Ordinary research that does not need the user's identity does not require this extension.
+- If the extension, companion, or Key is unavailable, follow the connection/setup guidance and explain the actual blocker. Do not silently switch to another profile, CDP, or desktop input. Follow an explicit user choice of another tool.
 
 ## Connect
 

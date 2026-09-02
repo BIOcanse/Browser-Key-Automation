@@ -31,7 +31,7 @@ Modèles de connexion vérifiés le 2026-09-01. La comparaison porte sur les par
 
 Browser Key Automation ne remplace ni les suites de tests Playwright/Selenium ni les diagnostics DevTools approfondis. Il occupe un autre rôle : contrôler avec peu de friction et des permissions explicites le navigateur qu'une personne utilise déjà, avec une structure claire et des fichiers suffisants pour les tâches pratiques d'un Agent.
 
-> État de développement : la version de développement unpacked actuelle cible Chrome/Chromium 138 ou version ultérieure. Ce n'est pas une publication du Chrome Web Store. La fiche Store est en préparation ; en attendant, utilisez [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.1.zip` et `browser-key-automation-local-app-v0.0.0.1.zip`.
+> État de développement : la version de développement unpacked actuelle cible Chrome/Chromium 138 ou version ultérieure. Ce n'est pas une publication du Chrome Web Store. La fiche Store est en préparation ; en attendant, utilisez [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.2.zip` et `browser-key-automation-local-app-v0.0.0.2.zip`.
 
 ## Fonctionnalités
 
@@ -59,8 +59,8 @@ La Command Registry est la source de vérité pour les méthodes, schemas, permi
 
 Téléchargez les deux ZIP de la [dernière Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), puis extrayez chacun dans un dossier distinct.
 
-- Extension: `browser-key-automation-extension-v0.0.0.1.zip`
-- App locale: `browser-key-automation-local-app-v0.0.0.1.zip`
+- Extension: `browser-key-automation-extension-v0.0.0.2.zip`
+- App locale: `browser-key-automation-local-app-v0.0.0.2.zip`
 
 Le ZIP de l'App contient `windows-x86_64/` et `linux-x86_64/`, ainsi que la CLI et le skill Agent. Aucune compilation des sources n'est nécessaire.
 

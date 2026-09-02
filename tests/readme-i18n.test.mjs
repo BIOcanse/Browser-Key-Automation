@@ -21,8 +21,8 @@ const LOCALES = Object.freeze([
 const REQUIRED_SHARED_TOKENS = Object.freeze([
   "Browser Key Automation",
   "138",
-  "browser-key-automation-extension-v0.0.0.1.zip",
-  "browser-key-automation-local-app-v0.0.0.1.zip",
+  "browser-key-automation-extension-v0.0.0.2.zip",
+  "browser-key-automation-local-app-v0.0.0.2.zip",
   "windows-x86_64",
   "linux-x86_64",
   "manifest.json",

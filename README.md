@@ -31,7 +31,7 @@ Connection models checked 2026-09-01. This compares normal workflows, not theore
 
 Browser Key Automation does not replace Playwright/Selenium test suites or DevTools diagnostics. It fills a different slot: low-friction, permissioned control of the browser a person is already using, with enough structure and file handling for an Agent to complete practical work.
 
-> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release. The Store listing is in preparation; until it is ready, use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.1.zip` and `browser-key-automation-local-app-v0.0.0.1.zip`.
+> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release. The Store listing is in preparation; until it is ready, use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.2.zip` and `browser-key-automation-local-app-v0.0.0.2.zip`.
 
 ## What It Can Do
 
@@ -59,8 +59,8 @@ The command registry is the public source of truth for exact methods, schemas, p
 
 Download both ZIPs from the [latest release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), then extract each into its own directory.
 
-- Extension: `browser-key-automation-extension-v0.0.0.1.zip`
-- Local App: `browser-key-automation-local-app-v0.0.0.1.zip`
+- Extension: `browser-key-automation-extension-v0.0.0.2.zip`
+- Local App: `browser-key-automation-local-app-v0.0.0.2.zip`
 
 The App ZIP includes `windows-x86_64/` and `linux-x86_64/`, plus the CLI and Agent skill. No source build is needed.
 

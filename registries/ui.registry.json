@@ -23,8 +23,113 @@
     { "tag": "nl", "nativeName": "Nederlands", "direction": "ltr", "browserAliases": ["nl"] },
     { "tag": "uk", "nativeName": "Українська", "direction": "ltr", "browserAliases": ["uk"] }
   ],
+  "permissionGroups": [
+    {
+      "groupId": "page-read",
+      "labelKey": "permissionGroupPage",
+      "permissionIds": [
+        "system.read",
+        "tabs.read",
+        "frames.read",
+        "page.dom.capture",
+        "page.dom.read",
+        "page.resources.read",
+        "page.text.read",
+        "page.tree.read",
+        "page.wait",
+        "dom.query",
+        "dom.describe"
+      ]
+    },
+    {
+      "groupId": "tabs",
+      "labelKey": "permissionGroupTabs",
+      "permissionIds": [
+        "tabs.create",
+        "tabs.activate",
+        "tabs.navigate",
+        "tabs.reload",
+        "tabs.close"
+      ]
+    },
+    {
+      "groupId": "dom",
+      "labelKey": "permissionGroupDom",
+      "permissionIds": [
+        "dom.click",
+        "dom.focus",
+        "dom.scroll",
+        "dom.select",
+        "dom.setValue"
+      ]
+    },
+    {
+      "groupId": "native-input",
+      "labelKey": "permissionGroupNative",
+      "permissionIds": [
+        "dom.click.real"
+      ]
+    },
+    {
+      "groupId": "javascript",
+      "labelKey": "permissionGroupScripts",
+      "permissionIds": [
+        "js.execute"
+      ]
+    },
+    {
+      "groupId": "files",
+      "labelKey": "permissionGroupFiles",
+      "permissionIds": [
+        "page.archive.capture",
+        "page.screenshot.capture",
+        "resource.fetch",
+        "artifact.read",
+        "artifact.write",
+        "artifact.release",
+        "demo.open"
+      ]
+    },
+    {
+      "groupId": "control",
+      "labelKey": "permissionGroupControl",
+      "permissionIds": [
+        "control.acquire",
+        "control.release"
+      ]
+    },
+    {
+      "groupId": "keys",
+      "labelKey": "permissionGroupKeys",
+      "permissionIds": [
+        "keys.list",
+        "keys.get",
+        "keys.create",
+        "keys.update",
+        "keys.reveal",
+        "keys.revoke"
+      ]
+    },
+    {
+      "groupId": "settings",
+      "labelKey": "permissionGroupSettings",
+      "permissionIds": [
+        "settings.read",
+        "settings.update"
+      ]
+    }
+  ],
   "translations": {
     "en": {
+      "permissionGroupPage": "Page reading",
+      "permissionGroupTabs": "Tab actions",
+      "permissionGroupDom": "DOM actions",
+      "permissionGroupNative": "Native clicks",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Files & demos",
+      "permissionGroupControl": "Control ownership",
+      "permissionGroupKeys": "Key management",
+      "permissionGroupSettings": "Extension settings",
       "extensionDescription": "Key-authenticated Chromium automation with extension permissions.",
       "actionTitle": "Manage Browser Keys",
       "pageTitle": "API Keys",
@@ -140,6 +245,15 @@
       "demoFailed": "Could not open the demo."
     },
     "zh-CN": {
+      "permissionGroupPage": "页面读取",
+      "permissionGroupTabs": "标签页操作",
+      "permissionGroupDom": "DOM 操作",
+      "permissionGroupNative": "真实点击",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "文件与演示",
+      "permissionGroupControl": "占据控制",
+      "permissionGroupKeys": "Key 管理",
+      "permissionGroupSettings": "插件设置",
       "extensionDescription": "使用密钥认证并具备扩展权限的 Chromium 自动化。",
       "actionTitle": "管理浏览器密钥",
       "pageTitle": "API Key",
@@ -255,6 +369,15 @@
       "demoFailed": "无法打开演示。"
     },
     "zh-TW": {
+      "permissionGroupPage": "頁面讀取",
+      "permissionGroupTabs": "分頁操作",
+      "permissionGroupDom": "DOM 操作",
+      "permissionGroupNative": "真實點擊",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "檔案與示範",
+      "permissionGroupControl": "佔用控制",
+      "permissionGroupKeys": "Key 管理",
+      "permissionGroupSettings": "擴充功能設定",
       "extensionDescription": "使用金鑰驗證並具備擴充功能權限的 Chromium 自動化。",
       "actionTitle": "管理瀏覽器金鑰",
       "pageTitle": "API Key",
@@ -370,6 +493,15 @@
       "demoFailed": "無法開啟示範。"
     },
     "ja": {
+      "permissionGroupPage": "ページの読み取り",
+      "permissionGroupTabs": "タブ操作",
+      "permissionGroupDom": "DOM 操作",
+      "permissionGroupNative": "ネイティブクリック",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "ファイルとデモ",
+      "permissionGroupControl": "占有の制御",
+      "permissionGroupKeys": "Key 管理",
+      "permissionGroupSettings": "拡張機能の設定",
       "extensionDescription": "拡張機能の権限とキー認証を使用する Chromium 自動化。",
       "actionTitle": "ブラウザーキーを管理",
       "pageTitle": "API Key",
@@ -485,6 +617,15 @@
       "demoFailed": "デモを開けませんでした。"
     },
     "ko": {
+      "permissionGroupPage": "페이지 읽기",
+      "permissionGroupTabs": "탭 작업",
+      "permissionGroupDom": "DOM 작업",
+      "permissionGroupNative": "실제 클릭",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "파일 및 데모",
+      "permissionGroupControl": "점유 제어",
+      "permissionGroupKeys": "Key 관리",
+      "permissionGroupSettings": "확장 프로그램 설정",
       "extensionDescription": "확장 프로그램 권한과 키 인증을 사용하는 Chromium 자동화.",
       "actionTitle": "브라우저 키 관리",
       "pageTitle": "API Key",
@@ -600,6 +741,15 @@
       "demoFailed": "데모를 열 수 없습니다."
     },
     "de": {
+      "permissionGroupPage": "Seiten lesen",
+      "permissionGroupTabs": "Tab-Aktionen",
+      "permissionGroupDom": "DOM-Aktionen",
+      "permissionGroupNative": "Native Klicks",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Dateien & Demos",
+      "permissionGroupControl": "Belegungssteuerung",
+      "permissionGroupKeys": "Key-Verwaltung",
+      "permissionGroupSettings": "Erweiterungseinstellungen",
       "extensionDescription": "Chromium-Automatisierung mit Schlüsselauthentifizierung und Erweiterungsberechtigungen.",
       "actionTitle": "Browser-Schlüssel verwalten",
       "pageTitle": "API Keys",
@@ -715,6 +865,15 @@
       "demoFailed": "Demo konnte nicht geöffnet werden."
     },
     "fr": {
+      "permissionGroupPage": "Lecture des pages",
+      "permissionGroupTabs": "Actions sur les onglets",
+      "permissionGroupDom": "Actions DOM",
+      "permissionGroupNative": "Clics natifs",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Fichiers et démos",
+      "permissionGroupControl": "Contrôle d'occupation",
+      "permissionGroupKeys": "Gestion des Keys",
+      "permissionGroupSettings": "Paramètres de l'extension",
       "extensionDescription": "Automatisation de Chromium authentifiée par clé avec les autorisations de l’extension.",
       "actionTitle": "Gérer les clés du navigateur",
       "pageTitle": "API Keys",
@@ -830,6 +989,15 @@
       "demoFailed": "Impossible d’ouvrir la démo."
     },
     "es": {
+      "permissionGroupPage": "Lectura de páginas",
+      "permissionGroupTabs": "Acciones de pestañas",
+      "permissionGroupDom": "Acciones DOM",
+      "permissionGroupNative": "Clics nativos",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Archivos y demos",
+      "permissionGroupControl": "Control de ocupación",
+      "permissionGroupKeys": "Gestión de Keys",
+      "permissionGroupSettings": "Ajustes de la extensión",
       "extensionDescription": "Automatización de Chromium autenticada por clave con permisos de la extensión.",
       "actionTitle": "Gestionar claves del navegador",
       "pageTitle": "API Keys",
@@ -945,6 +1113,15 @@
       "demoFailed": "No se pudo abrir la demo."
     },
     "pt-BR": {
+      "permissionGroupPage": "Leitura de páginas",
+      "permissionGroupTabs": "Ações nas abas",
+      "permissionGroupDom": "Ações DOM",
+      "permissionGroupNative": "Cliques nativos",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Arquivos e demos",
+      "permissionGroupControl": "Controle de ocupação",
+      "permissionGroupKeys": "Gerenciamento de Keys",
+      "permissionGroupSettings": "Configurações da extensão",
       "extensionDescription": "Automação do Chromium autenticada por chave com permissões da extensão.",
       "actionTitle": "Gerenciar chaves do navegador",
       "pageTitle": "API Keys",
@@ -1060,6 +1237,15 @@
       "demoFailed": "Não foi possível abrir a demo."
     },
     "it": {
+      "permissionGroupPage": "Lettura delle pagine",
+      "permissionGroupTabs": "Azioni sulle schede",
+      "permissionGroupDom": "Azioni DOM",
+      "permissionGroupNative": "Clic nativi",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "File e demo",
+      "permissionGroupControl": "Controllo dell'occupazione",
+      "permissionGroupKeys": "Gestione delle Key",
+      "permissionGroupSettings": "Impostazioni dell'estensione",
       "extensionDescription": "Automazione di Chromium autenticata tramite chiave con autorizzazioni dell’estensione.",
       "actionTitle": "Gestisci le chiavi del browser",
       "pageTitle": "API Keys",
@@ -1175,6 +1361,15 @@
       "demoFailed": "Impossibile aprire la demo."
     },
     "ru": {
+      "permissionGroupPage": "Чтение страниц",
+      "permissionGroupTabs": "Действия с вкладками",
+      "permissionGroupDom": "Действия DOM",
+      "permissionGroupNative": "Нативные клики",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Файлы и демо",
+      "permissionGroupControl": "Управление занятием",
+      "permissionGroupKeys": "Управление Key",
+      "permissionGroupSettings": "Настройки расширения",
       "extensionDescription": "Автоматизация Chromium с аутентификацией по ключу и разрешениями расширения.",
       "actionTitle": "Управление ключами браузера",
       "pageTitle": "API Keys",
@@ -1290,6 +1485,15 @@
       "demoFailed": "Не удалось открыть демо."
     },
     "ar": {
+      "permissionGroupPage": "قراءة الصفحات",
+      "permissionGroupTabs": "إجراءات علامات التبويب",
+      "permissionGroupDom": "إجراءات DOM",
+      "permissionGroupNative": "نقرات فعلية",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "الملفات والعروض",
+      "permissionGroupControl": "التحكم بالحجز",
+      "permissionGroupKeys": "إدارة المفاتيح",
+      "permissionGroupSettings": "إعدادات الإضافة",
       "extensionDescription": "أتمتة Chromium موثّقة بالمفاتيح مع أذونات الإضافة.",
       "actionTitle": "إدارة مفاتيح المتصفح",
       "pageTitle": "API Keys",
@@ -1405,6 +1609,15 @@
       "demoFailed": "تعذّر فتح العرض التوضيحي."
     },
     "hi": {
+      "permissionGroupPage": "पेज पढ़ना",
+      "permissionGroupTabs": "टैब की कार्रवाइयाँ",
+      "permissionGroupDom": "DOM कार्रवाइयाँ",
+      "permissionGroupNative": "वास्तविक क्लिक",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "फ़ाइलें और डेमो",
+      "permissionGroupControl": "कब्ज़े का नियंत्रण",
+      "permissionGroupKeys": "Key प्रबंधन",
+      "permissionGroupSettings": "एक्सटेंशन सेटिंग",
       "extensionDescription": "एक्सटेंशन अनुमतियों के साथ कुंजी-प्रमाणित Chromium ऑटोमेशन।",
       "actionTitle": "ब्राउज़र कुंजियाँ प्रबंधित करें",
       "pageTitle": "API Keys",
@@ -1520,6 +1733,15 @@
       "demoFailed": "डेमो नहीं खुल सका।"
     },
     "id": {
+      "permissionGroupPage": "Pembacaan halaman",
+      "permissionGroupTabs": "Tindakan tab",
+      "permissionGroupDom": "Tindakan DOM",
+      "permissionGroupNative": "Klik asli",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "File dan demo",
+      "permissionGroupControl": "Kontrol penguasaan",
+      "permissionGroupKeys": "Pengelolaan Key",
+      "permissionGroupSettings": "Pengaturan ekstensi",
       "extensionDescription": "Otomatisasi Chromium terautentikasi kunci dengan izin ekstensi.",
       "actionTitle": "Kelola Kunci Browser",
       "pageTitle": "API Keys",
@@ -1635,6 +1857,15 @@
       "demoFailed": "Tidak dapat membuka demo."
     },
     "vi": {
+      "permissionGroupPage": "Đọc trang",
+      "permissionGroupTabs": "Thao tác tab",
+      "permissionGroupDom": "Thao tác DOM",
+      "permissionGroupNative": "Nhấp thực",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Tệp và bản trình diễn",
+      "permissionGroupControl": "Kiểm soát chiếm giữ",
+      "permissionGroupKeys": "Quản lý Key",
+      "permissionGroupSettings": "Cài đặt tiện ích",
       "extensionDescription": "Tự động hóa Chromium xác thực bằng khóa với các quyền của tiện ích.",
       "actionTitle": "Quản lý khóa trình duyệt",
       "pageTitle": "API Keys",
@@ -1750,6 +1981,15 @@
       "demoFailed": "Không thể mở bản demo."
     },
     "th": {
+      "permissionGroupPage": "อ่านหน้าเว็บ",
+      "permissionGroupTabs": "การทำงานกับแท็บ",
+      "permissionGroupDom": "การทำงานกับ DOM",
+      "permissionGroupNative": "การคลิกจริง",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "ไฟล์และเดโม",
+      "permissionGroupControl": "ควบคุมการครอบครอง",
+      "permissionGroupKeys": "จัดการ Key",
+      "permissionGroupSettings": "การตั้งค่าส่วนขยาย",
       "extensionDescription": "ระบบอัตโนมัติ Chromium ที่ยืนยันตัวตนด้วยคีย์และใช้สิทธิ์ของส่วนขยาย",
       "actionTitle": "จัดการคีย์ของเบราว์เซอร์",
       "pageTitle": "API Keys",
@@ -1865,6 +2105,15 @@
       "demoFailed": "เปิดเดโมไม่ได้"
     },
     "tr": {
+      "permissionGroupPage": "Sayfa okuma",
+      "permissionGroupTabs": "Sekme işlemleri",
+      "permissionGroupDom": "DOM işlemleri",
+      "permissionGroupNative": "Gerçek tıklamalar",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Dosyalar ve demolar",
+      "permissionGroupControl": "Kullanım kilidi yönetimi",
+      "permissionGroupKeys": "Key yönetimi",
+      "permissionGroupSettings": "Uzantı ayarları",
       "extensionDescription": "Uzantı izinleriyle, anahtar kimlik doğrulamalı Chromium otomasyonu.",
       "actionTitle": "Tarayıcı Anahtarlarını Yönet",
       "pageTitle": "API Key'ler",
@@ -1980,6 +2229,15 @@
       "demoFailed": "Demo açılamadı."
     },
     "pl": {
+      "permissionGroupPage": "Odczyt stron",
+      "permissionGroupTabs": "Operacje na kartach",
+      "permissionGroupDom": "Operacje DOM",
+      "permissionGroupNative": "Natywne kliknięcia",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Pliki i demonstracje",
+      "permissionGroupControl": "Zarządzanie zajętością",
+      "permissionGroupKeys": "Zarządzanie Key",
+      "permissionGroupSettings": "Ustawienia rozszerzenia",
       "extensionDescription": "Automatyzacja Chromium uwierzytelniana kluczem, z uprawnieniami rozszerzenia.",
       "actionTitle": "Zarządzaj kluczami przeglądarki",
       "pageTitle": "Klucze API Key",
@@ -2095,6 +2353,15 @@
       "demoFailed": "Nie udało się otworzyć demonstracji."
     },
     "nl": {
+      "permissionGroupPage": "Pagina's lezen",
+      "permissionGroupTabs": "Tabbladacties",
+      "permissionGroupDom": "DOM-acties",
+      "permissionGroupNative": "Native klikken",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Bestanden en demo's",
+      "permissionGroupControl": "Bezettingsbeheer",
+      "permissionGroupKeys": "Key-beheer",
+      "permissionGroupSettings": "Extensie-instellingen",
       "extensionDescription": "Chromium-automatisering met sleutelauthenticatie en extensiemachtigingen.",
       "actionTitle": "Browsersleutels beheren",
       "pageTitle": "API Keys",
@@ -2210,6 +2477,15 @@
       "demoFailed": "Kan de demo niet openen."
     },
     "uk": {
+      "permissionGroupPage": "Читання сторінок",
+      "permissionGroupTabs": "Дії з вкладками",
+      "permissionGroupDom": "Дії DOM",
+      "permissionGroupNative": "Нативні кліки",
+      "permissionGroupScripts": "JavaScript",
+      "permissionGroupFiles": "Файли й демо",
+      "permissionGroupControl": "Керування зайняттям",
+      "permissionGroupKeys": "Керування Key",
+      "permissionGroupSettings": "Налаштування розширення",
       "extensionDescription": "Автоматизація Chromium з автентифікацією за ключем і дозволами розширення.",
       "actionTitle": "Керування ключами браузера",
       "pageTitle": "Ключі API Key",

@@ -46,7 +46,7 @@ const linuxChecksumCount = await verifyChecksums(linuxAppRoot);
 
 const manifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
 assert.equal(manifest.name, "Browser Key Automation");
-assert.equal(manifest.version, "0.0.0.1");
+assert.equal(manifest.version, "0.0.0.2");
 assert.equal(manifest.minimum_chrome_version, "138");
 assert.equal(manifest.action.default_title, "__MSG_actionTitle__");
 assert.deepEqual(manifest.action.default_icon, {

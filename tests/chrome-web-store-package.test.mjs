@@ -18,7 +18,7 @@ assert.equal(typeof sourceManifest.key, "string");
 assert.ok(sourceManifest.key.length > 0);
 assert.equal(Object.hasOwn(packagedManifest, "key"), false);
 assert.equal(packagedManifest.manifest_version, 3);
-assert.equal(packagedManifest.version, "0.0.0.1");
+assert.equal(packagedManifest.version, "0.0.0.2");
 assert.equal(packagedManifest.description, "__MSG_extensionDescription__");
 assert.deepEqual(packagedManifest.icons, {
   "16": "icons/icon-16.png",
