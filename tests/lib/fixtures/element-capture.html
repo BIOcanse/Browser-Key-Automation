@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>BKA element capture fixture</title>
+<style>
+  html, body { margin: 0; background: #2448d8; }
+  body { min-height: 1500px; }
+  canvas, .shape, svg { position: absolute; }
+  #canvas { left: 20px; top: 20px; width: 220px; height: 120px; }
+  #circle { left: 280px; top: 20px; width: 120px; height: 120px; border-radius: 50%; background: #ed3b40; }
+  #polygon { left: 450px; top: 20px; width: 140px; height: 120px; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: #ed3b40; }
+  #path-clip { left: 620px; top: 20px; width: 120px; height: 120px; clip-path: path(evenodd, 'M0 0H120V120H0ZM40 40H80V80H40Z'); background: #ed3b40; }
+  #rotated { left: 70px; top: 195px; width: 80px; height: 80px; transform: rotate(30deg); transform-origin: 0 0; background: #ffbc32; }
+  #branches { display: contents; }
+  #branches > :first-child { left: 190px; top: 185px; width: 60px; height: 60px; border-radius: 50%; background: #ed3b40; }
+  #branches > :last-child { left: 280px; top: 245px; width: 60px; height: 40px; border-radius: 8px; background: #30cf87; }
+  #clip-parent { left: 370px; top: 185px; width: 120px; height: 80px; overflow: hidden; border-radius: 20px; }
+  #overflow { position: absolute; left: -30px; top: -20px; width: 180px; height: 120px; background: #ed3b40; }
+  #svg { left: 530px; top: 175px; width: 180px; height: 150px; }
+  #svg-line { left: 530px; top: 340px; width: 180px; height: 60px; }
+  #partial { left: -20px; top: 380px; width: 80px; height: 60px; background: #30cf87; }
+  #masked { left: 260px; top: 350px; width: 70px; height: 70px; background: #ed3b40; mask-image: linear-gradient(black, transparent); }
+  #offscreen { left: 30px; top: 1200px; width: 60px; height: 60px; background: #ed3b40; }
+</style>
+<canvas id="canvas" width="440" height="240" aria-label="Canvas performance chart"></canvas>
+<div class="shape" id="circle"><div style="display:none;clip-path:url(#unused);perspective:500px"></div><div style="visibility:hidden;clip-path:url(#unused)"></div></div>
+<div class="shape" id="polygon"></div>
+<div class="shape" id="path-clip"></div>
+<div class="shape" id="rotated"></div>
+<div id="branches"><div class="shape"></div><div class="shape"></div></div>
+<div class="shape" id="clip-parent"><div id="overflow"></div></div>
+<svg id="svg" viewBox="0 0 180 150"><path id="svg-donut" d="M20 20H160V130H20ZM60 50H120V100H60Z" fill="#ed3b40" fill-rule="evenodd"/></svg>
+<svg id="svg-line" viewBox="0 0 180 60"><line id="round-line" x1="20" y1="20" x2="140" y2="20" stroke="#30cf87" stroke-width="12" stroke-linecap="round"/></svg>
+<div class="shape" id="partial"></div>
+<div class="shape" id="masked"></div>
+<div class="shape" id="offscreen"></div>
+<script>
+  const context = document.getElementById('canvas').getContext('2d');
+  context.fillStyle = '#172320'; context.fillRect(0, 0, 440, 240);
+  context.fillStyle = '#f4f4ef'; context.font = 'bold 24px sans-serif'; context.fillText('CANVAS / 73 FPS', 24, 42);
+  context.fillStyle = '#30cf87';
+  for (let index = 0; index < 7; index += 1) context.fillRect(24 + index * 56, 190 - index * 13, 32, 24 + index * 13);
+  context.fillStyle = '#9db5ac'; context.font = '16px sans-serif'; context.fillText('Pixels, not DOM text', 24, 72);
+  window.fixtureReady = true;
+</script>

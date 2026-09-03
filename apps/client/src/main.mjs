@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { NativeWebSocket } from "./native-websocket.mjs";
 import { TRANSPORT } from "./generated-config.mjs";
-import { ArtifactFileError, saveArtifactFile, savePageFile, saveScreenshotFile } from "./artifact-files.mjs";
+import { ArtifactFileError, saveArtifactFile, savePageFile, saveScreenshotFile, saveElementScreenshotFile } from "./artifact-files.mjs";
 import { DemoFileError, openDemoFile } from "./demo-files.mjs";
 
 const EXIT = Object.freeze({
@@ -60,6 +60,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export function savePage(options) { return execute(fileRequest("page-save", options)); }
 export function saveArtifact(options) { return execute(fileRequest("artifact-save", options)); }
 export function saveScreenshot(options) { return execute(fileRequest("page-shot", options)); }
+export function saveElementScreenshot(options) { return execute(fileRequest("element-shot", options)); }
 export function openDemo(options) {
   const args = ["demo-open", options.file];
   if (options.tabRef !== undefined) args.push("--tab-ref", options.tabRef);
@@ -69,11 +70,14 @@ export function openDemo(options) {
 }
 
 function fileRequest(command, options) {
-  const refFlag = command === "artifact-save" ? "--artifact-ref" : "--tab-ref";
-  const ref = command === "artifact-save" ? options.artifactRef : options.tabRef;
+  const refFlag = command === "artifact-save" ? "--artifact-ref" : command === "element-shot" ? "--node-ref" : "--tab-ref";
+  const ref = command === "artifact-save" ? options.artifactRef : command === "element-shot" ? options.nodeRef : options.tabRef;
   const args = [command, refFlag, ref, "--output", options.output];
   if (options.format !== undefined) args.push("--format", options.format);
   if (options.quality !== undefined) args.push("--quality", String(options.quality));
+  if (options.width !== undefined) args.push("--width", String(options.width));
+  if (options.height !== undefined) args.push("--height", String(options.height));
+  if (options.region !== undefined) args.push("--region-json", JSON.stringify(options.region));
   return parseArguments(connectionArguments(args, options));
 }
 
@@ -108,6 +112,11 @@ async function execute(request) {
       const result = await openDemoFile({ call, file: request.file, tabRef: request.tabRef ?? undefined,
         active: request.active, windowId: request.windowId });
       return { ok: true, command: request.command, delivery: "extension_response", targetInstance: session.targetInstance, ...result };
+    }
+    if (request.command === "element-shot") {
+      const result = await saveElementScreenshotFile({ call, nodeRef: request.nodeRef, output: request.output,
+        width: request.width, height: request.height, region: request.region });
+      return { ok: true, command: request.command, delivery: "local_file", targetInstance: session.targetInstance, ...result };
     }
     const result = request.command === "page-save"
       ? await savePageFile({ call, tabRef: request.tabRef, output: request.output })
@@ -285,7 +294,7 @@ export function parseArguments(args) {
   }
 
   const command = args[0];
-  if (!new Set(["instances", "call", "stop", "page-save", "artifact-save", "page-shot", "demo-open"]).has(command)) throw usageFailure();
+  if (!new Set(["instances", "call", "stop", "page-save", "artifact-save", "page-shot", "element-shot", "demo-open"]).has(command)) throw usageFailure();
   const options = {
     command,
     method: null,
@@ -327,6 +336,15 @@ export function parseArguments(args) {
       options.tabRef = value;
     } else if (name === "--artifact-ref") {
       options.artifactRef = value;
+    } else if (name === "--node-ref") {
+      options.nodeRef = value;
+    } else if (name === "--width" || name === "--height") {
+      options[name.slice(2)] = parseBoundedInteger(value, 1, Number.MAX_SAFE_INTEGER);
+    } else if (name === "--region-json") {
+      options.region = parseParams(value);
+      if (Object.keys(options.region).sort().join(",") !== "height,width,x,y" ||
+          !["x", "y", "width", "height"].every((key) => typeof options.region[key] === "number" && Number.isFinite(options.region[key]) && options.region[key] >= 0) ||
+          options.region.width <= 0 || options.region.height <= 0) throw usageFailure();
     } else if (name === "--format") {
       if (value !== "png" && value !== "jpeg") throw usageFailure();
       options.format = value;
@@ -356,6 +374,9 @@ export function parseArguments(args) {
     if ([...seenOptions].some((name) => !allowed.has(name)) || !options.output?.trim() ||
         (command === "artifact-save" ? !/^ar1\.[A-Za-z0-9_-]{43}$/u.test(options.artifactRef ?? "") :
           !/^tr1\.[A-Za-z0-9_-]{22}\.[1-9][0-9]{0,15}\.[A-Za-z0-9_-]{22}$/u.test(options.tabRef ?? ""))) throw usageFailure();
+  } else if (command === "element-shot") {
+    const allowed = new Set(["--node-ref", "--output", "--width", "--height", "--region-json", "--instance", "--api-key-env", "--read-timeout-ms"]);
+    if ([...seenOptions].some((name) => !allowed.has(name)) || !options.output?.trim() || !/^nr1\.[A-Za-z0-9_-]{43}$/u.test(options.nodeRef ?? "")) throw usageFailure();
   } else if (command === "demo-open") {
     const allowed = new Set(["--tab-ref", "--active", "--window-id", "--instance", "--api-key-env", "--read-timeout-ms"]);
     if ([...seenOptions].some((name) => !allowed.has(name)) ||
@@ -462,6 +483,7 @@ function helpOutput() {
       "browser-key-cli.mjs page-save --tab-ref <TabRef> --output <page.mhtml> [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs artifact-save --artifact-ref <ArtifactRef> --output <file> [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs page-shot --tab-ref <TabRef> --output <image> [--format png|jpeg] [--quality 0..100] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
+      "browser-key-cli.mjs element-shot --node-ref <NodeRef> --output <image.png> [--width <px>] [--height <px>] [--region-json <element-local-rectangle>] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs demo-open <UTF-8-self-contained.html> [--tab-ref <existing demo TabRef> | --window-id <id>] [--active true|false] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs stop [--read-timeout-ms <ms>]",
     ],

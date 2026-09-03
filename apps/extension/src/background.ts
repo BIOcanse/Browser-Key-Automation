@@ -8,10 +8,12 @@ import {
 } from "./background/transport-controller.js";
 import { initializeOccupationService } from "./background/occupation-service.js";
 import { initializeTabService } from "./background/tab-service.js";
+import { initializeDebuggerService } from "./background/debugger-service.js";
 
 const manifest = chrome.runtime.getManifest();
 initializeTabService();
 initializeOccupationService();
+initializeDebuggerService();
 attachAdminEntry();
 
 chrome.runtime.onConnect.addListener((port) => {

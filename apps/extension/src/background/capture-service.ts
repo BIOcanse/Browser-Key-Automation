@@ -212,12 +212,11 @@ function dataUrlBlob(dataUrl: string, expectedType: "image/jpeg" | "image/png"):
   return new Blob([bytes], { type: expectedType });
 }
 
-export async function captureVisibleScreenshot(
-  ownerKeyId: string,
+export async function captureVisibleScreenshotBlob(
   tabRef: string,
   format: "jpeg" | "png",
   quality: number,
-): Promise<{ readonly tabRef: string; readonly artifact: ArtifactMetadata }> {
+): Promise<Blob> {
   const target = await resolveTabTarget(tabRef);
   const tab = await getTab(tabRef);
   if (!tab.active) {
@@ -249,6 +248,16 @@ export async function captureVisibleScreenshot(
     );
   }
   const mediaType = format === "jpeg" ? "image/jpeg" : "image/png";
-  const artifact = await createArtifact(ownerKeyId, mediaType, dataUrlBlob(dataUrl, mediaType));
+  return dataUrlBlob(dataUrl, mediaType);
+}
+
+export async function captureVisibleScreenshot(
+  ownerKeyId: string,
+  tabRef: string,
+  format: "jpeg" | "png",
+  quality: number,
+): Promise<{ readonly tabRef: string; readonly artifact: ArtifactMetadata }> {
+  const blob = await captureVisibleScreenshotBlob(tabRef, format, quality);
+  const artifact = await createArtifact(ownerKeyId, blob.type, blob);
   return { tabRef, artifact };
 }

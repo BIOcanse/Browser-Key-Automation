@@ -19,6 +19,42 @@
       "description": "Provide only the coarse MV3 wake-up leg of the reconnect scheduler; alarms never prove a ten-second wall-clock retry SLA."
     },
     {
+      "capabilityId": "platform.extension.debugger",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "debugger"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "explicit_attach_cdp_event_detach",
+      "consumers": [
+        "apps/extension/src/background/debugger-service.ts"
+      ],
+      "description": "Optional explicit chrome.debugger transport. Chrome owns debugging UI; ordinary DOM/capture never attaches."
+    },
+    {
+      "capabilityId": "platform.extension.element_capture",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "isolated_geometry_mask_rgba_png_pixel_validation",
+      "consumers": [
+        "apps/extension/src/background/capture/element-service.ts",
+        "apps/extension/src/background/capture/document-geometry.ts",
+        "apps/extension/src/background/capture/mask-image.ts"
+      ],
+      "description": "Read NodeRef subtree geometry and mask real visible-tab pixels using OffscreenCanvas; fixed-size transparent PNG without page repaint."
+    },
+    {
       "capabilityId": "platform.extension.indexeddb_strict",
       "kind": "platform",
       "status": "active",
@@ -338,4 +374,5 @@
       ],
       "description": "Connect to the generated numeric loopback endpoint with exact paths, subprotocols and role hello; carry bounded binary application frames and reconnect at the generated interval. The relay routes bearer-bearing application bytes but does not authorize them."
     }
-  ]}
+  ]
+}

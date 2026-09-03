@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { pageEvaluate } from "./cdp-client.mjs";
+import { readFile } from "node:fs/promises";
+
+const commands = JSON.parse(await readFile(new URL("../../registries/commands.registry.json", import.meta.url), "utf8"));
+const ui = JSON.parse(await readFile(new URL("../../registries/ui.registry.json", import.meta.url), "utf8"));
 
 export async function probePermissionGroups(pageClient) {
   const samples = await pageEvaluate(pageClient, () => {
@@ -26,6 +30,9 @@ export async function probePermissionGroups(pageClient) {
     toggle("native-input").click();
     samples.nativeIndependent = { native: atom("dom.click.real").checked, javascript: atom("js.execute").checked, dom: state("dom") };
     toggle("javascript").click();
+    toggle("debugger").click();
+    samples.debuggerIndependent = { debugger: atom("debugger").checked, javascript: atom("js.execute").checked, native: atom("dom.click.real").checked };
+    toggle("debugger").click();
     toggle("dom").click();
     samples.filled = state("dom");
     toggle("dom").click();
@@ -65,14 +72,15 @@ export async function probePermissionGroups(pageClient) {
     samples.finalSelection = selected();
     return samples;
   });
-  assert.equal(samples.initial.count, 40);
-  assert.equal(samples.initial.groups, 9);
+  assert.equal(samples.initial.count, commands.permissionDeclarations.filter((item) => item.status === "active").length);
+  assert.equal(samples.initial.groups, ui.permissionGroups.length);
   assert.equal(samples.initial.collapsed, true);
   assert.deepEqual(samples.cleared, []);
-  assert.equal(samples.resetCount, 40);
+  assert.equal(samples.resetCount, samples.initial.count);
   assert.deepEqual(samples.domOnly, ["dom.click", "dom.focus", "dom.scroll", "dom.select", "dom.setValue"]);
   assert.deepEqual(samples.partial, { selected: ["dom.click", "dom.focus", "dom.select", "dom.setValue"], dom: { checked: false, mixed: true }, allMixed: true });
   assert.deepEqual(samples.nativeIndependent, { native: true, javascript: false, dom: { checked: false, mixed: true } });
+  assert.deepEqual(samples.debuggerIndependent, { debugger: true, javascript: true, native: true });
   assert.deepEqual(samples.filled, { checked: true, mixed: false });
   assert.deepEqual(samples.domCleared, ["dom.click.real", "js.execute"]);
   assert.deepEqual(samples.root, { hidden: true, note: true, disabled: true });

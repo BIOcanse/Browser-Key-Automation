@@ -4,13 +4,14 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { saveArtifactFile, savePageFile, saveScreenshotFile } from "../apps/client/src/artifact-files.mjs";
-import { parseArguments, savePage, saveScreenshot } from "../apps/client/src/main.mjs";
+import { saveArtifactFile, savePageFile, saveScreenshotFile, saveElementScreenshotFile } from "../apps/client/src/artifact-files.mjs";
+import { parseArguments, savePage, saveScreenshot, saveElementScreenshot } from "../apps/client/src/main.mjs";
 
 const root = fileURLToPath(new URL("../out/test-artifacts/", import.meta.url));
 await mkdir(root, { recursive: true });
 const artifactRef = `ar1.${"A".repeat(43)}`;
 const tabRef = `tr1.${"A".repeat(22)}.1.${"B".repeat(22)}`;
+const nodeRef = `nr1.${"A".repeat(43)}`;
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 async function destination(name = "page.mhtml") { return path.join(await mkdtemp(path.join(root, "file-save-")), name); }
 function source(bytes, chunkSize = 7) {
@@ -87,6 +88,37 @@ test("CLI and direct function share argument validation; importing starts no con
   assert.equal(parseArguments(["page-shot", "--tab-ref", tabRef, "--output", "x.jpg", "--format", "jpeg", "--quality", "0"]).quality, 0);
   assert.throws(() => parseArguments(["page-shot", "--tab-ref", tabRef, "--output", "x", "--quality", "101"]));
   assert.throws(() => parseArguments(["page-save", "--tab-ref", tabRef, "--output", "x", "--format", "png"]));
+  assert.equal(typeof saveElementScreenshot, "function");
+  const shot = parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x.png", "--width", "400", "--height", "300",
+    "--region-json", '{"x":5,"y":6,"width":10,"height":20}']);
+  assert.equal(shot.width, 400); assert.equal(shot.height, 300);
+  assert.deepEqual(shot.region, { x: 5, y: 6, width: 10, height: 20 });
+  assert.throws(() => parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x", "--width", "0"]));
+  assert.throws(() => parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x", "--format", "jpeg"]));
+  assert.throws(() => saveElementScreenshot({ nodeRef: "invalid", output: "x" }), (error) => error.code === "CLI_USAGE");
+});
+
+test("element-shot captures once, preserves sizing and region, and returns geometry with the verified file", async () => {
+  for (const options of [{}, { width: 800, height: 600, region: { x: 4, y: 5, width: 20, height: 30 } }]) {
+    const bytes = Buffer.from("element-png-fixture");
+    const output = await destination("元素.png");
+    const fixture = source(bytes);
+    const geometry = { width: 800, height: 600, sourceRect: { x: 1, y: 2, width: 200, height: 100 },
+      contentRect: { x: 0, y: 100, width: 800, height: 400 }, viewport: { x: 0, y: 0, width: 1000, height: 800 }, viewportOnly: true };
+    let captures = 0;
+    const call = async (method, params) => {
+      if (method !== "page.screenshot.element") return fixture.call(method, params);
+      captures += 1;
+      assert.deepEqual(params, { nodeRef, ...options });
+      return { nodeRef, tabRef, artifact: { artifactRef }, ...geometry };
+    };
+    const result = await saveElementScreenshotFile({ call, nodeRef, output, ...options });
+    assert.deepEqual(await readFile(output), bytes);
+    assert.equal(result.nodeRef, nodeRef); assert.equal(result.tabRef, tabRef);
+    for (const [key, value] of Object.entries(geometry)) assert.deepEqual(result[key], value);
+    await assert.rejects(saveElementScreenshotFile({ call, nodeRef, output }), (error) => error.code === "OUTPUT_EXISTS");
+    assert.equal(captures, 1);
+  }
 });
 
 test("page-shot captures once, leaves defaults to the extension and preserves explicit image options", async () => {

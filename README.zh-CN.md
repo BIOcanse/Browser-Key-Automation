@@ -31,7 +31,7 @@ Browser Key Automation 把你正在使用的 Chromium 浏览器变成面向可�
 
 Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代 DevTools 深度诊断。它填补的是另一块：低摩擦、可配置权限地控制人正在使用的浏览器，并提供足够干净的结构和文件能力，让 Agent 完成实际任务。
 
-> 开发状态：当前已解压扩展开发包面向 Chrome/Chromium 138 及以上版本；它目前不是 Chrome 应用商店发布版。商店页面仍在准备；在它完成前请使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.2.zip` 与 `browser-key-automation-local-app-v0.0.0.2.zip`。
+> 发布方式：[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 提供适用于 Chrome/Chromium 138 及以上版本的已解压扩展包和独立本地 App；Chrome 应用商店采用单独的发布流程。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.3.zip` 与 `browser-key-automation-local-app-v0.0.0.3.zip`。
 
 ## 当前能力
 
@@ -59,8 +59,8 @@ Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代
 
 从[最新 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 下载两个 ZIP，分别解压到独立目录。
 
-- 扩展: `browser-key-automation-extension-v0.0.0.2.zip`
-- 本地 App: `browser-key-automation-local-app-v0.0.0.2.zip`
+- 扩展: `browser-key-automation-extension-v0.0.0.3.zip`
+- 本地 App: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 App ZIP 内含 `windows-x86_64/`、`linux-x86_64/`、CLI 和 Agent skill，无需自行编译。
 
@@ -124,6 +124,18 @@ CLI 会先重新枚举实例，再读取 Key。若结果的 delivery 为 `unknow
 - 打开演示：`node client/browser-key-cli.mjs demo-open ./demo.html`。
 - 调用不熟悉的指令前先看 `skills/browser-key-automation/references/commands.registry.json`。交付包中的 Agent skill 带有同一份生成引用。
 
+### 元素图片与显式调试
+
+`page.screenshot.element` 让 Agent 直接用已有 NodeRef 查看 Canvas、图表或容器：包括可见子元素，按已支持的形状裁剪，等比居中放进指定尺寸的透明 PNG。不需要自己算屏幕坐标，也不附加调试器。
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+需要深入排查时，使用 `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`。独立的 `debugger` 权限提供 CDP 命令和事件；Chrome 自身的调试确认或警告仍然保留。日常扩展操作继续走原来的通道。
+
+元素截图只取已激活标签页的当前视口，不自动滚动或重建隐藏内容。支持的形状、顶层文档范围、元素局部区域、大型 CDP 结果与失败处理见 [Agent 使用说明](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### 原生 `.real` 点击
 
 `dom.click.real` 是显式且独立于 `dom.click` 的能力。Windows 上，它会请求 Chromium 激活目标标签页并聚焦对应浏览器窗口，验证引用元素仍然存在、可见、可用且未被遮挡，然后让本地 App 向匹配的 Chromium 内容窗口发送一次原生左击。
@@ -134,7 +146,7 @@ CLI 会先重新枚举实例，再读取 Key。若结果的 delivery 为 `unknow
 
 - Key 是唯一外部身份。Agent 品牌、进程、账号、socket 和 App 实例都不是额外鉴权身份。
 - Root 动态拥有全部 active 权限；Regular 只拥有显式勾选的权限。
-- JavaScript、普通 DOM 操作、原生 `.real` 输入、网络访问和未来调试后端是并列权限；授予一个不会暗中授予其他项。
+- JavaScript、普通 DOM 操作、原生 `.real` 输入、网络访问和显式 `debugger` 调试是并列权限；授予一个不会暗中授予其他项。
 - 同 Key 指令在当前扩展运行期内串行。不同 Key 有独立 lane，但它们对同一网页产生的效果仍可能竞态。
 - 占据归 Key 所有。没有隐藏 takeover、force 或 replace：必须先 release，再 acquire。
 - 完整 Key 保存在扩展内部。受信管理页以及被单独授予 `keys.create` 或 `keys.reveal` 的调用方可以取得它；普通列表和诊断不含完整 Key。CLI 只从 `BKA_API_KEY` 或显式指定的环境变量读取。

@@ -42,6 +42,23 @@ test("command boundary expands declared omissions once and preserves explicit va
   assert.deepEqual(parse("page.screenshot.capture", { tabRef }).params, { tabRef, format: "png", quality: 80 });
   assert.equal(parse("page.screenshot.capture", { tabRef, format: "jpeg", quality: 0 }).params.quality, 0);
   assert.equal(parse("page.screenshot.capture", { tabRef, format: null }), null);
+  assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 1024, height: 768 });
+  assert.deepEqual(parse("page.screenshot.element", { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 } }).params,
+    { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 } });
+  for (const params of [{ nodeRef, width: 0 }, { nodeRef, width: null }, { nodeRef, width: 8193 },
+    { nodeRef, width: 8192, height: 8192 }, { nodeRef, region: null }, { nodeRef, region: { x: 0, y: 0, width: 0, height: 1 } },
+    { nodeRef, region: { x: -1, y: 0, width: 1, height: 1 } }, { nodeRef, format: "jpeg" }]) assert.equal(parse("page.screenshot.element", params), null);
+  assert.deepEqual(parse("debugger.attach", { tabRef }).params, { tabRef });
+  assert.equal(parse("debugger.detach", { tabRef, extra: true }), null);
+  assert.deepEqual(parse("debugger.send", { tabRef, method: "Runtime.enable" }).params,
+    { tabRef, method: "Runtime.enable", params: {}, response: "inline" });
+  assert.deepEqual(parse("debugger.events.get", { tabRef }).params, { tabRef, afterSequence: 0, limit: 100 });
+  assert.equal(parse("debugger.send", { tabRef, method: "Runtime.evaluate", params: { expression: "42" }, sessionId: "child-session", response: "artifact" }).params.sessionId, "child-session");
+  for (const params of [{ tabRef, method: "broken" }, { tabRef, method: "Runtime.enable", params: null },
+    { tabRef, method: "Runtime.enable", params: [] }, { tabRef, method: "Runtime.enable", params: { text: "x".repeat(48_001) } },
+    { tabRef, method: "Runtime.enable", response: "automatic" }, { tabRef, method: "Runtime.enable", sessionId: "" }]) assert.equal(parse("debugger.send", params), null);
+  assert.equal(parse("debugger.events.get", { tabRef, afterSequence: -1 }), null);
+  assert.equal(parse("debugger.events.get", { tabRef, limit: 0 }), null);
   const artifactRef = `ar1.${"A".repeat(43)}`;
   assert.deepEqual(parse("demo.open", { artifactRef }).params, { artifactRef, tabRef: null, windowId: null, active: true });
   assert.equal(parse("demo.open", { artifactRef, tabRef, windowId: 1 }), null);
@@ -73,6 +90,10 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
   point("command.dom.scroll.default_block").defaultString = "start";
   point("command.page.screenshot.default_format").defaultString = "jpeg";
   point("command.page.screenshot.default_quality").defaultInteger = 42;
+  point("command.page.screenshot.default_width").defaultInteger = 640;
+  point("command.page.screenshot.default_height").defaultInteger = 480;
+  point("command.debugger.default_response").defaultString = "artifact";
+  point("command.debugger.default_event_limit").defaultInteger = 50;
   point("command.demo.open.default_active").defaultBoolean = false;
   point("build.transport.loopback_bind").defaultLoopbackBind.port = 32190;
   await writeFile(registryPath, JSON.stringify(registry));
@@ -92,6 +113,9 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
     assert.equal(parse("dom.scroll", { nodeRef }).params.block, "start");
     assert.equal(parse("page.screenshot.capture", { tabRef }).params.format, "jpeg");
     assert.equal(parse("page.screenshot.capture", { tabRef }).params.quality, 42);
+    assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 640, height: 480 });
+    assert.equal(parse("debugger.send", { tabRef, method: "Runtime.enable" }).params.response, "artifact");
+    assert.equal(parse("debugger.events.get", { tabRef }).params.limit, 50);
     assert.equal(parse("demo.open", { artifactRef: `ar1.${"A".repeat(43)}` }).params.active, false);
   } finally { COMMAND_CATALOG.parameterDefaultsByMethod = previous; }
   const transport = await import(pathToFileURL(path.join(fixture, "apps", "client", "src", "generated-config.mjs")));

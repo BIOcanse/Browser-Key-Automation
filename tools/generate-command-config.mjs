@@ -58,6 +58,7 @@ function defaultPointValue(pointId) {
 function validateParameterDefault(field, value) {
   const integer = Number.isSafeInteger(value);
   const enumValues = {
+    debugger_response: ["inline", "artifact"],
     image_format: ["jpeg", "png"],
     scroll_behavior: ["auto", "smooth"],
     scroll_alignment: ["center", "end", "nearest", "start"],
@@ -65,6 +66,7 @@ function validateParameterDefault(field, value) {
     page_wait_until: ["committed", "domcontentloaded", "complete"],
   };
   const valid = field.valueType === "boolean" ? typeof value === "boolean" :
+    field.valueType === "json_object" ? value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0 :
     field.valueType === "positive_integer" ? integer && value > 0 :
     field.valueType === "safe_integer" ? integer && value >= 0 :
     field.valueType === "safe_integer_or_null" ? value === null || integer && value >= 0 :
@@ -256,6 +258,19 @@ if (limits["client.default_read_timeout_ms"] > limits["client.maximum_read_timeo
 const frameBytes = transportProfile.maximumMessageBytes;
 const textBytes = limits["command.tabs.maximum_text_bytes"];
 const inlineResultBytes = limits["command.inline.maximum_result_json_bytes"];
+if (limits["command.debugger.maximum_params_bytes"] + 7 * textBytes + 2048 >= frameBytes) {
+  throw new Error("Debugger params, ASCII method, escaped sessionId and envelope must fit one request frame");
+}
+if (limits["command.debugger.maximum_event_bytes"] + 4096 > inlineResultBytes ||
+    limits["command.debugger.maximum_event_bytes"] > limits["command.debugger.maximum_event_buffer_bytes"] ||
+    limits["command.debugger.default_event_limit"] > limits["command.debugger.maximum_events"]) {
+  throw new Error("Debugger event defaults and byte limits must fit the buffer and an inline response");
+}
+if (limits["command.page.screenshot.default_width"] > limits["command.page.screenshot.maximum_dimension"] ||
+    limits["command.page.screenshot.default_height"] > limits["command.page.screenshot.maximum_dimension"] ||
+    limits["command.page.screenshot.default_width"] * limits["command.page.screenshot.default_height"] > limits["command.page.screenshot.maximum_pixels"]) {
+  throw new Error("Element screenshot defaults must fit the dimension and pixel limits");
+}
 if (inlineResultBytes + 12000 >= frameBytes) {
   throw new Error("The common inline result budget must leave room for the routed response envelope");
 }

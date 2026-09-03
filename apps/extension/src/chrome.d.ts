@@ -63,6 +63,11 @@ interface ChromeWebNavigationFrame {
   readonly documentLifecycle?: string;
 }
 
+interface ChromeDebuggerTarget {
+  readonly tabId: number;
+  readonly sessionId?: string;
+}
+
 type ChromeUserScriptInjectionResult<T = unknown> =
   | {
       readonly documentId: string;
@@ -91,6 +96,17 @@ interface ChromeRuntimePort {
 }
 
 declare const chrome: {
+  readonly debugger?: {
+    attach(target: { readonly tabId: number }, requiredVersion: string): Promise<void>;
+    detach(target: { readonly tabId: number }): Promise<void>;
+    sendCommand(target: ChromeDebuggerTarget, method: string, params?: Readonly<Record<string, unknown>>): Promise<unknown>;
+    readonly onEvent: {
+      addListener(callback: (source: { readonly tabId?: number; readonly sessionId?: string }, method: string, params?: Record<string, unknown>) => void): void;
+    };
+    readonly onDetach: {
+      addListener(callback: (source: { readonly tabId?: number }, reason: string) => void): void;
+    };
+  };
   readonly runtime: {
     readonly id: string;
     readonly onInstalled: {

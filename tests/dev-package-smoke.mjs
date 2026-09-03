@@ -46,7 +46,7 @@ const linuxChecksumCount = await verifyChecksums(linuxAppRoot);
 
 const manifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
 assert.equal(manifest.name, "Browser Key Automation");
-assert.equal(manifest.version, "0.0.0.2");
+assert.equal(manifest.version, "0.0.0.3");
 assert.equal(manifest.minimum_chrome_version, "138");
 assert.equal(manifest.action.default_title, "__MSG_actionTitle__");
 assert.deepEqual(manifest.action.default_icon, {
@@ -63,6 +63,11 @@ assert.deepEqual(manifest.icons, {
 assert.equal(manifest.default_locale, "en");
 assert.equal(Object.hasOwn(manifest.action, "default_popup"), false);
 assert.equal(manifest.options_page, "admin/index.html");
+assert.ok(manifest.permissions.includes("debugger"));
+await stat(path.join(extensionRoot, "background", "debugger-service.js"));
+for (const file of ["element-service", "document-geometry", "geometry-model", "mask-image", "shape-path"]) {
+  await stat(path.join(extensionRoot, "background", "capture", `${file}.js`));
+}
 await stat(path.join(extensionRoot, "admin", "welcome.html"));
 await stat(path.join(extensionRoot, "admin", "setup.js"));
 await stat(path.join(extensionRoot, "shared", "user-scripts.js"));
@@ -87,6 +92,7 @@ assert.equal(linuxStartHere.includes("{{"), false);
 for (const appRoot of [windowsAppRoot, linuxAppRoot]) {
   await stat(path.join(appRoot, "client", "demo-files.mjs"));
   await stat(path.join(appRoot, "skill", "browser-key-automation", "references", "quick-shot-and-demo.md"));
+  await stat(path.join(appRoot, "skill", "browser-key-automation", "references", "debugger-and-element-capture.md"));
   const skillText = await readFile(
     path.join(appRoot, "skill", "browser-key-automation", "SKILL.md"),
     "utf8",
@@ -129,6 +135,7 @@ const help = await runNode(path.join(windowsAppRoot, "client", "browser-key-cli.
 assert.equal(help.code, 0, help.stderr);
 assert.equal(JSON.parse(help.stdout.trim()).command, "help");
 assert.ok(JSON.parse(help.stdout.trim()).usage.some((item) => item.includes("page-shot")));
+assert.ok(JSON.parse(help.stdout.trim()).usage.some((item) => item.includes("element-shot")));
 assert.ok(JSON.parse(help.stdout.trim()).usage.some((item) => item.includes("demo-open")));
 
 if (process.platform === "win32") {

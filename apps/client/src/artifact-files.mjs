@@ -34,6 +34,22 @@ export async function saveScreenshotFile({ call, tabRef, output, format, quality
   return saveCaptureFile({ call, method: "page.screenshot.capture", params, output });
 }
 
+export async function saveElementScreenshotFile({ call, nodeRef, output, width, height, region }) {
+  const params = { nodeRef, ...(width === undefined ? {} : { width }), ...(height === undefined ? {} : { height }),
+    ...(region === undefined ? {} : { region }) };
+  const destination = await assertNewOutput(output);
+  const captured = await call("page.screenshot.element", params);
+  if (typeof captured?.artifact?.artifactRef !== "string") throw new ArtifactFileError("CAPTURE_RESULT_INVALID");
+  try {
+    const saved = await saveArtifactFile({ call, artifactRef: captured.artifact.artifactRef, output: destination });
+    return { ...saved, nodeRef, tabRef: captured.tabRef, width: captured.width, height: captured.height,
+      sourceRect: captured.sourceRect, contentRect: captured.contentRect, viewport: captured.viewport, viewportOnly: captured.viewportOnly };
+  } catch (error) {
+    error.details = { ...error.details, artifactRef: captured.artifact.artifactRef, output: destination };
+    throw error;
+  }
+}
+
 async function saveCaptureFile({ call, method, params, output }) {
   const destination = await assertNewOutput(output);
   const captured = await call(method, params);

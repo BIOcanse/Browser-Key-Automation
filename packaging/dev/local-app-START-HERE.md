@@ -26,9 +26,9 @@ node client/browser-key-cli.mjs instances
 - 恰好 1 个：可以继续调用。
 - 多个：停止，不默认选第一个，也不把 bearer Key 逐个试过去。
 
-`instances` 返回 `relayBuildId`；扩展的 `system.describe` 返回自身 buildId 和当前 Key 的实际权限。本批 relay hello 增加 buildId，需搭配同包 CLI 使用，不要混入旧 CLI。
+`instances` 返回 `relayBuildId`；扩展的 `system.describe` 返回自身 buildId 和当前 Key 的实际权限。请搭配同包 CLI 使用，不要混入其他版本的 CLI。
 
-首次安装扩展会打开介绍页。请用户在 `chrome://extensions` → 本扩展的“详情”中开启“允许用户脚本 / Allow User Scripts”，再重载扩展；这是 `js.execute` 必需的浏览器开关，Root Key 也不能替代。未启用时错误会附 `setupInstructions`，Agent 应据此提醒用户，不要循环重试。DOM/树读取和 Key 管理不受这个开关阻断。
+首次安装扩展会打开介绍页。需要 `js.execute` 时，应在 `chrome://extensions` → 本扩展的“详情”中开启“允许用户脚本 / Allow User Scripts”，再重载扩展；Root Key 也不能替代这个浏览器开关。未启用时错误会附 `setupInstructions`，Agent 应将步骤告知操作者，不要循环重试。DOM/树读取和 Key 管理不受这个开关阻断。
 
 一条命令把网页保存为实际本地单文件（父目录需存在，不覆盖已有文件）：
 
@@ -42,11 +42,14 @@ node client/browser-key-cli.mjs page-save --tab-ref <TabRef> --output ./page.mht
 
 ```text
 node client/browser-key-cli.mjs page-shot --tab-ref <TabRef> --output ./page.png
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
 node client/browser-key-cli.mjs demo-open ./demo.html
 node client/browser-key-cli.mjs demo-open ./updated.html --tab-ref <已有演示页的TabRef>
 ```
 
-截图需要 `page.screenshot.capture` 与 `artifact.read`；演示需要新增的 `artifact.write` 与 `demo.open`。Regular Key 在管理页补授这些权限，Root 自动包含。截图目标需已是当前标签，默认 PNG；演示默认新建并选中标签，不请求 OS 前台，`--active false` 可不选中。完整参数、函数入口和失败处理见 skill 的 `references/quick-shot-and-demo.md`。
+截图需要 `page.screenshot.capture` 与 `artifact.read`；演示需要 `artifact.write` 与 `demo.open`。Regular Key 在管理页授予这些权限，Root 自动包含。截图目标需已是当前标签，默认 PNG；演示默认新建并选中标签，不请求 OS 前台，`--active false` 可不选中。完整参数、函数入口和失败处理见 skill 的 `references/quick-shot-and-demo.md`。
+
+元素截图复用相同权限，按元素及子元素几何生成透明 PNG，等比居中放入指定矩形。调试使用通用 `call` 下的 `debugger.attach/send/events.get/detach`，需要独立 `debugger` 权限，Chrome 调试提示不会隐藏。详细边界见 skill 的 `references/debugger-and-element-capture.md`。
 
 客户端只从 `BKA_API_KEY` 环境变量读取 Key，拒绝把 Key 放进命令行参数；最终 stdout 会脱敏任何完整 API Key 形状。发送后若连接失败，可能返回 `delivery: "unknown"`，且不会自动重试。
 
@@ -56,7 +59,7 @@ node client/browser-key-cli.mjs demo-open ./updated.html --tab-ref <已有演示
 node client/browser-key-cli.mjs stop
 ```
 
-停止本地 App不吊销 Key，也不自动释放扩展内部 occupation。
+停止本地 App 不吊销 Key，也不自动释放扩展内部 occupation。
 
 ## Agent Skill
 

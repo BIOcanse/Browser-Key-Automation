@@ -31,7 +31,7 @@ Modelos de conexión verificados el 2026-09-01. Se comparan rutas de uso normale
 
 Browser Key Automation no sustituye las suites de pruebas Playwright/Selenium ni el diagnóstico profundo de DevTools. Cumple otra función: control autorizado y de baja fricción del navegador que una persona ya usa, con una estructura limpia y archivos suficientes para que un Agent complete trabajo real.
 
-> Estado de desarrollo: la compilación de desarrollo unpacked actual está dirigida a Chrome/Chromium 138 o posterior. No es una publicación de Chrome Web Store. La ficha de Store se está preparando; hasta entonces usa [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Cada Release tiene exactamente dos descargas: `browser-key-automation-extension-v0.0.0.2.zip` y `browser-key-automation-local-app-v0.0.0.2.zip`.
+> Distribución: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) ofrece una extensión unpacked para Chrome/Chromium 138 o posterior y una App local independiente. La publicación en Chrome Web Store sigue un proceso separado. Cada Release tiene exactamente dos descargas: `browser-key-automation-extension-v0.0.0.3.zip` y `browser-key-automation-local-app-v0.0.0.3.zip`.
 
 ## Funciones
 
@@ -59,8 +59,8 @@ Command Registry es la fuente de verdad para los métodos, schemas, permisos y e
 
 Descarga los dos ZIP de la [última Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) y extrae cada uno en una carpeta independiente.
 
-- Extensión: `browser-key-automation-extension-v0.0.0.2.zip`
-- App local: `browser-key-automation-local-app-v0.0.0.2.zip`
+- Extensión: `browser-key-automation-extension-v0.0.0.3.zip`
+- App local: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 El ZIP de la App incluye `windows-x86_64/` y `linux-x86_64/`, además de la CLI y el skill de Agent. No hace falta compilar el código fuente.
 
@@ -124,6 +124,18 @@ La CLI vuelve a enumerar las instancias antes de leer la Key. Si delivery se inf
 - Abrir una demostración: `node client/browser-key-cli.mjs demo-open ./demo.html`
 - Antes de usar un comando desconocido, consultar `skills/browser-key-automation/references/commands.registry.json`. El skill de Agent incluido contiene las mismas referencias generadas.
 
+### Imágenes de elementos y depuración explícita
+
+`page.screenshot.element` permite a un Agent ver un Canvas, gráfico o contenedor mediante su NodeRef existente. Incluye los hijos visibles, aplica una máscara a las formas compatibles y centra el conjunto proporcionalmente en un PNG transparente del tamaño exacto. No necesita calcular coordenadas de pantalla ni adjuntar un depurador.
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+Para un diagnóstico más profundo: `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`. El permiso independiente `debugger` proporciona comandos y eventos CDP; la confirmación y advertencia de depuración de Chrome permanecen. Las operaciones ordinarias conservan su ruta habitual.
+
+La captura de elementos usa solo el viewport actual de una pestaña ya activa, sin desplazamiento automático ni reconstrucción de contenido oculto. Consulta las formas compatibles, el alcance del documento principal, regiones locales, resultados CDP grandes y errores en [la guía del Agent](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### Clic nativo `.real`
 
 `dom.click.real` es explícito e independiente de `dom.click`. En Windows solicita a Chromium activar la pestaña de destino y enfocar su ventana, comprueba que el elemento referenciado siga presente, visible, habilitado y sin obstrucciones, y después pide a la App que envíe un único clic izquierdo nativo a la ventana de contenido Chromium correspondiente.
@@ -134,7 +146,7 @@ La CLI vuelve a enumerar las instancias antes de leer la Key. Si delivery se inf
 
 - Una Key es la única identidad externa. La marca del Agent, el proceso, la cuenta, el socket y la Instance de la App no son identidades de autorización adicionales.
 - Root recibe dinámicamente todos los permisos activos. Regular recibe solo los permisos seleccionados explícitamente.
-- JavaScript, las acciones DOM normales, la entrada nativa `.real`, el acceso de red y futuros backends de depuración son permisos paralelos; uno no concede silenciosamente los demás.
+- JavaScript, las acciones DOM normales, la entrada nativa `.real`, el acceso de red y el acceso explícito `debugger` son permisos paralelos; uno no concede silenciosamente los demás.
 - Los comandos de una misma Key se serializan en el runtime actual de la extensión. Keys diferentes tienen lanes independientes, aunque sus efectos sobre la misma página pueden competir.
 - Una ocupación pertenece a una Key. No hay takeover, force ni replace ocultos: primero release y después acquire.
 - La Key completa permanece dentro de la extensión. La página de administración de confianza y los llamantes autorizados por separado para `keys.create` o `keys.reveal` pueden recibirla; las listas y diagnósticos normales no la incluyen. La CLI solo la lee de `BKA_API_KEY` o de una variable de entorno elegida explícitamente.

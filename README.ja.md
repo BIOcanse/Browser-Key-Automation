@@ -31,7 +31,7 @@ Browser Key Automation は、普段使っている Chromium ブラウザーを�
 
 Browser Key Automation は Playwright/Selenium のテストスイートや DevTools の深い診断を置き換えません。人が使っているブラウザーを低摩擦かつ権限付きで操作し、Agent が実務を完了するための明瞭な構造とファイル機能を提供する別の役割です。
 
-> 開発状況: 現在の unpacked 開発ビルドは Chrome/Chromium 138 以降を対象としています。Chrome ウェブストア版ではありません。Store listing は準備中です。それまでは [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) を使用してください。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.2.zip` と `browser-key-automation-local-app-v0.0.0.2.zip` の 2 つだけです。
+> 配布方法: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) では Chrome/Chromium 138 以降向けの unpacked 拡張機能と、別個のローカル App を提供します。Chrome ウェブストアは独立した公開手順を使用します。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.3.zip` と `browser-key-automation-local-app-v0.0.0.3.zip` の 2 つだけです。
 
 ## 主な機能
 
@@ -59,8 +59,8 @@ Browser Key Automation は Playwright/Selenium のテストスイートや DevTo
 
 [最新の Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) から 2 つの ZIP をダウンロードし、それぞれ別のディレクトリに展開します。
 
-- 拡張機能: `browser-key-automation-extension-v0.0.0.2.zip`
-- ローカル App: `browser-key-automation-local-app-v0.0.0.2.zip`
+- 拡張機能: `browser-key-automation-extension-v0.0.0.3.zip`
+- ローカル App: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 App ZIP には `windows-x86_64/`、`linux-x86_64/`、CLI、Agent skill が含まれます。ソースからのビルドは不要です。
 
@@ -124,6 +124,18 @@ CLI は Key を読む前に Instance を再列挙します。delivery が `unkno
 - デモを開く: `node client/browser-key-cli.mjs demo-open ./demo.html`
 - 未知のコマンドを使う前に `skills/browser-key-automation/references/commands.registry.json` を確認してください。同梱 Agent skill にも同じ生成済み参照があります。
 
+### 要素画像と明示的なデバッグ
+
+`page.screenshot.element` は既存の NodeRef で Canvas、グラフ、コンテナを画像として確認できます。可視の子要素を含め、対応する形状でマスクし、指定サイズの透過 PNG に縦横比を保って中央配置します。画面座標の計算やデバッガーの接続は不要です。
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+詳細な診断には `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` を使います。独立した `debugger` 権限で CDP コマンドとイベントを利用でき、Chrome 自身のデバッグ確認・警告は残ります。通常の拡張機能操作の経路は変わりません。
+
+要素撮影の対象はアクティブなタブの現在のビューポートだけです。自動スクロールや隠れた内容の再構成はしません。対応形状、トップ文書の範囲、要素内領域、大きな CDP 結果と失敗時の扱いは次を参照してください： [Agent ガイド](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### ネイティブ `.real` クリック
 
 `dom.click.real` は `dom.click` から独立した明示的機能です。Windows では、対象タブのアクティブ化とブラウザーウィンドウのフォーカスを Chromium に要求し、参照要素が生存・可視・有効・非遮蔽であることを検証してから、対応する Chromium コンテンツウィンドウへ 1 回のネイティブ左クリックを送るよう App に要求します。
@@ -134,7 +146,7 @@ CLI は Key を読む前に Instance を再列挙します。delivery が `unkno
 
 - 外部 ID は Key だけです。Agent のブランド、プロセス、アカウント、socket、App Instance は追加の認可 ID ではありません。
 - Root はすべての active 権限を動的に持ちます。Regular は明示的に選んだ権限だけを持ちます。
-- JavaScript、通常 DOM 操作、ネイティブ `.real`、ネットワークアクセス、将来のデバッグ backend は並列権限です。1 つの付与が他を暗黙に付与することはありません。
+- JavaScript、通常 DOM 操作、ネイティブ `.real`、ネットワークアクセス、明示的な `debugger` アクセス は並列権限です。1 つの付与が他を暗黙に付与することはありません。
 - 同じ Key のコマンドは現在の拡張機能 runtime 内で直列化されます。異なる Key は独立 lane ですが、同じページへの効果は競合し得ます。
 - 占有は Key が所有します。隠れた takeover、force、replace はなく、先に release、次に acquire が必要です。
 - 完全な Key は拡張機能内に保存されます。信頼済み管理画面と、`keys.create` または `keys.reveal` を個別に許可された呼び出し元だけが受け取れます。通常の一覧や診断には含まれず、CLI は `BKA_API_KEY` または明示した環境変数からのみ読みます。

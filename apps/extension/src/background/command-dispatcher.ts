@@ -36,6 +36,10 @@ import {
   fetchResource,
 } from "./capture-service.js";
 import { DemoServiceError, openDemo, type OpenDemoParams } from "./demo-service.js";
+import { captureElementScreenshot, type ElementScreenshotRequest } from "./capture/element-service.js";
+import { ElementScreenshotError } from "./capture/geometry-model.js";
+import { attachDebugger, detachDebugger, sendDebuggerCommand, getDebuggerEvents,
+  DebuggerServiceError, type DebuggerDispatch, type DebuggerSendRequest } from "./debugger-service.js";
 import {
   clickDomNode,
   describeDomNode,
@@ -131,6 +135,8 @@ type CommandErrorCode =
   | "CAPABILITY_UNAVAILABLE"
   | "CONTROL_OCCUPIED"
   | "DOM_OPERATION_FAILED"
+  | "DEBUGGER_OPERATION_FAILED"
+  | "ELEMENT_SCREENSHOT_FAILED"
   | "DEMO_INPUT_INVALID"
   | "FORBIDDEN"
   | "INTERNAL_ERROR"
@@ -299,6 +305,19 @@ function parsed(entry: CatalogEntry, params: Record<string, unknown>): ParsedCom
   return { kind: entry.method, requiredPermission: entry.requiredPermission, params };
 }
 
+function captureRegion(value: unknown): boolean {
+  return isRecord(value) && hasExactKeys(value, ["x", "y", "width", "height"]) &&
+    ["x", "y", "width", "height"].every((key) => typeof value[key] === "number" && Number.isFinite(value[key]) &&
+      (value[key] as number) >= 0 && (value[key] as number) <= Number.MAX_SAFE_INTEGER) &&
+    (value.width as number) > 0 && (value.height as number) > 0;
+}
+
+function boundedJsonObject(value: unknown, maximumBytes: number): boolean {
+  if (!isRecord(value)) return false;
+  try { return encoder.encode(JSON.stringify(value)).byteLength <= maximumBytes; }
+  catch { return false; }
+}
+
 function commandEntry(value: unknown): CatalogEntry {
   return value as CatalogEntry;
 }
@@ -318,6 +337,28 @@ export function parseCommand(value: unknown): ParsedCommand | null {
   };
 
   switch (value.method) {
+    case COMMAND_CATALOG.debuggerAttach.method:
+    case COMMAND_CATALOG.debuggerDetach.method:
+      return hasExactKeys(params, ["tabRef"]) && isTabRefShape(params.tabRef)
+        ? parsed(commandEntry(value.method === COMMAND_CATALOG.debuggerAttach.method ? COMMAND_CATALOG.debuggerAttach : COMMAND_CATALOG.debuggerDetach), params) : null;
+    case COMMAND_CATALOG.debuggerSend.method:
+      return hasOnlyKeys(params, ["tabRef", "method", "params", "sessionId", "response"]) && isTabRefShape(params.tabRef) &&
+        boundedString(params.method, COMMAND_CATALOG.limits["command.tabs.maximum_text_bytes"]) && /^[A-Za-z][A-Za-z0-9]*\.[A-Za-z][A-Za-z0-9]*$/u.test(params.method as string) &&
+        boundedJsonObject(params.params, COMMAND_CATALOG.limits["command.debugger.maximum_params_bytes"]) &&
+        (params.sessionId === undefined || boundedString(params.sessionId, COMMAND_CATALOG.limits["command.tabs.maximum_text_bytes"])) &&
+        (params.response === "inline" || params.response === "artifact")
+        ? parsed(commandEntry(COMMAND_CATALOG.debuggerSend), params) : null;
+    case COMMAND_CATALOG.debuggerEventsGet.method:
+      return hasExactKeys(params, ["tabRef", "afterSequence", "limit"]) && isTabRefShape(params.tabRef) && safeInteger(params.afterSequence) &&
+        safeInteger(params.limit, 1, COMMAND_CATALOG.limits["command.debugger.maximum_events"])
+        ? parsed(commandEntry(COMMAND_CATALOG.debuggerEventsGet), params) : null;
+    case COMMAND_CATALOG.pageScreenshotElement.method:
+      return hasOnlyKeys(params, ["nodeRef", "width", "height", "region"]) && isNodeRefShape(params.nodeRef) &&
+        safeInteger(params.width, 1, COMMAND_CATALOG.limits["command.page.screenshot.maximum_dimension"]) &&
+        safeInteger(params.height, 1, COMMAND_CATALOG.limits["command.page.screenshot.maximum_dimension"]) &&
+        params.width * params.height <= COMMAND_CATALOG.limits["command.page.screenshot.maximum_pixels"] &&
+        (params.region === undefined || captureRegion(params.region))
+        ? parsed(commandEntry(COMMAND_CATALOG.pageScreenshotElement), params) : null;
     case COMMAND_CATALOG.artifactUploadBegin.method:
       return hasExactKeys(params, ["byteLength", "mediaType"]) && safeInteger(params.byteLength) && params.mediaType === "text/html"
         ? parsed(commandEntry(COMMAND_CATALOG.artifactUploadBegin), params) : null;
@@ -623,6 +664,24 @@ async function executeCommand(
 ): Promise<unknown> {
   const params = command.params;
   switch (command.kind) {
+    case "debugger.attach":
+    case "debugger.detach":
+    case "debugger.send": {
+      const tabRef = textParam(params, "tabRef");
+      const dispatch: DebuggerDispatch = async (effect) => {
+        const auth = await authenticateApiKey(context.apiKey, "debugger");
+        if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
+        if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
+        return dispatchWithControlGate(caller.keyId, tabRef, effect);
+      };
+      if (command.kind === "debugger.attach") return attachDebugger(tabRef, dispatch);
+      if (command.kind === "debugger.detach") return detachDebugger(tabRef, dispatch);
+      return sendDebuggerCommand(caller.keyId, params as unknown as DebuggerSendRequest, dispatch);
+    }
+    case "debugger.events.get":
+      return getDebuggerEvents(textParam(params, "tabRef"), numberParam(params, "afterSequence"), numberParam(params, "limit"));
+    case "page.screenshot.element":
+      return captureElementScreenshot(caller.keyId, params as unknown as ElementScreenshotRequest);
     case "artifact.upload.begin":
       return beginArtifactUpload(caller.keyId, numberParam(params, "byteLength"), "text/html");
     case "artifact.upload.append":
@@ -825,6 +884,7 @@ function publicCommandError(error: unknown): PublicCommandError {
   if (error instanceof CapabilityUnavailableError) return { code: error.code, details: error.details as unknown as Readonly<Record<string, unknown>> };
   if (error instanceof TabServiceError) return { code: error.code };
   if (error instanceof DomServiceError) return { code: error.code };
+  if (error instanceof DebuggerServiceError || error instanceof ElementScreenshotError) return { code: error.code, details: error.details };
   if (error instanceof NativeInputError) {
     return { code: error.code, details: error.details as unknown as Readonly<Record<string, unknown>> };
   }

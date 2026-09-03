@@ -201,6 +201,171 @@
       "safetyContract": "Raw upload chunk size leaves room for base64url, Key and route envelopes; returned by begin, never guessed by callers."
     },
     {
+      "pointId": "command.debugger.default_event_limit",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default event page limit, expanded once before the reader."
+    },
+    {
+      "pointId": "command.debugger.default_response",
+      "family": "build",
+      "kind": "string",
+      "defaultInteger": null,
+      "defaultString": "inline",
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [
+        "inline",
+        "artifact"
+      ],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default CDP result materialization; explicit artifact stores a complete JSON response without re-running the command."
+    },
+    {
+      "pointId": "command.debugger.maximum_connections",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/debugger-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds live or retained detached debugging connections; explicit detach releases retained buffers."
+    },
+    {
+      "pointId": "command.debugger.maximum_event_buffer_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1048576,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 16384,
+      "maximumInteger": 16777216,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/debugger-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Per-connection JSON event cache budget; discarded history is explicit."
+    },
+    {
+      "pointId": "command.debugger.maximum_event_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 16384,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 32768,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/debugger-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "One event must fit an inline page; oversize events advance the discarded-history boundary."
+    },
+    {
+      "pointId": "command.debugger.maximum_events",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 512,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/debugger-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Per-connection event count and maximum requested page size."
+    },
+    {
+      "pointId": "command.debugger.maximum_params_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 48000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 50000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounded raw CDP parameters before effect dispatch."
+    },
+    {
       "pointId": "command.demo.open.default_active",
       "family": "build",
       "kind": "boolean",
@@ -557,8 +722,8 @@
       "editableInSettings": false,
       "status": "active",
       "consumers": [
-        "apps/extension/src/background/dom-service.ts",
-        "apps/extension/src/background/command-dispatcher.ts"
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/dom-service.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -583,6 +748,7 @@
       "consumers": [
         "apps/extension/src/background/browser-service.ts",
         "apps/extension/src/background/capture-service.ts",
+        "apps/extension/src/background/debugger-service.ts",
         "apps/extension/src/background/dom-service.ts",
         "apps/extension/src/background/key-service.ts",
         "apps/extension/src/background/page-tree-service.ts",
@@ -760,6 +926,29 @@
       "safetyContract": "Default screenshot encoding is expanded once at the extension command boundary."
     },
     {
+      "pointId": "command.page.screenshot.default_height",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default element PNG pixel height."
+    },
+    {
       "pointId": "command.page.screenshot.default_quality",
       "family": "build",
       "kind": "integer",
@@ -775,12 +964,153 @@
       "editableInSettings": false,
       "status": "active",
       "consumers": [
+        "apps/extension/src/background/capture/element-service.ts",
         "apps/extension/src/background/command-dispatcher.ts"
       ],
       "emitTargets": [
         "typescript"
       ],
       "safetyContract": "JPEG quality omission default; explicit 0..100 preserved and PNG ignores quality per Chromium API."
+    },
+    {
+      "pointId": "command.page.screenshot.default_width",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default element PNG pixel width; contain fit and centered transparent padding."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_dimension",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 8192,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 32768,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture/element-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Per-side output allocation bound, also checked against total pixels."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_geometry_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1048576,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 16384,
+      "maximumInteger": 16777216,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture/element-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bound serialized geometry and SVG/CSS shape data read from a document."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_geometry_depth",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 128,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 4,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture/element-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Maximum geometry ancestor/subtree depth; traversal never recurses."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_geometry_nodes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 4096,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 16,
+      "maximumInteger": 65536,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture/element-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Maximum iterative ancestor and selected subtree geometry records."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_pixels",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 16777216,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1024,
+      "maximumInteger": 67108864,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/capture/element-service.ts",
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Source and destination raster pixel bound before allocating masks/output."
     },
     {
       "pointId": "command.page.text.maximum_json_bytes",
@@ -1151,6 +1481,7 @@
         "apps/extension/src/background/browser-service.ts",
         "apps/extension/src/background/capture-service.ts",
         "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/debugger-service.ts",
         "apps/extension/src/background/dom-service.ts",
         "apps/extension/src/background/page-tree-service.ts",
         "apps/extension/src/background/tab-service.ts"
@@ -1176,8 +1507,8 @@
       "editableInSettings": true,
       "status": "active",
       "consumers": [
-        "apps/extension/src/background/settings-service.ts",
-        "apps/extension/src/background/artifact-service.ts"
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/settings-service.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1200,8 +1531,8 @@
       "editableInSettings": true,
       "status": "active",
       "consumers": [
-        "apps/extension/src/background/settings-service.ts",
-        "apps/extension/src/background/artifact-service.ts"
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/settings-service.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1224,8 +1555,8 @@
       "editableInSettings": true,
       "status": "active",
       "consumers": [
-        "apps/extension/src/background/settings-service.ts",
-        "apps/extension/src/background/artifact-service.ts"
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/settings-service.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1248,8 +1579,8 @@
       "editableInSettings": true,
       "status": "active",
       "consumers": [
-        "apps/extension/src/background/settings-service.ts",
-        "apps/extension/src/background/artifact-service.ts"
+        "apps/extension/src/background/artifact-service.ts",
+        "apps/extension/src/background/settings-service.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1361,7 +1692,29 @@
       "minimumInteger": null,
       "maximumInteger": null,
       "contributesToSecurityTimeHorizon": false,
-      "allowedStrings": ["auto", "en", "zh-CN", "zh-TW", "ja", "ko", "de", "fr", "es", "pt-BR", "it", "ru", "ar", "hi", "id", "vi", "th", "tr", "pl", "nl", "uk"],
+      "allowedStrings": [
+        "auto",
+        "en",
+        "zh-CN",
+        "zh-TW",
+        "ja",
+        "ko",
+        "de",
+        "fr",
+        "es",
+        "pt-BR",
+        "it",
+        "ru",
+        "ar",
+        "hi",
+        "id",
+        "vi",
+        "th",
+        "tr",
+        "pl",
+        "nl",
+        "uk"
+      ],
       "owner": "build_profile",
       "updateClass": "rebuild",
       "editableInSettings": false,
@@ -1374,4 +1727,5 @@
       ],
       "safetyContract": "Default UI locale preference. Auto resolves the browser language on each page load; an explicit user preference is stored separately and overrides this default."
     }
-  ]}
+  ]
+}

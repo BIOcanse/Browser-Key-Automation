@@ -13,6 +13,8 @@ Requires `page.screenshot.capture` and `artifact.read`. Default format is PNG; J
 
 This is the visible webpage viewport, not browser chrome, the desktop, a whole scrolling page, or a video stream. The target must already be the active tab in its own window; on `TARGET_TAB_NOT_VISIBLE`, an explicit separately authorized `tabs.activate` is needed before another capture. Chrome limits this API to two calls per second. Parent output directory must exist; existing files are never overwritten. On a failed save, preserve the returned ArtifactRef and use `artifact-save` rather than recapturing automatically.
 
+For a Canvas or selected element instead of the entire viewport, use `element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png`. It reuses this screenshot permission and saving pipeline, includes visible children, and masks known geometry into a contain-fitted transparent PNG. Read [debugger-and-element-capture.md](debugger-and-element-capture.md) for region selection and explicit limitations; it does not require a debugger.
+
 ## Demonstration
 
 ```text

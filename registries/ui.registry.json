@@ -78,6 +78,11 @@
       ]
     },
     {
+      "groupId": "debugger",
+      "labelKey": "permissionGroupDebugger",
+      "permissionIds": ["debugger"]
+    },
+    {
       "groupId": "files",
       "labelKey": "permissionGroupFiles",
       "permissionIds": [
@@ -121,6 +126,7 @@
   ],
   "translations": {
     "en": {
+      "permissionGroupDebugger": "Debugger",
       "permissionGroupPage": "Page reading",
       "permissionGroupTabs": "Tab actions",
       "permissionGroupDom": "DOM actions",
@@ -153,6 +159,7 @@
       "legacy": "Needs Key",
       "refresh": "Refresh",
       "name": "Name",
+      "defaultKeyName": "Agent Key",
       "key": "Key",
       "type": "Type",
       "status": "Status",
@@ -245,6 +252,7 @@
       "demoFailed": "Could not open the demo."
     },
     "zh-CN": {
+      "permissionGroupDebugger": "浏览器调试",
       "permissionGroupPage": "页面读取",
       "permissionGroupTabs": "标签页操作",
       "permissionGroupDom": "DOM 操作",
@@ -277,6 +285,7 @@
       "legacy": "需要密钥",
       "refresh": "刷新",
       "name": "名称",
+      "defaultKeyName": "自动化 Key",
       "key": "密钥",
       "type": "类型",
       "status": "状态",
@@ -369,6 +378,7 @@
       "demoFailed": "无法打开演示。"
     },
     "zh-TW": {
+      "permissionGroupDebugger": "瀏覽器偵錯",
       "permissionGroupPage": "頁面讀取",
       "permissionGroupTabs": "分頁操作",
       "permissionGroupDom": "DOM 操作",
@@ -401,6 +411,7 @@
       "legacy": "需要金鑰",
       "refresh": "重新整理",
       "name": "名稱",
+      "defaultKeyName": "自動化 Key",
       "key": "金鑰",
       "type": "類型",
       "status": "狀態",
@@ -493,6 +504,7 @@
       "demoFailed": "無法開啟示範。"
     },
     "ja": {
+      "permissionGroupDebugger": "ブラウザーのデバッグ",
       "permissionGroupPage": "ページの読み取り",
       "permissionGroupTabs": "タブ操作",
       "permissionGroupDom": "DOM 操作",
@@ -525,6 +537,7 @@
       "legacy": "キーが必要",
       "refresh": "更新",
       "name": "名前",
+      "defaultKeyName": "エージェント Key",
       "key": "キー",
       "type": "種類",
       "status": "ステータス",
@@ -617,6 +630,7 @@
       "demoFailed": "デモを開けませんでした。"
     },
     "ko": {
+      "permissionGroupDebugger": "브라우저 디버깅",
       "permissionGroupPage": "페이지 읽기",
       "permissionGroupTabs": "탭 작업",
       "permissionGroupDom": "DOM 작업",
@@ -649,6 +663,7 @@
       "legacy": "키 필요",
       "refresh": "새로고침",
       "name": "이름",
+      "defaultKeyName": "에이전트 Key",
       "key": "키",
       "type": "유형",
       "status": "상태",
@@ -741,6 +756,7 @@
       "demoFailed": "데모를 열 수 없습니다."
     },
     "de": {
+      "permissionGroupDebugger": "Browser-Debugging",
       "permissionGroupPage": "Seiten lesen",
       "permissionGroupTabs": "Tab-Aktionen",
       "permissionGroupDom": "DOM-Aktionen",
@@ -773,6 +789,7 @@
       "legacy": "Schlüssel erforderlich",
       "refresh": "Aktualisieren",
       "name": "Name",
+      "defaultKeyName": "Agenten-Key",
       "key": "Schlüssel",
       "type": "Typ",
       "status": "Status",
@@ -865,6 +882,7 @@
       "demoFailed": "Demo konnte nicht geöffnet werden."
     },
     "fr": {
+      "permissionGroupDebugger": "Débogage du navigateur",
       "permissionGroupPage": "Lecture des pages",
       "permissionGroupTabs": "Actions sur les onglets",
       "permissionGroupDom": "Actions DOM",
@@ -897,6 +915,7 @@
       "legacy": "Clé requise",
       "refresh": "Actualiser",
       "name": "Nom",
+      "defaultKeyName": "Clé d’agent",
       "key": "Clé",
       "type": "Type",
       "status": "Statut",
@@ -989,6 +1008,7 @@
       "demoFailed": "Impossible d’ouvrir la démo."
     },
     "es": {
+      "permissionGroupDebugger": "Depuración del navegador",
       "permissionGroupPage": "Lectura de páginas",
       "permissionGroupTabs": "Acciones de pestañas",
       "permissionGroupDom": "Acciones DOM",
@@ -1021,6 +1041,7 @@
       "legacy": "Necesita una clave",
       "refresh": "Actualizar",
       "name": "Nombre",
+      "defaultKeyName": "Clave de agente",
       "key": "Clave",
       "type": "Tipo",
       "status": "Estado",
@@ -1113,6 +1134,7 @@
       "demoFailed": "No se pudo abrir la demo."
     },
     "pt-BR": {
+      "permissionGroupDebugger": "Depuração do navegador",
       "permissionGroupPage": "Leitura de páginas",
       "permissionGroupTabs": "Ações nas abas",
       "permissionGroupDom": "Ações DOM",
@@ -1145,6 +1167,7 @@
       "legacy": "Precisa de uma chave",
       "refresh": "Atualizar",
       "name": "Nome",
+      "defaultKeyName": "Chave do agente",
       "key": "Chave",
       "type": "Tipo",
       "status": "Status",
@@ -1237,6 +1260,7 @@
       "demoFailed": "Não foi possível abrir a demo."
     },
     "it": {
+      "permissionGroupDebugger": "Debug del browser",
       "permissionGroupPage": "Lettura delle pagine",
       "permissionGroupTabs": "Azioni sulle schede",
       "permissionGroupDom": "Azioni DOM",
@@ -1269,6 +1293,7 @@
       "legacy": "Richiede una chiave",
       "refresh": "Aggiorna",
       "name": "Nome",
+      "defaultKeyName": "Chiave agente",
       "key": "Chiave",
       "type": "Tipo",
       "status": "Stato",
@@ -1361,6 +1386,7 @@
       "demoFailed": "Impossibile aprire la demo."
     },
     "ru": {
+      "permissionGroupDebugger": "Отладка браузера",
       "permissionGroupPage": "Чтение страниц",
       "permissionGroupTabs": "Действия с вкладками",
       "permissionGroupDom": "Действия DOM",
@@ -1393,6 +1419,7 @@
       "legacy": "Требуется ключ",
       "refresh": "Обновить",
       "name": "Имя",
+      "defaultKeyName": "Ключ агента",
       "key": "Ключ",
       "type": "Тип",
       "status": "Статус",
@@ -1485,6 +1512,7 @@
       "demoFailed": "Не удалось открыть демо."
     },
     "ar": {
+      "permissionGroupDebugger": "تصحيح أخطاء المتصفح",
       "permissionGroupPage": "قراءة الصفحات",
       "permissionGroupTabs": "إجراءات علامات التبويب",
       "permissionGroupDom": "إجراءات DOM",
@@ -1517,6 +1545,7 @@
       "legacy": "يتطلب مفتاحًا",
       "refresh": "تحديث",
       "name": "الاسم",
+      "defaultKeyName": "مفتاح الوكيل",
       "key": "المفتاح",
       "type": "النوع",
       "status": "الحالة",
@@ -1609,6 +1638,7 @@
       "demoFailed": "تعذّر فتح العرض التوضيحي."
     },
     "hi": {
+      "permissionGroupDebugger": "ब्राउज़र डीबगिंग",
       "permissionGroupPage": "पेज पढ़ना",
       "permissionGroupTabs": "टैब की कार्रवाइयाँ",
       "permissionGroupDom": "DOM कार्रवाइयाँ",
@@ -1641,6 +1671,7 @@
       "legacy": "कुंजी आवश्यक",
       "refresh": "रीफ़्रेश",
       "name": "नाम",
+      "defaultKeyName": "एजेंट Key",
       "key": "कुंजी",
       "type": "प्रकार",
       "status": "स्थिति",
@@ -1733,6 +1764,7 @@
       "demoFailed": "डेमो नहीं खुल सका।"
     },
     "id": {
+      "permissionGroupDebugger": "Debug browser",
       "permissionGroupPage": "Pembacaan halaman",
       "permissionGroupTabs": "Tindakan tab",
       "permissionGroupDom": "Tindakan DOM",
@@ -1765,6 +1797,7 @@
       "legacy": "Memerlukan Kunci",
       "refresh": "Segarkan",
       "name": "Nama",
+      "defaultKeyName": "Key agen",
       "key": "Kunci",
       "type": "Jenis",
       "status": "Status",
@@ -1857,6 +1890,7 @@
       "demoFailed": "Tidak dapat membuka demo."
     },
     "vi": {
+      "permissionGroupDebugger": "Gỡ lỗi trình duyệt",
       "permissionGroupPage": "Đọc trang",
       "permissionGroupTabs": "Thao tác tab",
       "permissionGroupDom": "Thao tác DOM",
@@ -1889,6 +1923,7 @@
       "legacy": "Cần khóa",
       "refresh": "Làm mới",
       "name": "Tên",
+      "defaultKeyName": "Khóa tác nhân",
       "key": "Khóa",
       "type": "Loại",
       "status": "Trạng thái",
@@ -1981,6 +2016,7 @@
       "demoFailed": "Không thể mở bản demo."
     },
     "th": {
+      "permissionGroupDebugger": "การแก้ไขข้อบกพร่องเบราว์เซอร์",
       "permissionGroupPage": "อ่านหน้าเว็บ",
       "permissionGroupTabs": "การทำงานกับแท็บ",
       "permissionGroupDom": "การทำงานกับ DOM",
@@ -2013,6 +2049,7 @@
       "legacy": "ต้องใช้คีย์",
       "refresh": "รีเฟรช",
       "name": "ชื่อ",
+      "defaultKeyName": "Key ของเอเจนต์",
       "key": "คีย์",
       "type": "ประเภท",
       "status": "สถานะ",
@@ -2105,6 +2142,7 @@
       "demoFailed": "เปิดเดโมไม่ได้"
     },
     "tr": {
+      "permissionGroupDebugger": "Tarayıcı hata ayıklama",
       "permissionGroupPage": "Sayfa okuma",
       "permissionGroupTabs": "Sekme işlemleri",
       "permissionGroupDom": "DOM işlemleri",
@@ -2137,6 +2175,7 @@
       "legacy": "Anahtar Gerekli",
       "refresh": "Yenile",
       "name": "Ad",
+      "defaultKeyName": "Ajan Key’i",
       "key": "Anahtar",
       "type": "Tür",
       "status": "Durum",
@@ -2229,6 +2268,7 @@
       "demoFailed": "Demo açılamadı."
     },
     "pl": {
+      "permissionGroupDebugger": "Debugowanie przeglądarki",
       "permissionGroupPage": "Odczyt stron",
       "permissionGroupTabs": "Operacje na kartach",
       "permissionGroupDom": "Operacje DOM",
@@ -2261,6 +2301,7 @@
       "legacy": "Wymaga klucza",
       "refresh": "Odśwież",
       "name": "Nazwa",
+      "defaultKeyName": "Key agenta",
       "key": "Klucz",
       "type": "Typ",
       "status": "Status",
@@ -2353,6 +2394,7 @@
       "demoFailed": "Nie udało się otworzyć demonstracji."
     },
     "nl": {
+      "permissionGroupDebugger": "Browserdebugging",
       "permissionGroupPage": "Pagina's lezen",
       "permissionGroupTabs": "Tabbladacties",
       "permissionGroupDom": "DOM-acties",
@@ -2385,6 +2427,7 @@
       "legacy": "Sleutel vereist",
       "refresh": "Vernieuwen",
       "name": "Naam",
+      "defaultKeyName": "Agent-Key",
       "key": "Sleutel",
       "type": "Type",
       "status": "Status",
@@ -2477,6 +2520,7 @@
       "demoFailed": "Kan de demo niet openen."
     },
     "uk": {
+      "permissionGroupDebugger": "Налагодження браузера",
       "permissionGroupPage": "Читання сторінок",
       "permissionGroupTabs": "Дії з вкладками",
       "permissionGroupDom": "Дії DOM",
@@ -2509,6 +2553,7 @@
       "legacy": "Потрібен ключ",
       "refresh": "Оновити",
       "name": "Назва",
+      "defaultKeyName": "Ключ агента",
       "key": "Ключ",
       "type": "Тип",
       "status": "Стан",

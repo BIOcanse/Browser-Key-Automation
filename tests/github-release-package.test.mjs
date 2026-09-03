@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,10 +29,21 @@ assert.equal(releaseAssets.assets.some(({ name }) => /dev|chrome-web-store/iu.te
 const packagedManifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
 assert.equal(packagedManifest.version, version);
 assert.equal(packagedManifest.key, manifest.key);
+assert.ok(packagedManifest.permissions.includes("debugger"));
+for (const relativeFile of [
+  "background/debugger-service.js",
+  "background/capture/document-geometry.js",
+  "background/capture/element-service.js",
+  "background/capture/geometry-model.js",
+  "background/capture/mask-image.js",
+  "background/capture/shape-path.js",
+]) {
+  assert.equal((await stat(path.join(extensionRoot, relativeFile))).isFile(), true, relativeFile);
+}
 const extensionStart = await readFile(path.join(extensionRoot, "START-HERE.md"), "utf8");
 assert.match(extensionStart, new RegExp(`版本：\`${escapeRegExp(version)}\``, "u"));
 assert.match(extensionStart, new RegExp(`${escapeRegExp(appName)}\\.zip`, "u"));
-assert.match(extensionStart, /Chrome Web Store 发布仍按独立的商店身份与审核流程推进/u);
+assert.match(extensionStart, /Chrome Web Store 使用独立的商店包、身份与审核流程/u);
 
 assert.deepEqual((await readdir(appRoot)).sort(), [
   "SHA256SUMS.txt",
@@ -55,6 +66,8 @@ const help = JSON.parse(await run("node", [path.join(appRoot, "client", "browser
 assert.equal(help.command, "help");
 assert.ok(help.usage.some((line) => line.includes("page-shot")));
 assert.ok(help.usage.some((line) => line.includes("demo-open")));
+assert.ok(help.usage.some((line) => line.includes("element-shot")));
+assert.equal((await stat(path.join(appRoot, "skill", "browser-key-automation", "references", "debugger-and-element-capture.md"))).isFile(), true);
 
 const extensionFileCount = await verifyChecksums(extensionRoot);
 const appFileCount = await verifyChecksums(appRoot);
@@ -86,7 +99,9 @@ for (const [index, file] of [extensionZip, appZip].entries()) {
   assert.match(releaseNotes, new RegExp(`${digest}  ${escapeRegExp(path.basename(file))}`, "u"));
 }
 assert.match(releaseNotes, /exactly two downloads/u);
-assert.match(releaseNotes, /Chrome Web Store publication remains paused and requires separate user authorization/u);
+assert.match(releaseNotes, /transparent element screenshots and explicit CDP debugging/u);
+assert.match(releaseNotes, /Chrome Web Store distribution uses a separate package and review process/u);
+assert.equal(/user authorization/iu.test(releaseNotes), false);
 
 console.log(JSON.stringify({ ok: true, tag: releaseAssets.tag, assetCount: 2, extensionFileCount, appFileCount, assets: releaseAssets.assets }));
 

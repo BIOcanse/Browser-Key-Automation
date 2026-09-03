@@ -31,7 +31,7 @@ Browser Key Automation 把你正在使用的 Chromium 瀏覽器變成供可信 A
 
 Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代 DevTools 深度診斷。它填補的是另一塊：低摩擦、可設定權限地控制人正在使用的瀏覽器，並提供足夠乾淨的結構與檔案能力，讓 Agent 完成實際工作。
 
-> 開發狀態：目前的解壓縮擴充功能開發包以 Chrome/Chromium 138 以上版本為目標；目前不是 Chrome 線上應用程式商店版本。商店頁面仍在準備；完成前請使用 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.2.zip` 與 `browser-key-automation-local-app-v0.0.0.2.zip`。
+> 發布方式：[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 提供適用於 Chrome/Chromium 138 以上版本的解壓縮擴充功能套件與獨立本機 App；Chrome 線上應用程式商店採用另一套發布流程。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.3.zip` 與 `browser-key-automation-local-app-v0.0.0.3.zip`。
 
 ## 目前能力
 
@@ -59,8 +59,8 @@ Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代
 
 從[最新 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 下載兩個 ZIP，分別解壓縮到獨立目錄。
 
-- 擴充功能: `browser-key-automation-extension-v0.0.0.2.zip`
-- 本機 App: `browser-key-automation-local-app-v0.0.0.2.zip`
+- 擴充功能: `browser-key-automation-extension-v0.0.0.3.zip`
+- 本機 App: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 App ZIP 內含 `windows-x86_64/`、`linux-x86_64/`、CLI 與 Agent skill，無需自行編譯。
 
@@ -124,6 +124,18 @@ CLI 會先重新列舉執行個體，再讀取 Key。若 delivery 回報為 `unk
 - 開啟展示：`node client/browser-key-cli.mjs demo-open ./demo.html`。
 - 呼叫不熟悉的指令前，先查看 `skills/browser-key-automation/references/commands.registry.json`；隨附的 Agent skill 含相同的產生參照。
 
+### 元素圖片與明確啟用的偵錯
+
+`page.screenshot.element` 讓 Agent 直接用既有 NodeRef 查看 Canvas、圖表或容器：包含可見子元素，依支援的形狀裁切，等比置中放入指定尺寸的透明 PNG。不必自行計算螢幕座標，也不附加偵錯器。
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+需要深入診斷時，使用 `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`。獨立的 `debugger` 權限提供 CDP 指令與事件；Chrome 本身的偵錯確認或警告仍然保留。日常擴充功能操作繼續使用原有通道。
+
+元素截圖只擷取已啟用分頁的目前檢視區，不自動捲動或重建隱藏內容。支援形狀、頂層文件範圍、元素局部區域、大型 CDP 結果與失敗處理請見 [Agent 使用說明](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### 原生 `.real` 點擊
 
 `dom.click.real` 是明確且獨立於 `dom.click` 的能力。在 Windows 上，它會要求啟用目標分頁並聚焦其瀏覽器視窗，驗證參照元素仍存在、可見、可用且未被遮擋，再要求本機 App 對匹配的 Chromium 內容視窗傳送一次原生左鍵點擊。
@@ -134,7 +146,7 @@ CLI 會先重新列舉執行個體，再讀取 Key。若 delivery 回報為 `unk
 
 - Key 是唯一外部身分。Agent 品牌、程序、帳號、socket 與 App 執行個體都不是額外的授權身分。
 - Root 動態擁有全部 active 權限；Regular 只擁有明確選取的權限。
-- JavaScript、一般 DOM 操作、原生 `.real` 輸入、網路存取與未來偵錯後端是平行權限；授予其中一項不會暗中授予其他項。
+- JavaScript、一般 DOM 操作、原生 `.real` 輸入、網路存取與明確啟用的 `debugger` 偵錯是平行權限；授予其中一項不會暗中授予其他項。
 - 同一 Key 的指令在目前擴充功能執行期內序列化。不同 Key 有獨立 lane，但對同一網頁的效果仍可能競爭。
 - 佔用歸 Key 所有。沒有隱藏 takeover、force 或 replace：必須先 release，再 acquire。
 - 完整 Key 保存在擴充功能內部。受信任的管理頁，以及另外獲授權 `keys.create` 或 `keys.reveal` 的呼叫方可以取得它；一般清單與診斷不包含完整 Key。CLI 只從 `BKA_API_KEY` 或明確指定的環境變數讀取。

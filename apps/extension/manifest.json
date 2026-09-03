@@ -3,7 +3,7 @@
   "name": "Browser Key Automation",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "version": "0.0.0.2",
+  "version": "0.0.0.3",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyN2zMC14bMZaRbnBh1y+9Fl4TIM7PKz+KW/ZW0qOAKNSeJRQbrdqnvc9vuTLe29e6yPvQB0NGbAUERGrXSBcSRTIPeDJ+iWXxx8aRAuJH66x/EHoFcyu1KUt9erZb4FKUNJ2zKQkpFXWdX/4xNg0IskJZM67s2yspFO96XOicTHxg2+K/jZ5n5SVogGlsjXoOIcace/YddF1I+jljsv7dUVUnT31FkLV4xFEFclljSCZdNn1pDrp3lvBM6A1fi1bd/0ap6nBcBchgFJWpfil3CteP39YsS0ZceIq9QywDeNDOgHHHkRFcJfhK1m4TVoPK6Db9jGMd29Jlye49x44oQIDAQAB",
   "icons": {
     "16": "icons/icon-16.png",
@@ -26,6 +26,7 @@
   },
   "options_page": "admin/index.html",
   "permissions": [
+    "debugger",
     "offscreen",
     "pageCapture",
     "scripting",

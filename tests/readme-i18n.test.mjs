@@ -21,8 +21,8 @@ const LOCALES = Object.freeze([
 const REQUIRED_SHARED_TOKENS = Object.freeze([
   "Browser Key Automation",
   "138",
-  "browser-key-automation-extension-v0.0.0.2.zip",
-  "browser-key-automation-local-app-v0.0.0.2.zip",
+  "browser-key-automation-extension-v0.0.0.3.zip",
+  "browser-key-automation-local-app-v0.0.0.3.zip",
   "windows-x86_64",
   "linux-x86_64",
   "manifest.json",
@@ -36,6 +36,12 @@ const REQUIRED_SHARED_TOKENS = Object.freeze([
   "page.wait",
   "page-save",
   "page-shot",
+  "element-shot",
+  "page.screenshot.element",
+  "debugger.attach",
+  "debugger.send",
+  "debugger.events.get",
+  "debugger.detach",
   "demo-open",
   "dom.click.real",
   "native.input.click.v1",
@@ -62,7 +68,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "asks Chromium to activate the target tab and focus its browser window",
     "Linux App currently does not advertise",
     "callers separately authorized for `keys.create` or `keys.reveal`",
-    "not a Chrome Web Store release",
+    "Chrome Web Store distribution follows its own publication track",
   ],
   "README.zh-CN.md": [
     "本项目由作者维护，不接受外部贡献或 Pull Request。",
@@ -70,7 +76,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "请求 Chromium 激活目标标签页并聚焦对应浏览器窗口",
     "Linux App 当前不声明",
     "被单独授予 `keys.create` 或 `keys.reveal`",
-    "不是 Chrome 应用商店发布版",
+    "Chrome 应用商店采用单独的发布流程",
   ],
   "README.zh-TW.md": [
     "本專案由作者維護，不接受外部貢獻或 Pull Request。",
@@ -78,7 +84,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "要求啟用目標分頁並聚焦其瀏覽器視窗",
     "Linux App 目前不宣告",
     "另外獲授權 `keys.create` 或 `keys.reveal`",
-    "目前不是 Chrome 線上應用程式商店版本",
+    "Chrome 線上應用程式商店採用另一套發布流程",
   ],
   "README.ja.md": [
     "このプロジェクトは作者が保守します。外部からの貢献や Pull Request は受け付けていません。",
@@ -86,7 +92,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "対象タブのアクティブ化とブラウザーウィンドウのフォーカスを Chromium に要求",
     "Linux App は現在 `native.input.click.v1` を公開しない",
     "`keys.create` または `keys.reveal` を個別に許可",
-    "Chrome ウェブストア版ではありません",
+    "Chrome ウェブストアは独立した公開手順",
   ],
   "README.ko.md": [
     "이 프로젝트는 작성자가 유지 관리하며 외부 기여와 Pull Request를 받지 않습니다.",
@@ -94,7 +100,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "Chromium에 대상 탭 활성화와 브라우저 창 포커스를 요청",
     "Linux App은 현재 `native.input.click.v1`을 광고하지 않",
     "`keys.create` 또는 `keys.reveal` 권한을 별도로",
-    "Chrome 웹 스토어 릴리스가 아닙니다",
+    "Chrome 웹 스토어는 독립된 게시 절차",
   ],
   "README.de.md": [
     "Dieses Projekt wird vom Autor gepflegt. Externe Beiträge und Pull Requests werden nicht angenommen.",
@@ -102,7 +108,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "fordert es Chromium auf, den Ziel-Tab zu aktivieren und sein Browserfenster zu fokussieren",
     "Linux-App kündigt `native.input.click.v1` derzeit nicht an",
     "gesonderter Berechtigung für `keys.create` oder `keys.reveal`",
-    "keine Veröffentlichung im Chrome Web Store",
+    "Veröffentlichung im Chrome Web Store folgt einem eigenen Verfahren",
   ],
   "README.fr.md": [
     "Ce projet est maintenu par son auteur. Les contributions externes et les Pull Requests ne sont pas acceptées.",
@@ -110,7 +116,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "demande à Chromium d'activer l'onglet cible et de focaliser sa fenêtre",
     "L'App Linux n'annonce actuellement pas `native.input.click.v1`",
     "autorisés séparément pour `keys.create` ou `keys.reveal`",
-    "Ce n'est pas une publication du Chrome Web Store",
+    "publication sur le Chrome Web Store suit une procédure séparée",
   ],
   "README.es.md": [
     "Este proyecto lo mantiene su autor. No se aceptan contribuciones externas ni Pull Requests.",
@@ -118,7 +124,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "solicita a Chromium activar la pestaña de destino y enfocar su ventana",
     "La App de Linux no anuncia actualmente `native.input.click.v1`",
     "autorizados por separado para `keys.create` o `keys.reveal`",
-    "No es una publicación de Chrome Web Store",
+    "publicación en Chrome Web Store sigue un proceso separado",
   ],
   "README.pt-BR.md": [
     "Este projeto é mantido pelo autor. Contribuições externas e Pull Requests não são aceitas.",
@@ -126,7 +132,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "solicita ao Chromium que ative a aba de destino e dê foco à janela",
     "O App Linux atualmente não anuncia `native.input.click.v1`",
     "autorizados separadamente para `keys.create` ou `keys.reveal`",
-    "não é uma publicação da Chrome Web Store",
+    "publicação na Chrome Web Store segue um processo independente",
   ],
   "README.ru.md": [
     "Проект поддерживает автор. Внешние вклады и Pull Request не принимаются.",
@@ -134,7 +140,7 @@ const SEMANTIC_SENTINELS = Object.freeze({
     "просит Chromium активировать целевую вкладку и сфокусировать окно браузера",
     "Linux App сейчас не объявляет `native.input.click.v1`",
     "с отдельным разрешением `keys.create` или `keys.reveal`",
-    "Это не публикация в Chrome Web Store",
+    "Публикация в Chrome Web Store выполняется отдельным процессом",
   ],
 });
 
@@ -171,7 +177,7 @@ test("each README keeps exact language navigation and a complete shared contract
   const expectedH2 = headingCount(baseline, 2);
   const expectedH3 = headingCount(baseline, 3);
   assert.equal(expectedH2, 6);
-  assert.equal(expectedH3, 7);
+  assert.equal(expectedH3, 8);
 
   for (const current of LOCALES) {
     const text = readRepositoryFile(current.file);
@@ -221,6 +227,33 @@ test("public READMEs install released packages without internal build documentat
     assert.equal(text.includes("docs/historical/"), false, file);
     assert.equal(/npm (?:ci|run build:)/u.test(text), false, file);
     assert.equal(text.includes("-dev.zip"), false, file);
+    assert.equal(text.includes("v0.0.0.2"), false, `${file}: previous release placeholder remains`);
+  }
+});
+
+test("public prose contains product facts, not private release coordination", () => {
+  const publicFiles = [
+    ...LOCALES.map(({ file }) => file),
+    "PRIVACY.md",
+    "assets/chrome-web-store/README-FIRST.txt",
+    "packaging/dev/extension-START-HERE.md",
+    "packaging/dev/local-app-START-HERE.md",
+    "packaging/release/extension-START-HERE.md",
+    "packaging/release/local-app-START-HERE.md",
+    "registries/README.md",
+    "skills/browser-key-automation/SKILL.md",
+    "skills/browser-key-automation/references/operation-tree.md",
+    "skills/browser-key-automation/references/quick-shot-and-demo.md",
+    "skills/browser-key-automation/references/wait-and-save.md",
+    "skills/browser-key-automation/references/debugger-and-element-capture.md",
+    "tools/package-github-release.mjs",
+  ];
+  for (const file of publicFiles) {
+    const text = readRepositoryFile(file);
+    assert.equal(/requires separate user authorization/iu.test(text), false, file);
+    assert.equal(text.includes("当前私有 GitHub 仓库"), false, file);
+    assert.equal(text.includes("交回项目"), false, file);
+    assert.equal(text.includes("v0.0.0.2"), false, `${file}: stale release text`);
   }
 });
 

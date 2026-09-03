@@ -2,9 +2,9 @@
 
 这是独立的 unpacked Chromium 扩展开发包。解压后，本目录根部直接存在 `manifest.json`；Chrome 应选择本目录本身，不需要再进入任何 `extension/` 子目录。
 
-扩展会请求 `tabs`、`<all_urls>`、`scripting`、`userScripts` 等广泛权限，只应把生成的 Key 交给可信 Agent 或自动化程序。
+扩展会请求 `tabs`、`<all_urls>`、`scripting`、`userScripts`、`debugger` 等广泛权限，只应把生成的 Key 交给可信 Agent 或自动化程序。普通操作与元素截图不附加调试器；只有显式 `debugger.attach` 才启用调试，Chrome 自身的调试提示无法消除。Regular Key 需在独立“浏览器调试”权限组中授权，Root 自动包含。
 
-首轮真实浏览器验收支持 Chrome 138+。其他 Chromium 衍生浏览器可能可用，但尚未完成这轮实际体验记录。
+当前支持 Chrome 138+。其他 Chromium 衍生浏览器需要按各自的扩展 API 与策略配置验证。
 
 ## 安装
 
@@ -14,7 +14,7 @@
 4. 选择这个解压目录本身；确认所选目录根部直接含 `manifest.json`。
 5. 首次安装会自动打开本地介绍页，按页面指引完成设置。以后可从 Key 管理页的“安装与使用说明”重新打开；更新/重载不会重复弹出。打开扩展详情并核对：
    - 名称：`Browser Key Automation`
-   - 版本：`0.0.0.2`
+   - 版本：`0.0.0.3`
    - ID：`dbbbehdkedibhielmkaoohbeebnbfjbo`
 6. 在详情页开启 **Allow User Scripts / 允许用户脚本**，返回扩展列表并点击“重新加载”。介绍页提供“打开扩展权限设置”和“重新检测”；后者只刷新当前说明页，不代替重载扩展。此开关由浏览器管理，插件不能代开，Root Key 也不能替代。任意 JS 执行必须开启；未开启时 Key 管理、DOM 和页面树仍可用。
 7. 在浏览器工具栏或扩展菜单中点击 **Browser Key Automation**；它会在完整标签页中直接打开 Key 管理界面。需要常用时可把扩展固定到工具栏。“详情 → 扩展程序选项”是同一页面的备用入口。

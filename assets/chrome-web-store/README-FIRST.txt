@@ -1,12 +1,14 @@
-Browser Key Automation — Chrome Web Store 提交包
+Browser Key Automation — Chrome Web Store 资产说明
 
-1. 逐字段英文原文：打开 01-CHROME-WEB-STORE-FORM-COPY.md。
-2. 隐私政策正文：02-PRIVACY-POLICY.md。发布前必须把它放到无需登录即可访问的公共 HTTPS 页面，并把 URL 填入 Dashboard。
-3. Category 选择 Developer Tools。
-4. Support URL 留空；当前私有 GitHub 仓库不能作为公共支持地址。
-5. Remote code 必须选 Yes，并粘贴表单原文中的理由。js.execute 的输入代码来自 Key 客户端，但只通过 Chrome 明确允许的 User Scripts API 执行。
-6. 上传 store-icon-128.png、small-promo-440x280.png，以及三张 screenshot-*.png（按编号排序）。
-7. Data usage 勾选：Personally identifiable information、Health information、Financial and payment information、Authentication information、Personal communications、Location、Web history、Website content；不要勾 User activity。
-8. 已上传的 v0.0.0.1 ZIP 只是身份引导包。后来生成的 ZIP 也不要直接提交审核或发布；先从 Dashboard Package 页取得 Item ID 与 public key，交回项目同步 release identity、Windows/Linux App 门禁，再做真实商店安装联调。
+本目录保存可重复生成的商店视觉资产源码。运行 `npm run render:chrome-web-store-listing` 会在 `out/chrome-web-store/listing-assets/` 生成 128×128 图标、440×280 宣传图和三张 1280×800 实际扩展界面截图。
 
-本目录不包含任何真实 API Key。截图中的 Key 为隔离测试夹具生成且只显示掩码。
+商店提交应使用 `npm run build:chrome-web-store:first-upload` 生成的专用 ZIP，不能使用 GitHub Release 的手动安装包。每次提交前核对：
+
+1. manifest 版本高于 Dashboard 中已上传的版本，扩展 ID 与本地 App 的 exact-Origin 门禁一致。
+2. Category 为 Developer Tools；Support URL 可使用公开仓库主页 `https://github.com/BIOcanse/Browser-Key-Automation`。
+3. 隐私政策使用公开的 `PRIVACY.md`，并与 Dashboard 数据披露保持一致。
+4. Remote code 选择 Yes：`js.execute` 的代码由持有 Key 的客户端提供，并通过 Chrome User Scripts API 执行；扩展包本身不从开发者服务器下载脚本。
+5. Data usage 如实披露 Personally identifiable information、Health information、Financial and payment information、Authentication information、Personal communications、Location、Web history、Website content；不勾选未收集的 User activity。
+6. 上传本目录生成的图标、宣传图和按编号排序的三张界面截图。截图只显示隔离测试生成的掩码 Key，不含真实 API Key。
+
+Dashboard 中的 Item ID、审核状态和线上版本是发布时的外部真值，不在仓库文案中保存临时快照。

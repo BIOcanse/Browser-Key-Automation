@@ -42,14 +42,17 @@ node client/browser-key-cli.mjs instances
 ```text
 node client/browser-key-cli.mjs page-save --tab-ref <TabRef> --output ./page.mhtml
 node client/browser-key-cli.mjs page-shot --tab-ref <TabRef> --output ./page.png
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
 node client/browser-key-cli.mjs demo-open ./demo.html
 node client/browser-key-cli.mjs stop
 ```
 
 发送后连接失败可能返回 `delivery: "unknown"`，不得自动重试有副作用指令。`stop` 只关闭本地 App，不吊销 Key，也不自动释放扩展 occupation。
 
+元素截图使用已有截图与 Artifact 读取权限，返回等比居中、形状外透明的 PNG。调试通过 `call` 下的 `debugger.attach/send/events.get/detach` 使用独立权限组；Chrome 自身的调试提示保留。两者都由扩展实现，本地 App 不新增截图或 CDP 服务。
+
 ## Agent Skill
 
 `skill/browser-key-automation/` 是配套 Agent skill。安装或直接加载其中的 `SKILL.md`；精确命令和 Freedom Point 上限位于同目录 references。公共 CLI、协议与 skill 在本跨平台包中只保留一份。
 
-`SHA256SUMS.txt` 覆盖本目录中除清单自身以外的全部文件。本开发阶段产物未签名，操作系统首次运行时可能显示来源提示。
+`SHA256SUMS.txt` 覆盖本目录中除清单自身以外的全部文件。本 App 未进行代码签名，操作系统首次运行时可能显示来源提示。

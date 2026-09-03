@@ -357,7 +357,7 @@ function restoreCreateForm(params: CreateKeyParams): void {
 
 function resetCreateForm(): void {
   createForm.reset();
-  displayNameInput.value = "Agent Key";
+  displayNameInput.value = t("defaultKeyName");
   keyKindSelect.value = "regular";
   expiryInput.value = "";
   enabledInput.checked = true;

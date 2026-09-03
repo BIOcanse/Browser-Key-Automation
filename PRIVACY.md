@@ -1,6 +1,6 @@
 # Browser Key Automation Privacy Policy
 
-Effective date: September 1, 2026
+Effective date: September 3, 2026
 
 Browser Key Automation provides user-authorized, API-Key-scoped browser automation to trusted agents and programs. This policy describes the data handled by the Browser Key Automation Chrome extension and its separately installed local companion App.
 
@@ -10,9 +10,9 @@ The extension handles data only when needed to provide its browser-automation pu
 
 - API Keys and their local management metadata, including names, identifiers, permissions, status, and optional expiration dates.
 - Tab and navigation information, including tab identifiers, URLs, titles, loading state, frame information, and document identity.
-- Website content and resources, including DOM structure, text, attributes, form values, resource URLs, visible screenshots, MHTML archives, and explicitly fetched page resources.
+- Website content and resources, including DOM structure, text, attributes, form values, resource URLs, visible viewport or selected-element screenshots, MHTML archives, and explicitly fetched page resources.
 - Content already present on a selected page that may contain personally identifiable information, health information, financial or payment information, authentication information, personal communications, or location information.
-- Automation inputs and results, including target references, selectors, values supplied for requested actions, wait conditions, user-provided JavaScript, and user-provided demo HTML.
+- Automation inputs and results, including target references, selectors, values supplied for requested actions, wait conditions, user-provided JavaScript or demo HTML, and explicitly requested DevTools Protocol commands, events, and results.
 - Local runtime state needed to prevent conflicting automation and stale references, including connection state, tab or global occupations, expansion state for operation trees, and bounded Artifacts created by explicit commands.
 
 The extension does not continuously record human clicks, mouse position, scrolling, or keystrokes. It does not access Chrome cookies through the cookies API.
@@ -37,7 +37,7 @@ Runtime-only session and document state is discarded as the relevant browser, ex
 
 ## Security and user controls
 
-The product uses scoped API Keys, optional expiration, disable and revoke controls, exact tab and document references, bounded inputs and outputs, and Chrome's extension security boundaries. The companion App accepts the extension connection only through the configured local loopback route. Chrome-restricted pages remain inaccessible to the extension.
+The product uses scoped API Keys, optional expiration, disable and revoke controls, exact tab and document references, bounded inputs and outputs, and Chrome's extension security boundaries. Explicit DevTools Protocol access has its own Key permission and retains Chrome's debugging UI; routine extension operations do not attach a debugger. The companion App accepts the extension connection only through the configured local loopback route. Chrome-restricted pages remain inaccessible to the extension.
 
 Users can reduce or end access by changing a Key's permissions or expiration, disabling or revoking the Key, releasing saved Artifacts, stopping the companion App, clearing extension data, or uninstalling the extension.
 
@@ -51,4 +51,4 @@ If the product's data practices change, the updated practices will be disclosed 
 
 ## Contact
 
-Support and privacy questions can be submitted through the Support section of the Browser Key Automation listing in the Chrome Web Store.
+Support and privacy questions can be sent to biocanse@gmail.com.

@@ -12,6 +12,7 @@ import { CdpClient, pageEvaluate, runtimeEvaluate } from "./lib/cdp-client.mjs";
 import { NativeWebSocket } from "../apps/client/src/native-websocket.mjs";
 import { runUsabilityProbe } from "./lib/usability-probe.mjs";
 import { runShotDemoProbe } from "./lib/shot-demo-probe.mjs";
+import { runDebuggerElementProbe } from "./lib/debugger-element-probe.mjs";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { assertIsolatedFixture } = await import("./lib/isolation.mjs");
@@ -27,6 +28,7 @@ const runRoot = path.join(
 const profileDir = path.join(runRoot, "profile");
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const realInputAcceptance = process.argv.includes("--real-input");
+const debuggerElementOnly = process.argv.includes("--debugger-element-only");
 
 const chromiumExecutable = findChromiumExecutable();
 assert.ok(chromiumExecutable, "No Chromium executable was found");
@@ -64,7 +66,11 @@ for (let index = 0; index < largeResourceBytes.length; index += 1) {
 
 await mkdir(profileDir, { recursive: true });
 const usabilityGates = { pending: null, defer: null, image: null };
+const elementCaptureHtml = await readFile(new URL("./lib/fixtures/element-capture.html", import.meta.url));
 const testPageServer = http.createServer((request, response) => {
+  if (request.url === "/element-capture") {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end(elementCaptureHtml); return;
+  }
   if (request.url === "/usability") {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     response.end('<!doctype html><title>BKA usability fixture</title><main><h1>网页另存为实际样本</h1>' +
@@ -358,7 +364,7 @@ try {
   assert.equal(coreTabStatus, "complete", "HTTP core probe did not finish loading");
 
   let usabilitySequence = 0;
-  const usability = await runUsabilityProbe({
+  const usability = debuggerElementOnly ? null : await runUsabilityProbe({
     forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `usability-${++usabilitySequence}`, method, params),
     cliPath: path.join(workspaceRoot, "apps", "client", "src", "main.mjs"), apiKey: createdKey.apiKey,
     instanceRef: `${targetInstance.relayEpoch}/${targetInstance.instanceNumber}`,
@@ -367,13 +373,31 @@ try {
   });
 
   let shotDemoSequence = 0;
-  const shotDemo = await runShotDemoProbe({
+  const shotDemo = debuggerElementOnly ? null : await runShotDemoProbe({
     forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `shot-demo-${++shotDemoSequence}`, method, params),
     cliPath: path.join(workspaceRoot, "apps", "client", "src", "main.mjs"), apiKey: createdKey.apiKey,
     instanceRef: `${targetInstance.relayEpoch}/${targetInstance.instanceNumber}`,
     sampleRoot: path.join(workspaceRoot, "out", "test-artifacts", "shot-demo"),
     debugPort, browserClient, windowId: coreTab.windowId, ordinaryTabRef: coreTab.tabRef,
   });
+  let captureSequence = 0;
+  const debuggerElement = await runDebuggerElementProbe({
+    forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `capture-${++captureSequence}`, method, params),
+    scopedForward: async (permissions) => {
+      const scoped = await pageEvaluate(pageClient, async ({ permissions, mutationId }) => {
+        const service = await import(chrome.runtime.getURL("background/key-service.js"));
+        return service.createKey({ mutationId, displayName: "Capture/debugger scoped probe", keyKind: "regular", permissions, enabled: true, expiresAt: null });
+      }, { permissions, mutationId: adminMutationId() });
+      return (method, params) => forwardCommand(nativeClient, targetInstance, scoped.apiKey, `capture-scoped-${++captureSequence}`, method, params);
+    },
+    cliPath: path.join(workspaceRoot, "apps", "client", "src", "main.mjs"), apiKey: createdKey.apiKey,
+    instanceRef: `${targetInstance.relayEpoch}/${targetInstance.instanceNumber}`,
+    sampleRoot: path.join(workspaceRoot, "out", "test-artifacts", "debugger-element"),
+    baseUrl: testPageUrl, windowId: coreTab.windowId, workerClient,
+  });
+  if (debuggerElementOnly) {
+    console.log(JSON.stringify({ ok: true, debuggerElement }));
+  } else {
   const restrictedDom = await forwardCommand(
     nativeClient,
     targetInstance,
@@ -2016,10 +2040,12 @@ try {
       realInput: realInputEvidence,
       usability,
       shotDemo,
+      debuggerElement,
       tabRefOwnedByExtension: true,
       tabTextBoundsObserved: true,
     }),
   );
+  }
 } catch (error) {
   if (chromiumStderr) console.error(chromiumStderr.slice(-8000));
   throw error;

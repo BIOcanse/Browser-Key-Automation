@@ -31,7 +31,7 @@ Connection models checked 2026-09-01. This compares normal workflows, not theore
 
 Browser Key Automation does not replace Playwright/Selenium test suites or DevTools diagnostics. It fills a different slot: low-friction, permissioned control of the browser a person is already using, with enough structure and file handling for an Agent to complete practical work.
 
-> Development status: the current unpacked build targets Chrome/Chromium 138 or later. It is a development package, not a Chrome Web Store release. The Store listing is in preparation; until it is ready, use [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.2.zip` and `browser-key-automation-local-app-v0.0.0.2.zip`.
+> Distribution: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) provides an unpacked extension for Chrome/Chromium 138 or later and a separate companion App. Chrome Web Store distribution follows its own publication track. Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.3.zip` and `browser-key-automation-local-app-v0.0.0.3.zip`.
 
 ## What It Can Do
 
@@ -59,8 +59,8 @@ The command registry is the public source of truth for exact methods, schemas, p
 
 Download both ZIPs from the [latest release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), then extract each into its own directory.
 
-- Extension: `browser-key-automation-extension-v0.0.0.2.zip`
-- Local App: `browser-key-automation-local-app-v0.0.0.2.zip`
+- Extension: `browser-key-automation-extension-v0.0.0.3.zip`
+- Local App: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 The App ZIP includes `windows-x86_64/` and `linux-x86_64/`, plus the CLI and Agent skill. No source build is needed.
 
@@ -124,6 +124,18 @@ The CLI re-enumerates instances before reading the Key. If delivery is reported 
 - Open a demonstration: `node client/browser-key-cli.mjs demo-open ./demo.html`.
 - Inspect an unfamiliar command in `skills/browser-key-automation/references/commands.registry.json` before calling it. The packaged Agent skill contains the same generated references.
 
+### Element images and explicit debugging
+
+`page.screenshot.element` lets an Agent inspect a Canvas, chart, or container using its existing NodeRef. The extension includes visible descendants, masks supported geometry, and fits it proportionally into an exact-size transparent PNG. No screen-coordinate calculation or debugger attachment is needed.
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+For deeper diagnosis, use `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`. This separate `debugger` permission exposes CDP commands and events; Chrome's own debugging confirmation/warning remains. Ordinary extension operations stay on their existing path.
+
+Element capture uses the current viewport of an already-active tab. It does not scroll or reconstruct hidden content. Supported shapes, top-document scope, local regions, large CDP results and failure semantics are documented in [the Agent guide](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### Native `.real` Click
 
 `dom.click.real` is explicit and independent from `dom.click`. On Windows it asks Chromium to activate the target tab and focus its browser window, verifies that the referenced element is live, visible, enabled, and unobstructed, then asks the companion App to send one native left-click to the matched Chromium content window.
@@ -134,7 +146,7 @@ The CLI re-enumerates instances before reading the Key. If delivery is reported 
 
 - A Key is the sole external identity. Agent brand, process, account, socket, and App instance are not additional authorization identities.
 - Root dynamically receives every active permission. A Regular Key receives only explicitly selected permissions.
-- JavaScript, ordinary DOM actions, native `.real` input, network access, and future debugging backends are parallel permissions; granting one does not silently grant another.
+- JavaScript, ordinary DOM actions, native `.real` input, network access, and explicit `debugger` access are parallel permissions; granting one does not silently grant another.
 - Same-Key commands are serialized in the live extension runtime. Different Keys have independent lanes, but their effects on the same webpage can still race.
 - Occupation is owned by a Key. There is no hidden takeover, force, or replace command: release first, then acquire.
 - The full Key stays inside the extension. The trusted management page and callers separately authorized for `keys.create` or `keys.reveal` can receive it; public lists and normal diagnostics do not include it. The CLI reads it only from `BKA_API_KEY` (or an explicitly selected environment variable).

@@ -31,7 +31,7 @@ Browser Key Automation превращает уже используемый бр
 
 Browser Key Automation не заменяет тестовые наборы Playwright/Selenium или глубокую диагностику DevTools. Его роль иная: управление с низким трением и явными разрешениями браузером, который уже использует человек, с чистой структурой и файловыми возможностями для реальной работы Agent.
 
-> Статус разработки: текущая unpacked-сборка предназначена для Chrome/Chromium 138 и новее. Это не публикация в Chrome Web Store. Страница Store готовится; до её завершения используйте [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest). В каждом Release ровно две загрузки: `browser-key-automation-extension-v0.0.0.2.zip` и `browser-key-automation-local-app-v0.0.0.2.zip`.
+> Распространение: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) предоставляет unpacked-расширение для Chrome/Chromium 138 и новее и отдельное локальное App. Публикация в Chrome Web Store выполняется отдельным процессом. В каждом Release ровно две загрузки: `browser-key-automation-extension-v0.0.0.3.zip` и `browser-key-automation-local-app-v0.0.0.3.zip`.
 
 ## Возможности
 
@@ -59,8 +59,8 @@ Command Registry является источником истины для то�
 
 Скачайте оба ZIP из [последнего Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) и распакуйте каждый в отдельный каталог.
 
-- Расширение: `browser-key-automation-extension-v0.0.0.2.zip`
-- Локальное App: `browser-key-automation-local-app-v0.0.0.2.zip`
+- Расширение: `browser-key-automation-extension-v0.0.0.3.zip`
+- Локальное App: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 ZIP App содержит `windows-x86_64/` и `linux-x86_64/`, а также CLI и Agent skill. Собирать проект из исходников не нужно.
 
@@ -124,6 +124,18 @@ CLI заново перечисляет экземпляры перед чтен
 - Открытие демонстрации: `node client/browser-key-cli.mjs demo-open ./demo.html`
 - Перед незнакомой командой проверьте `skills/browser-key-automation/references/commands.registry.json`. Включённый Agent skill содержит те же сгенерированные ссылки.
 
+### Изображения элементов и явная отладка
+
+`page.screenshot.element` позволяет Agent просматривать Canvas, график или контейнер по имеющемуся NodeRef. Видимые дочерние элементы включаются, поддерживаемые формы маскируются, а результат пропорционально вписывается по центру прозрачного PNG точного размера. Вычислять экранные координаты или подключать отладчик не нужно.
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+Для глубокой диагностики: `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`. Независимое разрешение `debugger` открывает команды и события CDP; собственное подтверждение и предупреждение отладки Chrome сохраняются. Обычные операции расширения продолжают использовать прежний путь.
+
+Снимок элемента охватывает только текущую видимую область уже активной вкладки, без автоматической прокрутки или восстановления скрытого содержимого. Поддерживаемые формы, область главного документа, локальные участки, большие результаты CDP и ошибки описаны в [руководстве Agent](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### Нативный клик `.real`
 
 `dom.click.real` — явная возможность, независимая от `dom.click`. В Windows она просит Chromium активировать целевую вкладку и сфокусировать окно браузера, проверяет, что элемент по ссылке актуален, видим, включён и не перекрыт, после чего просит App отправить один нативный левый клик в соответствующее окно содержимого Chromium.
@@ -134,7 +146,7 @@ CLI заново перечисляет экземпляры перед чтен
 
 - Key — единственная внешняя идентичность. Марка Agent, процесс, учётная запись, socket и Instance App не являются дополнительными идентичностями авторизации.
 - Root динамически получает все активные разрешения. Regular получает только явно выбранные разрешения.
-- JavaScript, обычные DOM-операции, нативный ввод `.real`, сетевой доступ и будущие debugging backends — параллельные разрешения; выдача одного не выдаёт остальные скрытно.
+- JavaScript, обычные DOM-операции, нативный ввод `.real`, сетевой доступ и явный доступ `debugger` — параллельные разрешения; выдача одного не выдаёт остальные скрытно.
 - Команды одного Key сериализуются в текущем runtime расширения. Разные Keys имеют независимые lanes, но их эффекты на одной странице могут конкурировать.
 - Занятие принадлежит Key. Скрытых takeover, force или replace нет: сначала release, затем acquire.
 - Полный Key остаётся внутри расширения. Его могут получить доверенная страница управления и вызывающие стороны с отдельным разрешением `keys.create` или `keys.reveal`; обычные списки и диагностика его не содержат. CLI читает его только из `BKA_API_KEY` или явно выбранной переменной окружения.

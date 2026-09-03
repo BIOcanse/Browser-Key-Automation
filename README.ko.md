@@ -31,7 +31,7 @@ Browser Key Automation은 지금 사용 중인 Chromium 브라우저를 신뢰�
 
 Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevTools 진단을 대체하지 않습니다. 사람이 쓰는 브라우저를 낮은 마찰과 명시적 권한으로 제어하고, Agent가 실제 작업을 마칠 만큼 깨끗한 구조와 파일 기능을 제공하는 별도 역할입니다.
 
-> 개발 상태: 현재 unpacked 개발 빌드는 Chrome/Chromium 138 이상을 대상으로 합니다. Chrome 웹 스토어 릴리스가 아닙니다. Store listing은 준비 중이며, 완료 전에는 [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)를 사용하십시오. 각 Release에는 `browser-key-automation-extension-v0.0.0.2.zip`과 `browser-key-automation-local-app-v0.0.0.2.zip`, 정확히 두 개의 다운로드만 있습니다.
+> 배포 방식: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)는 Chrome/Chromium 138 이상용 unpacked 확장 프로그램과 별도의 로컬 App을 제공합니다. Chrome 웹 스토어는 독립된 게시 절차를 사용합니다. 각 Release에는 `browser-key-automation-extension-v0.0.0.3.zip`과 `browser-key-automation-local-app-v0.0.0.3.zip`, 정확히 두 개의 다운로드만 있습니다.
 
 ## 주요 기능
 
@@ -59,8 +59,8 @@ Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevT
 
 [최신 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)에서 ZIP 두 개를 다운로드하고 각각 별도 디렉터리에 압축을 풉니다.
 
-- 확장 프로그램: `browser-key-automation-extension-v0.0.0.2.zip`
-- 로컬 App: `browser-key-automation-local-app-v0.0.0.2.zip`
+- 확장 프로그램: `browser-key-automation-extension-v0.0.0.3.zip`
+- 로컬 App: `browser-key-automation-local-app-v0.0.0.3.zip`
 
 App ZIP에는 `windows-x86_64/`, `linux-x86_64/`, CLI와 Agent skill이 포함되어 있습니다. 소스 빌드는 필요하지 않습니다.
 
@@ -124,6 +124,18 @@ CLI는 Key를 읽기 전에 Instance를 다시 열거합니다. delivery가 `unk
 - 데모 열기: `node client/browser-key-cli.mjs demo-open ./demo.html`
 - 익숙하지 않은 명령은 호출 전에 `skills/browser-key-automation/references/commands.registry.json`에서 확인하십시오. 패키지 Agent skill에도 같은 생성 참조가 포함됩니다.
 
+### 요소 이미지와 명시적 디버깅
+
+`page.screenshot.element`로 기존 NodeRef를 사용해 Canvas, 차트 또는 컨테이너를 확인할 수 있습니다. 보이는 자식 요소를 포함하고 지원되는 형상으로 마스킹한 뒤, 종횡비를 유지해 지정 크기의 투명 PNG 중앙에 배치합니다. 화면 좌표를 직접 계산하거나 디버거를 연결할 필요가 없습니다.
+
+```text
+node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+```
+
+깊이 있는 진단은 `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`로 수행합니다. 독립적인 `debugger` 권한으로 CDP 명령과 이벤트를 사용할 수 있으며 Chrome 자체의 디버깅 확인 및 경고는 유지됩니다. 일반 확장 작업의 경로는 바뀌지 않습니다.
+
+요소 캡처는 활성 탭의 현재 뷰포트만 대상으로 하며 자동 스크롤이나 숨겨진 내용 재구성을 하지 않습니다. 지원 형상, 최상위 문서 범위, 요소 내부 영역, 큰 CDP 결과 및 실패 처리는 다음을 참고하세요: [Agent 안내](skills/browser-key-automation/references/debugger-and-element-capture.md).
+
 ### 네이티브 `.real` 클릭
 
 `dom.click.real`은 `dom.click`과 독립된 명시적 기능입니다. Windows에서는 Chromium에 대상 탭 활성화와 브라우저 창 포커스를 요청하고, 참조 요소가 살아 있고 보이며 활성 상태이고 가려지지 않았는지 확인한 다음, 동반 App에 일치하는 Chromium 콘텐츠 창으로 네이티브 왼쪽 클릭 한 번을 보내도록 요청합니다.
@@ -134,7 +146,7 @@ CLI는 Key를 읽기 전에 Instance를 다시 열거합니다. delivery가 `unk
 
 - 외부 신원은 Key 하나뿐입니다. Agent 브랜드, 프로세스, 계정, socket, App Instance는 추가 인증 신원이 아닙니다.
 - Root는 모든 active 권한을 동적으로 가집니다. Regular는 명시적으로 선택된 권한만 가집니다.
-- JavaScript, 일반 DOM 작업, 네이티브 `.real`, 네트워크 접근, 향후 디버깅 backend는 병렬 권한입니다. 하나를 부여해도 다른 권한이 암묵적으로 부여되지 않습니다.
+- JavaScript, 일반 DOM 작업, 네이티브 `.real`, 네트워크 접근, 명시적 `debugger` 접근은 병렬 권한입니다. 하나를 부여해도 다른 권한이 암묵적으로 부여되지 않습니다.
 - 같은 Key의 명령은 현재 확장 프로그램 runtime에서 직렬화됩니다. 서로 다른 Key는 독립 lane을 가지지만 동일 페이지에 대한 효과는 경합할 수 있습니다.
 - 점유는 Key 소유입니다. 숨겨진 takeover, force, replace가 없으며 먼저 release하고 그다음 acquire해야 합니다.
 - 전체 Key는 확장 프로그램 내부에 저장됩니다. 신뢰할 수 있는 관리 페이지와 `keys.create` 또는 `keys.reveal` 권한을 별도로 받은 호출자만 이를 받을 수 있습니다. 일반 목록과 진단에는 포함되지 않고, CLI는 `BKA_API_KEY` 또는 명시한 환경 변수에서만 읽습니다.

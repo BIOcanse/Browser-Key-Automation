@@ -90,6 +90,20 @@
       "description": "Another Key owns a global or exact-tab occupation that blocks this acquire or page-effect dispatch."
     },
     {
+      "errorId": "DEBUGGER_OPERATION_FAILED",
+      "code": 1026,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform",
+        "storage"
+      ],
+      "retryCondition": "Inspect commandMayHaveRun; never automatically replay a CDP command after dispatch or result failure.",
+      "effectEvidence": "PhaseSensitive",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "Explicit debugging operation failed; details preserve whether a command may already have run."
+    },
+    {
       "errorId": "DEMO_INPUT_INVALID",
       "code": 1024,
       "status": "active",
@@ -113,6 +127,19 @@
       "effectEvidence": "PhaseSensitive",
       "secretRedaction": "all_diagnostics_only",
       "description": "A fixed DOM query or action could not be applied to the current target element."
+    },
+    {
+      "errorId": "ELEMENT_SCREENSHOT_FAILED",
+      "code": 1027,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Correct the reported shape, visible region, stable geometry or registered budget.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "Element geometry is empty, changed, unsupported or above its capture budget; no screenshot fallback occurs."
     },
     {
       "errorId": "FORBIDDEN",
@@ -329,4 +356,5 @@
       "secretRedaction": "all_values",
       "description": "The supplied credential is malformed, unknown, revoked, unsupported, or has the wrong secret."
     }
-  ]}
+  ]
+}

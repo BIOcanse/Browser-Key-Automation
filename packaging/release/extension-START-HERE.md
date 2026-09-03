@@ -19,6 +19,8 @@
 
 扩展拥有 Key 鉴权、权限、页面引用、占据和浏览器操作。本地 App 不保存 Key 数据库，也不决定浏览器权限。只应把完整 Key 交给可信 Agent 或自动化程序。
 
-Chrome Web Store 发布仍按独立的商店身份与审核流程推进；本包用于 GitHub 手动安装，不是商店上传包。
+`debugger` 是独立权限组，Regular Key 需显式授予，Root 自动包含。只有 `debugger.attach` 会启用调试；Chrome 自身的调试提示保留。普通 DOM、树和元素截图不附加调试器。
+
+Chrome Web Store 使用独立的商店包、身份与审核流程；本包用于 GitHub 手动安装，不能直接作为商店上传包。
 
 `SHA256SUMS.txt` 覆盖本目录中除清单自身以外的全部文件。

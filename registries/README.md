@@ -4,7 +4,7 @@ These four JSON registries are the authoring source for commands/permissions/sch
 
 ## Current generation
 
-The active API has 46 commands and 40 independent permissions. `page.wait` has its own permission, `page.tree.find` shares `page.tree.read`, and `dom.click.real` has a permission independent from ordinary `dom.click`. Root evaluates every currently active atom as true; regular Keys keep their explicit grants.
+The active API has 51 commands and 41 independent permissions. `page.wait` has its own permission, `page.tree.find` shares `page.tree.read`, and `dom.click.real` is independent from ordinary `dom.click`. The four explicit debugging commands share the independent `debugger` permission; `page.screenshot.element` reuses `page.screenshot.capture`. Root evaluates every currently active atom as true; regular Keys keep their explicit grants.
 
 - `generate-command-config.mjs` checks sorted unique active IDs, active references, closed top-level schema fields, permission use, declared consumer paths, and exact manifest API/host projections. It generates the extension catalog, limits and parameter defaults, and synchronizes the skill's two registry copies.
 - `generate-transport-config.mjs` projects the same bind/profile into extension TypeScript, relay Zig and client JavaScript, and checks the fixed extension Origin/CSP. Source/config content build IDs identify extension and relay inputs; they are not executable hashes. The package SHA256 manifests identify actual output bytes.
@@ -16,7 +16,7 @@ The active API has 46 commands and 40 independent permissions. `page.wait` has i
 A field with a default must have `required: false` and exactly one of:
 
 - `defaultFromFreedomPoint`: reference an active bounded integer, typed string/enum, or boolean point also present in the command's `limitRefs`.
-- `defaultValue`: fixed protocol meaning, currently null starting cursor or zero Artifact offset, not a tunable copy.
+- `defaultValue`: fixed protocol meaning, such as a null starting cursor, zero Artifact/event offset, or empty CDP params object, not a tunable copy.
 
 The generator validates the default's parameter type/value. The extension parser merges defaults once and validates the complete request; explicit false/zero/null values are not silently replaced. The injected tree-view boundary separately normalizes omitted nullable projection options because Chromium can omit null object members.
 
@@ -28,7 +28,7 @@ Authentication and business authorization happen only in the extension. Same-Key
 
 Only explicit `control.acquire` and `control.release` are supported. No hidden takeover, per-command occupation, OperationId, accepted/progress protocol, or effect replay is implied by legacy descriptor fields. Admin mutation IDs retain their already-implemented Key-management semantics.
 
-`keys.create/reveal` deliberately return the locally retained token to an authorized caller. CLI diagnostic output redacts full tokens. Do not reinstate the abandoned one-time-secret design from historical drafts.
+`keys.create/reveal` deliberately return the locally retained token to an authorized caller. CLI diagnostic output redacts full tokens. Keep this retained-token contract; do not implement one-time-only secret display.
 
 ## Validation limits
 
