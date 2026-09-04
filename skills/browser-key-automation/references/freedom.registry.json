@@ -707,6 +707,357 @@
       "safetyContract": "Default horizontal alignment."
     },
     {
+      "pointId": "command.ensure.default_scroll_into_view",
+      "family": "build",
+      "kind": "boolean",
+      "defaultInteger": null,
+      "defaultString": null,
+      "defaultBoolean": true,
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default permits bounded target scrolling during ensure preparation; callers can disable it explicitly."
+    },
+    {
+      "pointId": "command.ensure.default_search_by_scrolling",
+      "family": "build",
+      "kind": "boolean",
+      "defaultInteger": null,
+      "defaultString": null,
+      "defaultBoolean": true,
+      "defaultLoopbackBind": null,
+      "minimumInteger": null,
+      "maximumInteger": null,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default permits bounded downward locator search within the current page; callers can disable it explicitly."
+    },
+    {
+      "pointId": "command.ensure.default_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Visible default deadline for the entire ensure workflow."
+    },
+    {
+      "pointId": "command.ensure.maximum_condition_depth",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 16,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 2,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds structured condition nesting without recursive traversal."
+    },
+    {
+      "pointId": "command.ensure.maximum_condition_nodes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds total structured condition work per request."
+    },
+    {
+      "pointId": "command.ensure.maximum_frame_candidates",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one current-frame projection before an iframe locator chain is evaluated."
+    },
+    {
+      "pointId": "command.ensure.maximum_frame_depth",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 16,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the explicit direct-child iframe locator chain without recursive traversal."
+    },
+    {
+      "pointId": "command.ensure.maximum_locator_scan_nodes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 20000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one deterministic locator element traversal and its associated text/name scans in the live document."
+    },
+    {
+      "pointId": "command.ensure.maximum_scroll_contexts",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds scrollable nested elements plus the document root discovered during one search step."
+    },
+    {
+      "pointId": "command.ensure.maximum_search_attempts",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 2000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds all locator search attempts, including attempts that cannot move a scroll context."
+    },
+    {
+      "pointId": "command.ensure.maximum_search_scrolls",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 20,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds successful automatic scroll moves across nested containers and the document root."
+    },
+    {
+      "pointId": "command.ensure.maximum_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Hard upper bound for one complete ensure workflow."
+    },
+    {
+      "pointId": "command.ensure.poll_interval_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 10,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounded polling cadence shared by preparation and verification."
+    },
+    {
+      "pointId": "command.ensure.search_scroll_percent",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 80,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/dom-service.ts",
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Visible context fraction for each automatic downward locator-search scroll."
+    },
+    {
+      "pointId": "command.ensure.stable_window_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 200,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 5000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Continuous truth window required by stable and ready conditions."
+    },
+    {
       "pointId": "command.frames.list.maximum_items",
       "family": "build",
       "kind": "integer",
@@ -827,6 +1178,305 @@
         "typescript"
       ],
       "safetyContract": "Bounds the JSON-escaped UTF-8 preview returned for a JavaScript completion value and leaves room for the response envelope."
+    },
+    {
+      "pointId": "command.keyboard.default_gap_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 0,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default pause inserted only between caller-declared keyboard.press actions."
+    },
+    {
+      "pointId": "command.keyboard.default_hold_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 0,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default duration between the down and up halves of one complete native key press."
+    },
+    {
+      "pointId": "command.keyboard.default_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default total deadline for normal typing, key actions and keyboard-state reset."
+    },
+    {
+      "pointId": "command.keyboard.human.default_characters_per_minute",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 400,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 40,
+      "maximumInteger": 1200,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Controls only the explicit humanized typing model; normal keyboard.type remains immediate."
+    },
+    {
+      "pointId": "command.keyboard.human.default_mistake_percent",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 3,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 25,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds deliberate neighboring-letter mistakes that are always corrected before the command advances."
+    },
+    {
+      "pointId": "command.keyboard.human.default_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 120000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 600000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Default total deadline for the separately requested humanized typing operation."
+    },
+    {
+      "pointId": "command.keyboard.maximum_chord_keys",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 16,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-model.ts",
+        "apps/relay/src/native_input.zig",
+        "tools/generate-transport-config.mjs"
+      ],
+      "emitTargets": [
+        "typescript",
+        "zig"
+      ],
+      "safetyContract": "Bounds one named simultaneous key chord before any native event is sent."
+    },
+    {
+      "pointId": "command.keyboard.maximum_human_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 600000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 900000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Hard finite deadline accepted for one humanized typing command."
+    },
+    {
+      "pointId": "command.keyboard.maximum_sequence_actions",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-model.ts",
+        "apps/relay/src/native_input.zig",
+        "tools/generate-transport-config.mjs"
+      ],
+      "emitTargets": [
+        "typescript",
+        "zig"
+      ],
+      "safetyContract": "Bounds caller-declared keyboard.press actions before gaps are expanded."
+    },
+    {
+      "pointId": "command.keyboard.maximum_short_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 300000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Hard finite deadline accepted for normal text, named key actions and reset."
+    },
+    {
+      "pointId": "command.keyboard.maximum_text_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 2048,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 256,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-service.ts",
+        "apps/relay/src/native_input.zig",
+        "tools/generate-command-config.mjs",
+        "tools/generate-transport-config.mjs"
+      ],
+      "emitTargets": [
+        "typescript",
+        "zig"
+      ],
+      "safetyContract": "Keeps exact or expanded humanized text plus its route envelope below one transport frame."
+    },
+    {
+      "pointId": "command.keyboard.maximum_wait_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/command-dispatcher.ts",
+        "apps/extension/src/background/keyboard-model.ts",
+        "apps/relay/src/native_input.zig",
+        "tools/generate-transport-config.mjs"
+      ],
+      "emitTargets": [
+        "typescript",
+        "zig"
+      ],
+      "safetyContract": "Bounds each explicit wait and each command-level press gap or hold before native dispatch."
     },
     {
       "pointId": "command.keys.list.maximum_items",
@@ -1490,6 +2140,167 @@
         "typescript"
       ],
       "safetyContract": "Bounds short UTF-8 text projections such as tab title/URL, live DOM URL and JavaScript error text without splitting a Unicode code point."
+    },
+    {
+      "pointId": "command.trace.maximum_events",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 128,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 8,
+      "maximumInteger": 2048,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds retained semantic events in one execution trace; excess events are counted, not persisted."
+    },
+    {
+      "pointId": "command.trace.maximum_io_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 10,
+      "maximumInteger": 10000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds subordinate trace begin, read, pre-effect checkpoint and finish storage I/O so diagnostics cannot hold the primary command indefinitely."
+    },
+    {
+      "pointId": "command.trace.maximum_owner_records",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 128,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the number of Key-owner rings retained by one extension instance; oldest unprotected traces are evicted first."
+    },
+    {
+      "pointId": "command.trace.maximum_record_json_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 32768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 4096,
+      "maximumInteger": 262144,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds one public execution-trace JSON projection so reads always fit the inline response budget."
+    },
+    {
+      "pointId": "command.trace.maximum_records_per_key",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the durable per-Key ring; admitting a new run evicts only the oldest whole trace."
+    },
+    {
+      "pointId": "command.trace.maximum_retention_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 604800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 60000,
+      "maximumInteger": 2592000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Expires execution traces by their admission time; reads hide expired records and subsequent writes remove them."
+    },
+    {
+      "pointId": "command.trace.maximum_total_json_bytes",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 16777216,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 262144,
+      "maximumInteger": 268435456,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "apps/extension/src/background/execution-trace-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds the sum of retained public trace JSON projections across all Keys in one extension instance."
     },
     {
       "pointId": "runtime.artifact.default_maximum_bytes",

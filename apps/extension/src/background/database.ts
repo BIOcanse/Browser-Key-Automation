@@ -1,10 +1,11 @@
 export const DATABASE_NAME = "browser-key-automation";
-export const DATABASE_VERSION = 3;
+export const DATABASE_VERSION = 4;
 export const KEY_STORE = "keys";
 export const ADMIN_MUTATION_STORE = "admin_mutations";
 export const ARTIFACT_STORE = "artifacts";
 export const ARTIFACT_CHUNK_STORE = "artifact_chunks";
 export const SETTINGS_STORE = "settings";
+export const EXECUTION_TRACE_STORE = "execution_traces";
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 let activeDatabase: IDBDatabase | null = null;
@@ -42,6 +43,9 @@ function openDatabase(): Promise<IDBDatabase> {
     }
     if (!database.objectStoreNames.contains(SETTINGS_STORE)) {
       database.createObjectStore(SETTINGS_STORE, { keyPath: "settingsId" });
+    }
+    if (!database.objectStoreNames.contains(EXECUTION_TRACE_STORE)) {
+      database.createObjectStore(EXECUTION_TRACE_STORE, { keyPath: "ownerKeyId" });
     }
   });
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -90,35 +94,80 @@ export function getDatabase(): Promise<IDBDatabase> {
 export async function withStrictReadWrite<T>(
   storeNames: readonly string[],
   operation: (transaction: IDBTransaction) => Promise<T>,
+  options?: { readonly timeoutMs: number },
 ): Promise<T> {
-  const database = await getDatabase();
-  const transaction = database.transaction([...storeNames], "readwrite", { durability: "strict" });
-  const completion = transactionCompletion(transaction);
+  let transaction: IDBTransaction | null = null;
+  let completion: Promise<void> | null = null;
+  let timedOut = false;
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const deadline = options === undefined ? null : new Promise<never>((_resolve, reject) => {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      try { transaction?.abort(); }
+      catch { /* The transaction may already have reached a terminal state. */ }
+      reject(new DOMException("IndexedDB transaction exceeded its bounded deadline", "TimeoutError"));
+    }, options.timeoutMs);
+  });
+  const within = <V>(promise: Promise<V>): Promise<V> => deadline === null ? promise : Promise.race([promise, deadline]);
   try {
-    const result = await operation(transaction);
-    await completion;
+    const database = await within(getDatabase());
+    transaction = database.transaction([...storeNames], "readwrite", { durability: "strict" });
+    completion = transactionCompletion(transaction);
+    const result = await within(operation(transaction));
+    await within(completion);
     return result;
   } catch (error) {
     try {
-      transaction.abort();
+      transaction?.abort();
     } catch {
       // The transaction may already be committed or aborted; the original error remains authoritative.
     }
-    await completion.catch(() => undefined);
+    if (completion !== null) {
+      if (timedOut) void completion.catch(() => undefined);
+      else await completion.catch(() => undefined);
+    }
     throw error;
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
   }
 }
 
 export async function withReadOnly<T>(
   storeNames: readonly string[],
   operation: (transaction: IDBTransaction) => Promise<T>,
+  options?: { readonly timeoutMs: number },
 ): Promise<T> {
-  const database = await getDatabase();
-  const transaction = database.transaction([...storeNames], "readonly");
-  const completion = transactionCompletion(transaction);
-  const result = await operation(transaction);
-  await completion;
-  return result;
+  let transaction: IDBTransaction | null = null;
+  let completion: Promise<void> | null = null;
+  let timedOut = false;
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const deadline = options === undefined ? null : new Promise<never>((_resolve, reject) => {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      try { transaction?.abort(); }
+      catch { /* The transaction may already have reached a terminal state. */ }
+      reject(new DOMException("IndexedDB transaction exceeded its bounded deadline", "TimeoutError"));
+    }, options.timeoutMs);
+  });
+  const within = <V>(promise: Promise<V>): Promise<V> => deadline === null ? promise : Promise.race([promise, deadline]);
+  try {
+    const database = await within(getDatabase());
+    transaction = database.transaction([...storeNames], "readonly");
+    completion = transactionCompletion(transaction);
+    const result = await within(operation(transaction));
+    await within(completion);
+    return result;
+  } catch (error) {
+    try { transaction?.abort(); }
+    catch { /* The transaction may already be completed or aborted. */ }
+    if (completion !== null) {
+      if (timedOut) void completion.catch(() => undefined);
+      else await completion.catch(() => undefined);
+    }
+    throw error;
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+  }
 }
 
 export { requestResult };

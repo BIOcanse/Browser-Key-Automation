@@ -10,6 +10,7 @@ The primary path uses ordinary extension APIs—not CDP, WebDriver, remote-debug
 
 - **Seamless control of the browser already in front of you.** List, create, select, navigate, reload, and close tabs at any time while keeping the user's real sessions, cookies, extensions, and manually reached page state.
 - **An Agent-sized view of the whole page.** The cached canonical operation tree keeps the overall structure visible, expands only requested branches, preserves each Key's expansion state until the document changes, and offers one-shot depth, range, and subtree views without mutating that state.
+- **State changes that prove their result.** `ensure.run` combines a strict condition, one registered browser action, bounded preparation, and an observable goal under one deadline. Live iframe paths are re-resolved on every observation, nested-scroll search can traverse virtual lists, and each admitted call returns a Key-owned bounded, redacted trace reference. Non-repeat actions are never replayed after dispatch; an unprovable outcome is reported as `unknown`.
 - **Key-scoped trust instead of an open debugging endpoint.** Root and Regular Keys have explicit permissions, expiry, reveal, disable, and revoke controls. Calls are serialized per Key, while different Keys can work independently.
 - **A one-suffix native click fallback.** On Windows, `dom.click.real` combines extension-observed element geometry with the local App to send an OS-level left click when a page rejects synthetic DOM activation. The target must still be live, visible, enabled, and unobstructed.
 - **Files are first-class.** Save a page as MHTML, capture the visible viewport, fetch resources into bounded Artifacts, download them to disk, upload self-contained HTML, and open it as a browser demo without running a local web server.
@@ -31,7 +32,7 @@ Connection models checked 2026-09-01. This compares normal workflows, not theore
 
 Browser Key Automation does not replace Playwright/Selenium test suites or DevTools diagnostics. It fills a different slot: low-friction, permissioned control of the browser a person is already using, with enough structure and file handling for an Agent to complete practical work.
 
-> Distribution: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) provides an unpacked extension for Chrome/Chromium 138 or later and a separate companion App. Chrome Web Store distribution follows its own publication track. Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.3.zip` and `browser-key-automation-local-app-v0.0.0.3.zip`.
+> Distribution: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) provides an unpacked extension for Chrome/Chromium 138 or later and a separate companion App. Chrome Web Store distribution follows its own publication track. Each release has exactly two downloads: `browser-key-automation-extension-v0.0.0.4.zip` and `browser-key-automation-local-app-v0.0.0.4.zip`.
 
 ## What It Can Do
 
@@ -43,6 +44,7 @@ Browser Key Automation does not replace Playwright/Selenium test suites or DevTo
 - Wait for navigation, `interactive`, `complete`, DOM, or text conditions.
 - Save the current page as MHTML, capture a verified viewport image, transfer bounded Artifacts, and open self-contained HTML demonstrations without a local HTTP server.
 - Send an explicit Windows native left-click with `dom.click.real`. It has a permission independent from ordinary `dom.click`.
+- Insert text at the current caret with `dom.insertText`, or use Windows native keyboard commands for exact text, human-paced text, named keys, arbitrary shortcuts, deliberate down/up state, and instance-scoped reset.
 - Let one Key occupy a tab or the global scope. Another authorized Key must explicitly release that occupation before acquiring it.
 
 The command registry is the public source of truth for exact methods, schemas, permissions, and errors. `system.describe` reports the active build and the calling Key's effective permissions.
@@ -59,8 +61,8 @@ The command registry is the public source of truth for exact methods, schemas, p
 
 Download both ZIPs from the [latest release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), then extract each into its own directory.
 
-- Extension: `browser-key-automation-extension-v0.0.0.3.zip`
-- Local App: `browser-key-automation-local-app-v0.0.0.3.zip`
+- Extension: `browser-key-automation-extension-v0.0.0.4.zip`
+- Local App: `browser-key-automation-local-app-v0.0.0.4.zip`
 
 The App ZIP includes `windows-x86_64/` and `linux-x86_64/`, plus the CLI and Agent skill. No source build is needed.
 
@@ -142,11 +144,17 @@ Element capture uses the current viewport of an already-active tab. It does not 
 
 `{ "status": "input_sent" }` means that one input sequence was accepted, not that the website completed the requested business action. Observe the page afterwards. Never automatically replay an unknown or failed native input. The Linux App currently does not advertise `native.input.click.v1`, so the extension rejects `.real` before page preparation there.
 
+### Native Keyboard Input
+
+`keyboard.type` sends exact Unicode text immediately, while `keyboard.typeHuman` is the separate bounded human-paced mode. `keyboard.press` accepts named keys and chords; plain names perform a complete down/up, while an action array can deliberately preserve raw `down`/`up` state across commands. `keyboard.reset` releases only keys held for the current extension instance. `dom.insertText` remains a separate, untrusted DOM insertion at the current caret or selection.
+
+Native keyboard commands target a NodeRef or TabRef and require the exact Chromium window in the foreground. If the target/foreground changes or conflicting physical keys appear, the App stops before sending more input; accepted effects are never replayed. Windows advertises `native.input.keyboard.v1`; Linux does not currently claim this backend.
+
 ## Keys, Permissions, and Control
 
 - A Key is the sole external identity. Agent brand, process, account, socket, and App instance are not additional authorization identities.
 - Root dynamically receives every active permission. A Regular Key receives only explicitly selected permissions.
-- JavaScript, ordinary DOM actions, native `.real` input, network access, and explicit `debugger` access are parallel permissions; granting one does not silently grant another.
+- JavaScript, ordinary DOM actions, native click, each native-keyboard operation, network access, and explicit `debugger` access are parallel permissions; granting one does not silently grant another.
 - Same-Key commands are serialized in the live extension runtime. Different Keys have independent lanes, but their effects on the same webpage can still race.
 - Occupation is owned by a Key. There is no hidden takeover, force, or replace command: release first, then acquire.
 - The full Key stays inside the extension. The trusted management page and callers separately authorized for `keys.create` or `keys.reveal` can receive it; public lists and normal diagnostics do not include it. The CLI reads it only from `BKA_API_KEY` (or an explicitly selected environment variable).
@@ -157,7 +165,7 @@ Treat a powerful Key like a local browser-control credential. Give it only to tr
 
 Chromium still controls host access, restricted pages, file URL access, the **Allow User Scripts** switch, extension enablement, and any DevTools debugging confirmation. Root cannot bypass those browser-owned boundaries.
 
-The Windows and Linux Apps both provide routing and file delivery. Windows additionally advertises the current native click backend. Linux does not claim that backend yet. Incognito behavior and Chromium derivatives must be verified for their own profile and policy configuration.
+The Windows and Linux Apps both provide routing and file delivery. Windows additionally advertises the current native click and keyboard backends. Linux does not claim those backends yet. Incognito behavior and Chromium derivatives must be verified for their own profile and policy configuration.
 
 Agent setup: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 

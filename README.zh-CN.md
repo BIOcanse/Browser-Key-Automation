@@ -10,6 +10,7 @@ Browser Key Automation 把你正在使用的 Chromium 浏览器变成面向可�
 
 - **无缝操作眼前这一个浏览器。** 随时列出、新建、选择、导航、刷新和关闭标签页，同时保留用户真实的登录状态、Cookie、扩展和手动到达的页面状态。
 - **把完整网页变成 Agent 看得懂的干净视图。** 缓存的 canonical 操作树始终保留整体结构，只展开请求的分支；每枚 Key 的展开状态会保留到文档变化，并可一次性读取指定深度、区间或子树而不改变缓存状态。
+- **让状态变更自行证明结果。** `ensure.run` 在一条总期限内组合严格条件、一个已注册浏览器动作、有界准备和可观察目标。实时 iframe 路径会在每次观察时重新解析，嵌套滚动搜索可穿过虚拟列表；每个已接纳调用都会返回一份由 Key 所有的有界脱敏轨迹引用。不可重复动作送出后绝不重放；无法证实的结果会明确返回 `unknown`。
 - **用 Key 划定信任，而不是暴露调试端口。** Root/Regular Key 具有明确权限、有效期、再次显示、禁用和吊销控制。同一 Key 的调用串行，不同 Key 可以互不干扰地工作。
 - **一个后缀切换到原生点击。** Windows 上的 `dom.click.real` 会把扩展取得的元素几何信息交给本地 App，在网页拒绝合成 DOM 激活时发送操作系统级左键点击；目标仍必须存活、可见、可用且未被遮挡。
 - **文件是一等能力。** 一键保存 MHTML、截取可见视口、把资源取为有界 Artifact 并落盘、上传自包含 HTML，再无需本地 Web 服务直接在浏览器打开演示。
@@ -31,7 +32,7 @@ Browser Key Automation 把你正在使用的 Chromium 浏览器变成面向可�
 
 Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代 DevTools 深度诊断。它填补的是另一块：低摩擦、可配置权限地控制人正在使用的浏览器，并提供足够干净的结构和文件能力，让 Agent 完成实际任务。
 
-> 发布方式：[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 提供适用于 Chrome/Chromium 138 及以上版本的已解压扩展包和独立本地 App；Chrome 应用商店采用单独的发布流程。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.3.zip` 与 `browser-key-automation-local-app-v0.0.0.3.zip`。
+> 发布方式：[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 提供适用于 Chrome/Chromium 138 及以上版本的已解压扩展包和独立本地 App；Chrome 应用商店采用单独的发布流程。每个 Release 固定只有两个下载项：`browser-key-automation-extension-v0.0.0.4.zip` 与 `browser-key-automation-local-app-v0.0.0.4.zip`。
 
 ## 当前能力
 
@@ -43,6 +44,7 @@ Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代
 - 等待导航、`interactive`、`complete`、DOM 或文本条件。
 - 将当前网页保存为 MHTML、获取经过校验的视口截图、传输有界 Artifact，以及不启动本地 HTTP 服务直接打开自包含 HTML 演示。
 - 通过 `dom.click.real` 发送显式 Windows 原生左键点击；它拥有独立于普通 `dom.click` 的权限。
+- 用 `dom.insertText` 在当前光标处放入文本，或用 Windows 原生键盘指令发送精确文本、人类化文本、命名按键、任意快捷键、显式 down/up 状态并按实例复位。
 - 让某个 Key 占据标签页或全局。其他有权 Key 必须先显式解除原占据，再自行占据。
 
 精确方法、schema、权限和错误以 Command Registry 为准。`system.describe` 会返回当前构建和调用 Key 的实际有效权限。
@@ -59,8 +61,8 @@ Browser Key Automation 不替代 Playwright/Selenium 测试套件，也不替代
 
 从[最新 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 下载两个 ZIP，分别解压到独立目录。
 
-- 扩展: `browser-key-automation-extension-v0.0.0.3.zip`
-- 本地 App: `browser-key-automation-local-app-v0.0.0.3.zip`
+- 扩展: `browser-key-automation-extension-v0.0.0.4.zip`
+- 本地 App: `browser-key-automation-local-app-v0.0.0.4.zip`
 
 App ZIP 内含 `windows-x86_64/`、`linux-x86_64/`、CLI 和 Agent skill，无需自行编译。
 
@@ -142,11 +144,17 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 `{ "status": "input_sent" }` 只表示一组输入已被接受，不表示网站业务目标已经完成；之后应重新观察页面。未知或失败的原生输入绝不能自动重放。Linux App 当前不声明 `native.input.click.v1`，因此扩展会在任何页面准备动作之前拒绝 `.real`。
 
+### 原生键盘输入
+
+`keyboard.type` 会立即发送精确 Unicode 文本；`keyboard.typeHuman` 是单独、受边界约束的人类化输入模式。`keyboard.press` 接受命名按键和组合键：普通名称默认完成一次按下与抬起，动作数组则可显式把 raw `down`/`up` 状态保留到后续指令。`keyboard.reset` 只释放当前扩展实例持有的键。`dom.insertText` 仍是独立的非 trusted DOM 光标/选区插入。
+
+原生键盘指令可指向 NodeRef 或 TabRef，并要求精确的 Chromium 窗口位于前台。目标或前台改变、或出现冲突的物理按键时，App 会在继续发送前停止；已接受的效果绝不重放。Windows 声明 `native.input.keyboard.v1`，Linux 当前不声明该后端。
+
 ## Key、权限与占据
 
 - Key 是唯一外部身份。Agent 品牌、进程、账号、socket 和 App 实例都不是额外鉴权身份。
 - Root 动态拥有全部 active 权限；Regular 只拥有显式勾选的权限。
-- JavaScript、普通 DOM 操作、原生 `.real` 输入、网络访问和显式 `debugger` 调试是并列权限；授予一个不会暗中授予其他项。
+- JavaScript、普通 DOM 操作、原生点击、每项原生键盘操作、网络访问和显式 `debugger` 调试是并列权限；授予一个不会暗中授予其他项。
 - 同 Key 指令在当前扩展运行期内串行。不同 Key 有独立 lane，但它们对同一网页产生的效果仍可能竞态。
 - 占据归 Key 所有。没有隐藏 takeover、force 或 replace：必须先 release，再 acquire。
 - 完整 Key 保存在扩展内部。受信管理页以及被单独授予 `keys.create` 或 `keys.reveal` 的调用方可以取得它；普通列表和诊断不含完整 Key。CLI 只从 `BKA_API_KEY` 或显式指定的环境变量读取。
@@ -157,7 +165,7 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 Chromium 仍然拥有 host access、受限页面、file URL 访问、**允许用户脚本** 开关、扩展启停和 DevTools 调试确认。Root 无法绕过这些浏览器边界。
 
-Windows/Linux App 都提供路由和文件落地；Windows 额外声明当前原生点击后端，Linux 暂不声明。无痕模式和其他 Chromium 衍生浏览器必须按各自 profile 与策略实际验证。
+Windows/Linux App 都提供路由和文件落地；Windows 额外声明当前原生点击与键盘后端，Linux 暂不声明。无痕模式和其他 Chromium 衍生浏览器必须按各自 profile 与策略实际验证。
 
 Agent 接入：[Browser Key Automation skill](skills/browser-key-automation/SKILL.md)。
 

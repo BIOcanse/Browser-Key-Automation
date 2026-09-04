@@ -10,7 +10,7 @@ const native_input = @import("native_input.zig");
 const role_hello_extension = "{\"kind\":\"role.hello\",\"role\":\"extension\",\"protocolVersion\":1}";
 const role_hello_client = "{\"kind\":\"role.hello\",\"role\":\"client\",\"protocolVersion\":1}";
 const role_ready_extension = if (builtin.os.tag == .windows)
-    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.native_input_click_capability ++ "\"]}"
+    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.native_input_click_capability ++ "\",\"" ++ config.native_input_keyboard_capability ++ "\"]}"
 else
     "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[]}";
 const role_ready_client = "{\"kind\":\"role.ready\",\"role\":\"client\"}";
@@ -48,6 +48,15 @@ const NativeClickMessage = struct {
     marker: []const u8,
     point: native_input.Point,
     viewport: native_input.Viewport,
+};
+
+const NativeKeyboardMessage = struct {
+    kind: []const u8,
+    requestId: []const u8,
+    routeId: []const u8,
+    timeoutMs: u32,
+    marker: ?[]const u8,
+    operation: native_input.KeyboardOperation,
 };
 
 const ServerState = struct {
@@ -168,6 +177,7 @@ fn serveExtension(
         // already have created its route, and no new write may escape the scan.
         state.registry.unregisterExtension(instance_ref);
         state.routes.failInstance(instance_ref.instance_number);
+        native_input.cleanupInstance(state.io, instance_ref.instance_number);
     }
 
     // The extension receives no instanceNumber; hello's relayEpoch is not a route identity it owns.
@@ -182,9 +192,15 @@ fn serveExtension(
         )) orelse return;
         var value = try std.json.parseFromSlice(std.json.Value, state.allocator, payload, .{});
         defer value.deinit();
-        const object = switch (value.value) { .object => |object| object, else => return error.BadExtensionMessage };
+        const object = switch (value.value) {
+            .object => |object| object,
+            else => return error.BadExtensionMessage,
+        };
         const kind_value = object.get("kind") orelse return error.BadExtensionMessage;
-        const kind = switch (kind_value) { .string => |string| string, else => return error.BadExtensionMessage };
+        const kind = switch (kind_value) {
+            .string => |string| string,
+            else => return error.BadExtensionMessage,
+        };
         if (std.mem.eql(u8, kind, "route.response")) {
             var parsed = try std.json.parseFromSlice(RouteResponse, state.allocator, payload, .{});
             defer parsed.deinit();
@@ -192,6 +208,8 @@ fn serveExtension(
             try state.routes.complete(route_id, payload);
         } else if (std.mem.eql(u8, kind, "native.input.click")) {
             try serveNativeClick(state, instance_ref, payload);
+        } else if (std.mem.eql(u8, kind, "native.input.keyboard")) {
+            try serveNativeKeyboard(state, instance_ref, payload);
         } else return error.BadExtensionMessage;
     }
 }
@@ -201,11 +219,11 @@ fn serveNativeClick(state: *ServerState, instance_ref: registry_module.InstanceR
     defer parsed.deinit();
     const request = &parsed.value;
     const route_id = std.fmt.parseUnsigned(u64, request.routeId, 10) catch 0;
-    const outcome: native_input.Outcome = if (route_id == 0 or
+    const outcome: native_input.ClickOutcome = if (route_id == 0 or
         !state.routes.isPendingForInstance(route_id, instance_ref.instance_number))
         .{ .failure = .{ .reason = "stale_route", .phase = .prepare, .click_state = .not_sent } }
     else
-        native_input.execute(state.io, .{
+        native_input.executeClick(state.io, .{
             .marker = request.marker,
             .point = request.point,
             .viewport = request.viewport,
@@ -223,6 +241,54 @@ fn serveNativeClick(state: *ServerState, instance_ref: registry_module.InstanceR
             try std.json.Stringify.value(failure.reason, .{}, &response);
             try response.print(",\"phase\":\"{s}\",\"clickState\":\"{s}\"}}}}", .{
                 @tagName(failure.phase), @tagName(failure.click_state),
+            });
+        },
+    }
+    try state.registry.writeToConnected(instance_ref, .binary, response_buffer[0..response.end]);
+}
+
+fn serveNativeKeyboard(state: *ServerState, instance_ref: registry_module.InstanceRef, payload: []const u8) !void {
+    var parsed = try std.json.parseFromSlice(NativeKeyboardMessage, state.allocator, payload, .{});
+    defer parsed.deinit();
+    const request = &parsed.value;
+    const route_id = std.fmt.parseUnsigned(u64, request.routeId, 10) catch 0;
+    const outcome: native_input.KeyboardOutcome = if (route_id == 0 or
+        !state.routes.isPendingForInstance(route_id, instance_ref.instance_number))
+        .{ .failure = .{
+            .reason = "stale_route",
+            .phase = .prepare,
+            .input_state = .not_sent,
+            .completed_actions = 0,
+        } }
+    else
+        native_input.executeKeyboard(state.io, instance_ref.instance_number, .{
+            .marker = request.marker,
+            .operation = request.operation,
+            .timeout_ms = request.timeoutMs,
+        });
+
+    var response_buffer: [4096]u8 = undefined;
+    var response: std.Io.Writer = .fixed(&response_buffer);
+    try response.writeAll("{\"kind\":\"native.keyboard.result\",\"requestId\":");
+    try std.json.Stringify.value(request.requestId, .{}, &response);
+    switch (outcome) {
+        .success => |result| {
+            try response.print(
+                ",\"ok\":true,\"result\":{{\"status\":\"input_sent\",\"completedActions\":{d},\"submittedScalars\":{d},\"correctedMistakes\":{d},\"heldVirtualKeys\":[",
+                .{ result.completed_actions, result.submitted_scalars, result.corrected_mistakes },
+            );
+            var index: usize = 0;
+            while (index < result.held_count) : (index += 1) {
+                if (index != 0) try response.writeByte(',');
+                try response.print("{d}", .{result.held_virtual_keys[index]});
+            }
+            try response.writeAll("]}}");
+        },
+        .failure => |failure| {
+            try response.writeAll(",\"ok\":false,\"error\":{\"reason\":");
+            try std.json.Stringify.value(failure.reason, .{}, &response);
+            try response.print(",\"phase\":\"{s}\",\"inputState\":\"{s}\",\"completedActions\":{d}}}}}", .{
+                @tagName(failure.phase), @tagName(failure.input_state), failure.completed_actions,
             });
         },
     }
@@ -354,10 +420,12 @@ test "role hello constants contain no instance identity" {
     try std.testing.expect(std.mem.indexOf(u8, role_ready_extension, "relayEpoch") == null);
 }
 
-test "native click capability is advertised only by the implemented platform build" {
+test "native input capabilities are advertised only by the implemented platform build" {
     if (builtin.os.tag == .windows) {
         try std.testing.expect(std.mem.indexOf(u8, role_ready_extension, config.native_input_click_capability) != null);
+        try std.testing.expect(std.mem.indexOf(u8, role_ready_extension, config.native_input_keyboard_capability) != null);
     } else {
         try std.testing.expect(std.mem.indexOf(u8, role_ready_extension, config.native_input_click_capability) == null);
+        try std.testing.expect(std.mem.indexOf(u8, role_ready_extension, config.native_input_keyboard_capability) == null);
     }
 }

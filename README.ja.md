@@ -10,6 +10,7 @@ Browser Key Automation は、普段使っている Chromium ブラウザーを�
 
 - **目の前のブラウザーをそのままシームレスに操作。** ユーザーの実際のログイン状態、Cookie、拡張機能、手動で到達したページ状態を保ちながら、いつでもタブを一覧、作成、選択、移動、再読み込み、終了できます。
 - **ページ全体を Agent 向けの小さく明瞭なビューに。** キャッシュされた canonical 操作ツリーは全体構造を残したまま要求された枝だけを展開し、文書が変わるまで Key ごとの展開状態を保持します。深さ、範囲、部分ツリーの一時ビューはキャッシュ状態を変えません。
+- **状態変更が結果を自ら証明。** `ensure.run` は一つの期限内で、厳密な条件、登録済みブラウザー操作一件、上限付き準備、観測可能な目標をまとめます。現在の iframe パスを観測ごとに再解決し、入れ子スクロール検索で仮想リストをたどれます。受理された各呼び出しは、Key 所有の上限付き・秘匿済みトレース参照を返します。再実行不可の操作は送信後に繰り返さず、確認できない結果は `unknown` と明示します。
 - **開いたデバッグ端点ではなく Key で信頼を区切る。** Root/Regular Key には明示的な権限、有効期限、再表示、無効化、失効があります。同一 Key の呼び出しは直列化され、異なる Key は独立して動けます。
 - **接尾辞ひとつのネイティブクリック。** Windows の `dom.click.real` は拡張機能が得た要素座標とローカル App を組み合わせ、ページが合成 DOM 操作を拒否したときに OS レベルの左クリックを送ります。対象は存続し、可視・有効・遮蔽なしである必要があります。
 - **ファイルを第一級の機能として扱う。** MHTML 保存、表示中 viewport の撮影、リソースの有界 Artifact 化とディスク保存、自己完結 HTML のアップロード、ローカル Web サーバーなしのデモ表示を直接行えます。
@@ -31,7 +32,7 @@ Browser Key Automation は、普段使っている Chromium ブラウザーを�
 
 Browser Key Automation は Playwright/Selenium のテストスイートや DevTools の深い診断を置き換えません。人が使っているブラウザーを低摩擦かつ権限付きで操作し、Agent が実務を完了するための明瞭な構造とファイル機能を提供する別の役割です。
 
-> 配布方法: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) では Chrome/Chromium 138 以降向けの unpacked 拡張機能と、別個のローカル App を提供します。Chrome ウェブストアは独立した公開手順を使用します。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.3.zip` と `browser-key-automation-local-app-v0.0.0.3.zip` の 2 つだけです。
+> 配布方法: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) では Chrome/Chromium 138 以降向けの unpacked 拡張機能と、別個のローカル App を提供します。Chrome ウェブストアは独立した公開手順を使用します。各 Release のダウンロードは `browser-key-automation-extension-v0.0.0.4.zip` と `browser-key-automation-local-app-v0.0.0.4.zip` の 2 つだけです。
 
 ## 主な機能
 
@@ -43,6 +44,7 @@ Browser Key Automation は Playwright/Selenium のテストスイートや DevTo
 - ナビゲーション、`interactive`、`complete`、DOM、テキスト条件を待機できます。
 - 現在のページを MHTML で保存し、検証済みビューポート画像を取得し、有界 Artifact を転送し、ローカル HTTP サーバーなしで自己完結型 HTML デモを開けます。
 - `dom.click.real` で Windows のネイティブ左クリックを送信できます。通常の `dom.click` とは独立した権限です。
+- `dom.insertText` で現在のカーソル位置へ文字を挿入するか、Windows ネイティブキーボードコマンドで正確な文字列、人間的な間隔の文字列、名前付きキー、任意のショートカット、明示的な down/up 状態、Instance 単位のリセットを実行できます。
 - Key 単位でタブまたはグローバル範囲を占有できます。別の許可済み Key は、先に明示的に解放してから取得する必要があります。
 
 正確なメソッド、schema、権限、エラーは Command Registry が正本です。`system.describe` は現在のビルドと呼び出し元 Key の実効権限を返します。
@@ -59,8 +61,8 @@ Browser Key Automation は Playwright/Selenium のテストスイートや DevTo
 
 [最新の Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) から 2 つの ZIP をダウンロードし、それぞれ別のディレクトリに展開します。
 
-- 拡張機能: `browser-key-automation-extension-v0.0.0.3.zip`
-- ローカル App: `browser-key-automation-local-app-v0.0.0.3.zip`
+- 拡張機能: `browser-key-automation-extension-v0.0.0.4.zip`
+- ローカル App: `browser-key-automation-local-app-v0.0.0.4.zip`
 
 App ZIP には `windows-x86_64/`、`linux-x86_64/`、CLI、Agent skill が含まれます。ソースからのビルドは不要です。
 
@@ -142,11 +144,17 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 `{ "status": "input_sent" }` は入力列が受理されたことだけを表し、Web サイトの業務処理完了を保証しません。必ず後からページを観察してください。不明または失敗したネイティブ入力を自動再送してはいけません。Linux App は現在 `native.input.click.v1` を公開しないため、ページ準備より前に `.real` が拒否されます。
 
+### ネイティブキーボード入力
+
+`keyboard.type` は正確な Unicode 文字列を即座に送り、`keyboard.typeHuman` は独立した有界の人間的入力モードです。`keyboard.press` は名前付きキーとコードを受け付けます。単純な名前は必ず押下と解放を完了し、アクション配列では raw `down`/`up` 状態を意図的に次のコマンドまで保持できます。`keyboard.reset` は現在の拡張機能 Instance が保持するキーだけを解放します。`dom.insertText` は、現在のカーソルまたは選択範囲に対する独立した非 trusted DOM 挿入です。
+
+ネイティブキーボードコマンドは NodeRef または TabRef を対象とし、正確な Chromium ウィンドウが前面にあることを要求します。対象や前面ウィンドウが変わるか、競合する物理キーが現れた場合、App は追加送信前に停止し、受理済みの効果を再送しません。Windows は `native.input.keyboard.v1` を公開し、Linux は現在この backend を公開しません。
+
 ## Key、権限、占有
 
 - 外部 ID は Key だけです。Agent のブランド、プロセス、アカウント、socket、App Instance は追加の認可 ID ではありません。
 - Root はすべての active 権限を動的に持ちます。Regular は明示的に選んだ権限だけを持ちます。
-- JavaScript、通常 DOM 操作、ネイティブ `.real`、ネットワークアクセス、明示的な `debugger` アクセス は並列権限です。1 つの付与が他を暗黙に付与することはありません。
+- JavaScript、通常 DOM 操作、ネイティブクリック、各ネイティブキーボード操作、ネットワークアクセス、明示的な `debugger` アクセスは並列権限です。1 つの付与が他を暗黙に付与することはありません。
 - 同じ Key のコマンドは現在の拡張機能 runtime 内で直列化されます。異なる Key は独立 lane ですが、同じページへの効果は競合し得ます。
 - 占有は Key が所有します。隠れた takeover、force、replace はなく、先に release、次に acquire が必要です。
 - 完全な Key は拡張機能内に保存されます。信頼済み管理画面と、`keys.create` または `keys.reveal` を個別に許可された呼び出し元だけが受け取れます。通常の一覧や診断には含まれず、CLI は `BKA_API_KEY` または明示した環境変数からのみ読みます。
@@ -157,7 +165,7 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 host access、制限ページ、file URL、**Allow User Scripts**、拡張機能の有効化、DevTools デバッグ確認は引き続き Chromium が管理します。Root でもこれらは回避できません。
 
-Windows/Linux App はどちらもルーティングとファイル保存を提供します。Windows は現在のネイティブクリック backend も公開し、Linux はまだ公開しません。シークレットモードや Chromium 派生ブラウザーは、それぞれの profile と policy で検証が必要です。
+Windows/Linux App はどちらもルーティングとファイル保存を提供します。Windows は現在のネイティブクリックとキーボード backend も公開し、Linux はまだ公開しません。シークレットモードや Chromium 派生ブラウザーは、それぞれの profile と policy で検証が必要です。
 
 Agent の接続：[Browser Key Automation skill](skills/browser-key-automation/SKILL.md)。
 

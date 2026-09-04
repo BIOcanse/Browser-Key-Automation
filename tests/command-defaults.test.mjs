@@ -39,6 +39,28 @@ test("command boundary expands declared omissions once and preserves explicit va
     { nodeRef, scrollIntoView: null }, { nodeRef, timeoutMs: null }, { nodeRef, timeoutMs: 0 },
     { nodeRef, timeoutMs: 60001 }, { nodeRef: "bad" }, { nodeRef, extra: true },
   ]) assert.equal(parse("dom.click.real", params), null);
+  assert.equal(parse("dom.insertText", { nodeRef, text: "x" }).kind, "dom.insertText");
+  assert.equal(parse("dom.insertText", { nodeRef, text: "" }), null);
+  assert.deepEqual(parse("keyboard.type", { targetRef: nodeRef, text: "hello" }).params, {
+    targetRef: nodeRef, text: "hello", timeoutMs: 10000,
+  });
+  assert.deepEqual(parse("keyboard.typeHuman", { targetRef: tabRef, text: "hello" }).params, {
+    targetRef: tabRef, text: "hello", charactersPerMinute: 400, mistakePercent: 3,
+    randomSeed: null, timeoutMs: 120000,
+  });
+  const keyPress = parse("keyboard.press", { targetRef: tabRef, keys: "Ctrl+Shift+P" });
+  assert.equal(keyPress.params.holdMs, 0);
+  assert.equal(keyPress.params.gapMs, 0);
+  assert.deepEqual(keyPress.params.actions.map((action) => action.kind), ["press"]);
+  assert.deepEqual(parse("keyboard.reset", {}).params, { timeoutMs: 10000 });
+  for (const params of [
+    { targetRef: tabRef, keys: "Ctrl++P" },
+    { targetRef: tabRef, keys: [{ key: "A", action: "tap" }] },
+    { targetRef: tabRef, keys: [{ waitMs: 5001 }] },
+    { targetRef: "bad", keys: "A" },
+  ]) assert.equal(parse("keyboard.press", params), null);
+  assert.equal(parse("keyboard.type", { targetRef: tabRef, text: "\ud800" }), null);
+  assert.equal(parse("keyboard.typeHuman", { targetRef: tabRef, text: "x", randomSeed: 0x1_0000_0000 }), null);
   assert.deepEqual(parse("page.screenshot.capture", { tabRef }).params, { tabRef, format: "png", quality: 80 });
   assert.equal(parse("page.screenshot.capture", { tabRef, format: "jpeg", quality: 0 }).params.quality, 0);
   assert.equal(parse("page.screenshot.capture", { tabRef, format: null }), null);
@@ -67,6 +89,78 @@ test("command boundary expands declared omissions once and preserves explicit va
   assert.equal(parse("artifact.upload.begin", { byteLength: -1, mediaType: "text/html" }), null);
   assert.equal(parse("dom.focus", { nodeRef, preventScroll: false }).params.preventScroll, false);
   assert.deepEqual(parse("dom.scroll", { nodeRef }).params, { nodeRef, behavior: "auto", block: "center", inline: "nearest" });
+  const traceRef = `xr1.${"T".repeat(43)}`;
+  assert.deepEqual(parse("trace.read", {}).params, { traceRef: null });
+  assert.equal(parse("trace.export", { traceRef }).params.traceRef, traceRef);
+  assert.equal(parse("trace.read", { traceRef: "xr1.short" }), null);
+  assert.equal(parse("trace.read", { traceRef: null, extra: true }), null);
+  const setValueAction = {
+    method: "dom.setValue", schemaVersion: 1, target: { kind: "node", nodeRef }, params: { value: "Alice" },
+  };
+  const ensured = parse("ensure.run", { action: setValueAction });
+  assert.deepEqual(ensured.params, {
+    action: setValueAction,
+    goal: null,
+    mode: "ensure",
+    precondition: null,
+    scrollIntoView: true,
+    searchByScrolling: true,
+    timeoutMs: 10000,
+  });
+  assert.deepEqual(ensured.ensureRequest.goal, { kind: "value_is", target: { kind: "node", nodeRef }, value: "Alice" });
+  const framedTarget = {
+    kind: "locator",
+    tabRef,
+    framePath: [
+      { urlPattern: "https://frame.test/*" },
+      { urlPattern: "https://child.test/editor", match: "first" },
+    ],
+    selector: "button",
+    role: "button",
+    name: "Save",
+    nameMatch: "exact",
+    match: "unique",
+  };
+  const framed = parse("ensure.run", {
+    action: { method: "dom.focus", schemaVersion: 1, target: framedTarget, params: {} },
+  });
+  assert.deepEqual(framed.ensureRequest.action.target.framePath, [
+    { urlPattern: "https://frame.test/*", match: "unique" },
+    { urlPattern: "https://child.test/editor", match: "first" },
+  ]);
+  const keyboardLocator = parse("ensure.run", {
+    action: { method: "keyboard.press", schemaVersion: 1, target: framedTarget, params: { keys: "Enter" } },
+    goal: { kind: "loaded", tabRef, state: "complete" },
+  });
+  assert.equal(keyboardLocator.ensureRequest.action.target.selector, "button");
+  assert.equal(Object.hasOwn(keyboardLocator.ensureRequest.action.params, "targetRef"), false);
+  assert.equal(parse("ensure.run", {
+    action: { method: "keyboard.type", schemaVersion: 1, params: { targetRef: tabRef, text: "x" } },
+    goal: { kind: "loaded", tabRef, state: "complete" },
+  }).ensureRequest.action.target, null);
+  assert.equal(parse("ensure.run", {
+    action: { method: "dom.focus", schemaVersion: 1, target: { ...framedTarget, framePath: [{ urlPattern: "*", match: "last" }] }, params: {} },
+  }), null);
+  assert.equal(parse("ensure.run", {
+    action: { method: "dom.click", schemaVersion: 1, target: { kind: "node", nodeRef }, params: {} },
+  }), null, "click requires an explicit observable goal");
+  assert.equal(parse("ensure.run", { action: setValueAction, mode: "strict" }), null, "strict requires a precondition");
+  assert.equal(parse("ensure.run", {
+    action: setValueAction,
+    mode: "strict",
+    precondition: { kind: "visible", target: { kind: "node", nodeRef } },
+  }).ensureRequest.goal, null);
+  assert.equal(parse("ensure.run", {
+    action: { ...setValueAction, params: { nodeRef, value: "Alice" } },
+  }), null, "a target action cannot also smuggle nodeRef through params");
+  assert.equal(parse("ensure.run", {
+    action: { method: "dom.describe", schemaVersion: 1, params: { nodeRef } },
+  }), null, "read-only primitives are not workflow effects");
+  assert.equal(parse("ensure.run", { action: setValueAction, timeoutMs: 60001 }), null);
+  assert.equal(parse("ensure.run", {
+    action: setValueAction,
+    goal: { kind: "present", target: { kind: "locator", tabRef, selector: null, role: null, name: null, nameMatch: "exact", match: "unique" } },
+  }), null);
   const rootRef = `tr2.${"A".repeat(43)}`;
   assert.equal(parse("page.tree.find", { rootRef }), null);
   assert.equal(parse("page.tree.find", { rootRef, text: "x" }).params.limit, 256);
@@ -95,6 +189,10 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
   point("command.debugger.default_response").defaultString = "artifact";
   point("command.debugger.default_event_limit").defaultInteger = 50;
   point("command.demo.open.default_active").defaultBoolean = false;
+  point("command.ensure.default_scroll_into_view").defaultBoolean = false;
+  point("command.ensure.default_search_by_scrolling").defaultBoolean = false;
+  point("command.ensure.default_timeout_ms").defaultInteger = 7000;
+  point("command.ensure.maximum_timeout_ms").defaultInteger = 8000;
   point("build.transport.loopback_bind").defaultLoopbackBind.port = 32190;
   await writeFile(registryPath, JSON.stringify(registry));
   const manifestPath = path.join(fixture, "apps", "extension", "manifest.json");
@@ -117,6 +215,12 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
     assert.equal(parse("debugger.send", { tabRef, method: "Runtime.enable" }).params.response, "artifact");
     assert.equal(parse("debugger.events.get", { tabRef }).params.limit, 50);
     assert.equal(parse("demo.open", { artifactRef: `ar1.${"A".repeat(43)}` }).params.active, false);
+    assert.deepEqual(parse("ensure.run", { action: {
+      method: "dom.setValue", schemaVersion: 1, target: { kind: "node", nodeRef }, params: { value: "x" },
+    } }).params, {
+      action: { method: "dom.setValue", schemaVersion: 1, target: { kind: "node", nodeRef }, params: { value: "x" } },
+      goal: null, mode: "ensure", precondition: null, scrollIntoView: false, searchByScrolling: false, timeoutMs: 7000,
+    });
   } finally { COMMAND_CATALOG.parameterDefaultsByMethod = previous; }
   const transport = await import(pathToFileURL(path.join(fixture, "apps", "client", "src", "generated-config.mjs")));
   assert.equal(transport.TRANSPORT.port, 32190);
@@ -130,6 +234,10 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
   await writeFile(registryPath, JSON.stringify(registry));
   await assert.rejects(run(fixture, "tools/generate-command-config.mjs"), /dom\.click\.real default timeout/);
   point("command.dom.click.real.default_timeout_ms").defaultInteger = 7000;
+  point("command.ensure.default_timeout_ms").defaultInteger = 9000;
+  await writeFile(registryPath, JSON.stringify(registry));
+  await assert.rejects(run(fixture, "tools/generate-command-config.mjs"), /ensure defaults/);
+  point("command.ensure.default_timeout_ms").defaultInteger = 7000;
   point("command.dom.scroll.default_block").defaultString = "invalid-alignment";
   await writeFile(registryPath, JSON.stringify(registry));
   await assert.rejects(run(fixture, "tools/generate-command-config.mjs"), /typed default/);
@@ -143,6 +251,12 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
   focus.limitRefs.push("command.page.wait.default_timeout_ms"); focus.limitRefs.sort();
   await writeFile(commandPath, JSON.stringify(commands));
   await assert.rejects(run(fixture, "tools/generate-command-config.mjs"), /parameter default type/);
+  commands.schemaDeclarations.find((schema) => schema.schemaId === "schema.dom.focus.params.v1")
+    .fields.find((field) => field.fieldName === "preventScroll").defaultFromFreedomPoint = "command.dom.focus.default_prevent_scroll";
+  focus.limitRefs = focus.limitRefs.filter((pointId) => pointId !== "command.page.wait.default_timeout_ms");
+  commands.commandDeclarations.find((command) => command.method === "dom.click").ensurePolicy.repeat = "safe";
+  await writeFile(commandPath, JSON.stringify(commands));
+  await assert.rejects(run(fixture, "tools/generate-command-config.mjs"), /invalid ensure policy/);
 });
 
 async function run(cwd, script) {

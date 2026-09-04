@@ -10,6 +10,7 @@ Browser Key Automation은 지금 사용 중인 Chromium 브라우저를 신뢰�
 
 - **눈앞의 브라우저를 그대로 제어합니다.** 실제 로그인 상태, 쿠키, 확장 프로그램, 사람이 도달한 페이지 상태를 유지하면서 언제든 탭을 나열·생성·선택·이동·새로고침·닫을 수 있습니다.
 - **전체 페이지를 Agent 크기의 깨끗한 보기로 만듭니다.** 캐시된 canonical 작업 트리는 전체 구조를 보존하면서 요청한 가지뿐만 펼칩니다. 문서가 바뀔 때까지 Key별 펼침 상태를 유지하고, 깊이·범위·하위 트리의 일회성 보기는 캐시 상태를 바꾸지 않습니다.
+- **상태 변경이 결과를 직접 증명합니다.** `ensure.run`은 하나의 전체 기한 안에서 엄격한 조건, 등록된 브라우저 동작 한 번, 제한된 준비, 관찰 가능한 목표를 결합합니다. 현재 iframe 경로를 관찰할 때마다 다시 해석하고 중첩 스크롤 검색으로 가상 목록을 탐색하며, 수락된 호출마다 Key 소유의 제한·비식별화된 추적 참조를 반환합니다. 반복 불가 동작은 전송 후 다시 실행하지 않으며 확인할 수 없는 결과는 `unknown`으로 명시합니다.
 - **열린 디버깅 엔드포인트 대신 Key로 신뢰 범위를 정합니다.** Root/Regular Key에는 명시적 권한, 만료, 재표시, 비활성화, 폐기 제어가 있습니다. 같은 Key의 호출은 직렬화되고 서로 다른 Key는 독립적으로 일할 수 있습니다.
 - **접미사 하나로 네이티브 클릭을 사용합니다.** Windows의 `dom.click.real`은 확장이 관찰한 요소 좌표와 로컬 App을 결합해 페이지가 합성 DOM 활성화를 거부할 때 OS 수준 왼쪽 클릭을 보냅니다. 대상은 여전히 살아 있고 보이며 활성화되어 있고 가려지지 않아야 합니다.
 - **파일을 일급 기능으로 취급합니다.** MHTML 저장, 보이는 viewport 캡처, 리소스의 제한된 Artifact 변환과 디스크 저장, 자체 포함 HTML 업로드, 로컬 Web 서버 없는 브라우저 데모 열기를 바로 수행합니다.
@@ -31,7 +32,7 @@ Browser Key Automation은 지금 사용 중인 Chromium 브라우저를 신뢰�
 
 Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevTools 진단을 대체하지 않습니다. 사람이 쓰는 브라우저를 낮은 마찰과 명시적 권한으로 제어하고, Agent가 실제 작업을 마칠 만큼 깨끗한 구조와 파일 기능을 제공하는 별도 역할입니다.
 
-> 배포 방식: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)는 Chrome/Chromium 138 이상용 unpacked 확장 프로그램과 별도의 로컬 App을 제공합니다. Chrome 웹 스토어는 독립된 게시 절차를 사용합니다. 각 Release에는 `browser-key-automation-extension-v0.0.0.3.zip`과 `browser-key-automation-local-app-v0.0.0.3.zip`, 정확히 두 개의 다운로드만 있습니다.
+> 배포 방식: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)는 Chrome/Chromium 138 이상용 unpacked 확장 프로그램과 별도의 로컬 App을 제공합니다. Chrome 웹 스토어는 독립된 게시 절차를 사용합니다. 각 Release에는 `browser-key-automation-extension-v0.0.0.4.zip`과 `browser-key-automation-local-app-v0.0.0.4.zip`, 정확히 두 개의 다운로드만 있습니다.
 
 ## 주요 기능
 
@@ -43,6 +44,7 @@ Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevT
 - 탐색, `interactive`, `complete`, DOM 또는 텍스트 조건을 기다립니다.
 - 현재 페이지를 MHTML로 저장하고, 검증된 뷰포트 이미지를 캡처하고, 제한된 Artifact를 전송하고, 로컬 HTTP 서버 없이 자체 포함 HTML 데모를 엽니다.
 - `dom.click.real`로 명시적인 Windows 네이티브 왼쪽 클릭을 보냅니다. 일반 `dom.click`과 독립된 권한입니다.
+- `dom.insertText`로 현재 커서에 텍스트를 넣거나 Windows 네이티브 키보드 명령으로 정확한 텍스트, 사람 속도의 텍스트, 이름 있는 키, 임의 단축키, 명시적 down/up 상태 및 Instance별 초기화를 실행합니다.
 - Key가 탭 또는 전역 범위를 점유할 수 있습니다. 다른 권한 있는 Key는 먼저 기존 점유를 명시적으로 해제한 뒤 획득해야 합니다.
 
 정확한 메서드, schema, 권한, 오류의 기준은 Command Registry입니다. `system.describe`는 활성 빌드와 호출 Key의 실제 권한을 반환합니다.
@@ -59,8 +61,8 @@ Browser Key Automation은 Playwright/Selenium 테스트 스위트나 깊은 DevT
 
 [최신 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest)에서 ZIP 두 개를 다운로드하고 각각 별도 디렉터리에 압축을 풉니다.
 
-- 확장 프로그램: `browser-key-automation-extension-v0.0.0.3.zip`
-- 로컬 App: `browser-key-automation-local-app-v0.0.0.3.zip`
+- 확장 프로그램: `browser-key-automation-extension-v0.0.0.4.zip`
+- 로컬 App: `browser-key-automation-local-app-v0.0.0.4.zip`
 
 App ZIP에는 `windows-x86_64/`, `linux-x86_64/`, CLI와 Agent skill이 포함되어 있습니다. 소스 빌드는 필요하지 않습니다.
 
@@ -142,11 +144,17 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 `{ "status": "input_sent" }`는 입력 시퀀스가 받아들여졌다는 뜻일 뿐 웹사이트 업무가 완료되었다는 뜻은 아닙니다. 이후 페이지를 다시 관찰해야 합니다. 알 수 없거나 실패한 네이티브 입력을 자동 재생하지 마십시오. Linux App은 현재 `native.input.click.v1`을 광고하지 않으므로 확장 프로그램이 페이지 준비 전에 `.real`을 거부합니다.
 
+### 네이티브 키보드 입력
+
+`keyboard.type`은 정확한 Unicode 텍스트를 즉시 보내고, `keyboard.typeHuman`은 별도의 제한된 사람 속도 입력 모드입니다. `keyboard.press`는 이름 있는 키와 코드를 받습니다. 단순 이름은 항상 누름과 뗌을 모두 수행하고, 작업 배열은 raw `down`/`up` 상태를 의도적으로 다음 명령까지 유지할 수 있습니다. `keyboard.reset`은 현재 확장 프로그램 Instance가 보유한 키만 해제합니다. `dom.insertText`는 현재 커서나 선택 영역에 적용하는 독립적인 비 trusted DOM 삽입입니다.
+
+네이티브 키보드 명령은 NodeRef 또는 TabRef를 대상으로 하며 정확한 Chromium 창이 전경에 있어야 합니다. 대상이나 전경 창이 바뀌거나 충돌하는 물리 키가 감지되면 App은 추가 입력 전에 중단하고, 이미 수락된 효과는 재생하지 않습니다. Windows는 `native.input.keyboard.v1`을 광고하지만 Linux는 아직 이 backend를 제공하지 않습니다.
+
 ## Key, 권한 및 점유
 
 - 외부 신원은 Key 하나뿐입니다. Agent 브랜드, 프로세스, 계정, socket, App Instance는 추가 인증 신원이 아닙니다.
 - Root는 모든 active 권한을 동적으로 가집니다. Regular는 명시적으로 선택된 권한만 가집니다.
-- JavaScript, 일반 DOM 작업, 네이티브 `.real`, 네트워크 접근, 명시적 `debugger` 접근은 병렬 권한입니다. 하나를 부여해도 다른 권한이 암묵적으로 부여되지 않습니다.
+- JavaScript, 일반 DOM 작업, 네이티브 클릭, 각 네이티브 키보드 작업, 네트워크 접근, 명시적 `debugger` 접근은 병렬 권한입니다. 하나를 부여해도 다른 권한이 암묵적으로 부여되지 않습니다.
 - 같은 Key의 명령은 현재 확장 프로그램 runtime에서 직렬화됩니다. 서로 다른 Key는 독립 lane을 가지지만 동일 페이지에 대한 효과는 경합할 수 있습니다.
 - 점유는 Key 소유입니다. 숨겨진 takeover, force, replace가 없으며 먼저 release하고 그다음 acquire해야 합니다.
 - 전체 Key는 확장 프로그램 내부에 저장됩니다. 신뢰할 수 있는 관리 페이지와 `keys.create` 또는 `keys.reveal` 권한을 별도로 받은 호출자만 이를 받을 수 있습니다. 일반 목록과 진단에는 포함되지 않고, CLI는 `BKA_API_KEY` 또는 명시한 환경 변수에서만 읽습니다.
@@ -157,7 +165,7 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 host access, 제한된 페이지, file URL 접근, **Allow User Scripts**, 확장 프로그램 활성화, DevTools 디버깅 확인은 계속 Chromium이 제어합니다. Root도 이를 우회할 수 없습니다.
 
-Windows와 Linux App은 모두 라우팅과 파일 저장을 제공합니다. Windows는 현재 네이티브 클릭 backend도 광고하지만 Linux는 아직 광고하지 않습니다. 시크릿 모드와 Chromium 파생 브라우저는 각각의 profile과 policy에서 검증해야 합니다.
+Windows와 Linux App은 모두 라우팅과 파일 저장을 제공합니다. Windows는 현재 네이티브 클릭 및 키보드 backend도 광고하지만 Linux는 아직 광고하지 않습니다. 시크릿 모드와 Chromium 파생 브라우저는 각각의 profile과 policy에서 검증해야 합니다.
 
 Agent 연결: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 

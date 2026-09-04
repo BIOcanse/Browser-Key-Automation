@@ -21,8 +21,8 @@ const LOCALES = Object.freeze([
 const REQUIRED_SHARED_TOKENS = Object.freeze([
   "Browser Key Automation",
   "138",
-  "browser-key-automation-extension-v0.0.0.3.zip",
-  "browser-key-automation-local-app-v0.0.0.3.zip",
+  "browser-key-automation-extension-v0.0.0.4.zip",
+  "browser-key-automation-local-app-v0.0.0.4.zip",
   "windows-x86_64",
   "linux-x86_64",
   "manifest.json",
@@ -34,6 +34,7 @@ const REQUIRED_SHARED_TOKENS = Object.freeze([
   "page.tree.expand.v2",
   "page.tree.view.get",
   "page.wait",
+  "ensure.run",
   "page-save",
   "page-shot",
   "element-shot",
@@ -45,6 +46,7 @@ const REQUIRED_SHARED_TOKENS = Object.freeze([
   "demo-open",
   "dom.click.real",
   "native.input.click.v1",
+  "native.input.keyboard.v1",
   "input_sent",
   "chrome.debugger",
   "Playwright",
@@ -177,7 +179,7 @@ test("each README keeps exact language navigation and a complete shared contract
   const expectedH2 = headingCount(baseline, 2);
   const expectedH3 = headingCount(baseline, 3);
   assert.equal(expectedH2, 6);
-  assert.equal(expectedH3, 8);
+  assert.equal(expectedH3, 9);
 
   for (const current of LOCALES) {
     const text = readRepositoryFile(current.file);
@@ -246,6 +248,7 @@ test("public prose contains product facts, not private release coordination", ()
     "skills/browser-key-automation/references/quick-shot-and-demo.md",
     "skills/browser-key-automation/references/wait-and-save.md",
     "skills/browser-key-automation/references/debugger-and-element-capture.md",
+    "skills/browser-key-automation/references/ensure-workflows.md",
     "tools/package-github-release.mjs",
   ];
   for (const file of publicFiles) {
@@ -275,6 +278,7 @@ test("README platform and runtime claims are grounded in active authoring source
   assert.deepEqual(realCommand?.permissionExpression, { allOf: ["dom.click.real"] });
   assert.equal(nativeCapability?.status, "active");
   assert.equal(transportProfile.nativeInputClickCapability, "native.input.click.v1");
+  assert.equal(transportProfile.nativeInputKeyboardCapability, "native.input.keyboard.v1");
   assert.equal(manifest.minimum_chrome_version, "138");
   assert.equal(packageJson.engines?.node, ">=20");
 });

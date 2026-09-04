@@ -59,6 +59,7 @@ function validateParameterDefault(field, value) {
   const integer = Number.isSafeInteger(value);
   const enumValues = {
     debugger_response: ["inline", "artifact"],
+    ensure_mode: ["ensure", "strict"],
     image_format: ["jpeg", "png"],
     scroll_behavior: ["auto", "smooth"],
     scroll_alignment: ["center", "end", "nearest", "start"],
@@ -71,6 +72,8 @@ function validateParameterDefault(field, value) {
     field.valueType === "safe_integer" ? integer && value >= 0 :
     field.valueType === "safe_integer_or_null" ? value === null || integer && value >= 0 :
     field.valueType === "tab_ref_or_null" ? value === null :
+    field.valueType === "trace_ref_or_null" ? value === null :
+    field.valueType === "ensure_condition_or_null" ? value === null :
     field.valueType === "integer_0_100" ? integer && value >= 0 && value <= 100 :
     enumValues[field.valueType]?.includes(value) === true;
   if (!valid) throw new Error(`Invalid parameter default type/value: ${field.fieldName} (${field.valueType})`);
@@ -124,6 +127,17 @@ const usedPermissions = new Set();
 const catalog = {};
 const schemaVersionByMethod = {};
 const parameterDefaultsByMethod = {};
+const ensurePolicyByMethod = {};
+const ensureCompletionKinds = new Set([
+  "derive_active",
+  "derive_focus",
+  "derive_selection",
+  "derive_value",
+  "explicit_goal",
+  "result",
+]);
+const ensureRepeatKinds = new Set(["never", "safe"]);
+const safelyRepeatableEnsureMethods = new Set(["dom.scroll", "dom.select", "dom.setValue"]);
 for (const command of activeCommands) {
   const methodVersion = `${command.method}\n${command.schemaVersion}`;
   if (methodVersions.has(methodVersion)) throw new Error(`Duplicate active method/schemaVersion: ${command.method}`);
@@ -141,6 +155,19 @@ for (const command of activeCommands) {
   }
   const permission = command.permissionExpression.allOf[0];
   usedPermissions.add(permission);
+  if (
+    command.ensurePolicy === null ||
+    typeof command.ensurePolicy !== "object" ||
+    typeof command.ensurePolicy.allowed !== "boolean" ||
+    !ensureCompletionKinds.has(command.ensurePolicy.completion) ||
+    !ensureRepeatKinds.has(command.ensurePolicy.repeat) ||
+    command.ensurePolicy.allowed && command.effectKind !== "page_effect" ||
+    command.ensurePolicy.repeat === "safe" && !safelyRepeatableEnsureMethods.has(command.method) ||
+    !command.ensurePolicy.allowed &&
+      (command.ensurePolicy.completion !== "result" || command.ensurePolicy.repeat !== "never")
+  ) {
+    throw new Error(`${command.stableCommandId} has an invalid ensure policy`);
+  }
   for (const capabilityId of command.capabilityRequirements) {
     if (!activeCapabilities.includes(capabilityId)) {
       throw new Error(`${command.stableCommandId} references a non-active capability: ${capabilityId}`);
@@ -168,8 +195,10 @@ for (const command of activeCommands) {
     requiredPermission: permission,
     effectKind: command.effectKind,
     controlPolicy: command.controlPolicy,
+    ensurePolicy: command.ensurePolicy,
   };
   schemaVersionByMethod[command.method] = command.schemaVersion;
+  ensurePolicyByMethod[command.method] = command.ensurePolicy;
   const defaults = {};
   for (const field of schemaById.get(command.paramsSchema).fields) {
     const fromPoint = Object.hasOwn(field, "defaultFromFreedomPoint");
@@ -251,6 +280,24 @@ if (limits["command.page.wait.default_timeout_ms"] > limits["command.page.wait.m
 if (limits["command.dom.click.real.default_timeout_ms"] > limits["command.dom.click.real.maximum_timeout_ms"]) {
   throw new Error("dom.click.real default timeout exceeds its maximum");
 }
+if (
+  limits["command.keyboard.default_timeout_ms"] > limits["command.keyboard.maximum_short_timeout_ms"] ||
+  limits["command.keyboard.human.default_timeout_ms"] > limits["command.keyboard.maximum_human_timeout_ms"] ||
+  limits["command.keyboard.default_gap_ms"] > limits["command.keyboard.maximum_wait_ms"] ||
+  limits["command.keyboard.default_hold_ms"] > limits["command.keyboard.maximum_wait_ms"]
+) {
+  throw new Error("keyboard defaults must fit their finite operation limits");
+}
+if (
+  limits["command.ensure.default_timeout_ms"] > limits["command.ensure.maximum_timeout_ms"] ||
+  limits["command.ensure.poll_interval_ms"] > limits["command.ensure.maximum_timeout_ms"] ||
+  limits["command.ensure.stable_window_ms"] > limits["command.ensure.maximum_timeout_ms"] ||
+  limits["command.ensure.maximum_condition_depth"] > limits["command.ensure.maximum_condition_nodes"] ||
+  limits["command.ensure.maximum_frame_depth"] > limits["command.ensure.maximum_frame_candidates"] ||
+  limits["command.ensure.maximum_search_scrolls"] > limits["command.ensure.maximum_search_attempts"]
+) {
+  throw new Error("ensure defaults and structural bounds must fit the workflow limits");
+}
 if (limits["client.default_read_timeout_ms"] > limits["client.maximum_read_timeout_ms"]) {
   throw new Error("CLI default read timeout exceeds its maximum");
 }
@@ -258,6 +305,9 @@ if (limits["client.default_read_timeout_ms"] > limits["client.maximum_read_timeo
 const frameBytes = transportProfile.maximumMessageBytes;
 const textBytes = limits["command.tabs.maximum_text_bytes"];
 const inlineResultBytes = limits["command.inline.maximum_result_json_bytes"];
+if ((limits["command.keyboard.maximum_text_bytes"] * 25) + 12000 >= frameBytes) {
+  throw new Error("The worst-case humanized keyboard plan must fit one transport message");
+}
 if (limits["command.debugger.maximum_params_bytes"] + 7 * textBytes + 2048 >= frameBytes) {
   throw new Error("Debugger params, ASCII method, escaped sessionId and envelope must fit one request frame");
 }
@@ -273,6 +323,9 @@ if (limits["command.page.screenshot.default_width"] > limits["command.page.scree
 }
 if (inlineResultBytes + 12000 >= frameBytes) {
   throw new Error("The common inline result budget must leave room for the routed response envelope");
+}
+if (limits["command.trace.maximum_record_json_bytes"] + 4096 > inlineResultBytes) {
+  throw new Error("One execution trace and its response envelope must fit the common inline result budget");
 }
 if ((26 * limits["command.dom.maximum_descriptor_text_characters"] * 6) + 4096 > inlineResultBytes) {
   throw new Error("One worst-case escaped DOM descriptor must fit the common inline result budget");
@@ -310,6 +363,9 @@ if (Math.ceil(limits["command.artifact.upload.maximum_raw_bytes"] * 4 / 3) + 120
 if (limits["build.artifact.chunk_bytes"] < limits["command.artifact.read.maximum_raw_bytes"]) {
   throw new Error("One Artifact read may intersect at most two storage chunks");
 }
+if (limits["command.trace.maximum_record_json_bytes"] > limits["command.trace.maximum_total_json_bytes"]) {
+  throw new Error("One execution trace must fit within the global execution-trace byte bound");
+}
 if (Math.ceil(limits["build.artifact.hard_maximum_bytes"] / limits["build.artifact.chunk_bytes"]) > 1024) {
   throw new Error("One Artifact must have at most 1024 committed storage chunks");
 }
@@ -327,6 +383,7 @@ export const COMMAND_CATALOG = ${JSON.stringify(
     ...catalog,
     schemaVersionByMethod,
     parameterDefaultsByMethod,
+    ensurePolicyByMethod,
     activeCommandIds,
     activePermissionIds: activePermissions,
     activeCapabilityIds: activeCapabilities,

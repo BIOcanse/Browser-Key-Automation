@@ -78,6 +78,18 @@
       "description": "The exact method and schemaVersion pair is not declared in this build."
     },
     {
+      "errorId": "CONDITION_NOT_MET",
+      "code": 1028,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Only after the declared strict precondition changes or the caller intentionally changes the request.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A strict workflow precondition was observed false, so no preparation or action was attempted."
+    },
+    {
       "errorId": "CONTROL_OCCUPIED",
       "code": 1014,
       "status": "active",
@@ -250,10 +262,10 @@
         "extension",
         "platform"
       ],
-      "retryCondition": "Correct the reported state; never silently replay when clickState is unknown.",
+      "retryCondition": "Correct the reported state; never silently replay when clickState or inputState is unknown or when inputState is partially_sent.",
       "effectEvidence": "PhaseSensitive",
       "secretRedaction": "all_diagnostics_only",
-      "description": "The native click could not be safely addressed or fully confirmed; details state the phase and whether input is known absent."
+      "description": "Native pointer or keyboard input could not be safely addressed or fully confirmed; command-specific details state the phase and delivery evidence."
     },
     {
       "errorId": "RESULT_WITHHELD",
@@ -332,6 +344,19 @@
       "description": "The syntactically valid TabRef belongs to an unprovable runtime or no longer resolves to its original live Chromium tab."
     },
     {
+      "errorId": "TARGET_AMBIGUOUS",
+      "code": 1029,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "platform"
+      ],
+      "retryCondition": "Use a locator that resolves uniquely or explicitly request first-match semantics.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A unique locator matched more than one live element before any action was dispatched."
+    },
+    {
       "errorId": "TARGET_REF_STALE",
       "code": 1022,
       "status": "active",
@@ -343,6 +368,19 @@
       "effectEvidence": "KnownNoEffect",
       "secretRedaction": "all_diagnostics_only",
       "description": "The DocumentRef or NodeRef no longer resolves to its original live document or isolated-world node token."
+    },
+    {
+      "errorId": "TRACE_NOT_FOUND",
+      "code": 1030,
+      "status": "active",
+      "producerSurfaces": [
+        "extension",
+        "storage"
+      ],
+      "retryCondition": "Only with an owner-visible retained TraceRef, or after another non-trace command completes.",
+      "effectEvidence": "KnownNoEffect",
+      "secretRedaction": "all_values",
+      "description": "The execution trace is unknown, evicted, or owned by another Key; the response does not disclose which."
     },
     {
       "errorId": "UNAUTHENTICATED",

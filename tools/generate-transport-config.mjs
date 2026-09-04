@@ -58,6 +58,22 @@ const nativeInputWindowMatchPollMs = requirePoint("transport.native_input.window
   family: "build", kind: "integer", owner: "build_profile", updateClass: "rebuild",
   editableInSettings: false, status: "active", emitTargets: ["zig"],
 }).defaultInteger;
+const nativeKeyboardMaximumChordKeys = requirePoint("command.keyboard.maximum_chord_keys", {
+  family: "build", kind: "integer", owner: "build_profile", updateClass: "rebuild",
+  editableInSettings: false, status: "active", emitTargets: ["typescript", "zig"],
+}).defaultInteger;
+const nativeKeyboardMaximumSequenceActions = requirePoint("command.keyboard.maximum_sequence_actions", {
+  family: "build", kind: "integer", owner: "build_profile", updateClass: "rebuild",
+  editableInSettings: false, status: "active", emitTargets: ["typescript", "zig"],
+}).defaultInteger;
+const nativeKeyboardMaximumTextBytes = requirePoint("command.keyboard.maximum_text_bytes", {
+  family: "build", kind: "integer", owner: "build_profile", updateClass: "rebuild",
+  editableInSettings: false, status: "active", emitTargets: ["typescript", "zig"],
+}).defaultInteger;
+const nativeKeyboardMaximumWaitMs = requirePoint("command.keyboard.maximum_wait_ms", {
+  family: "build", kind: "integer", owner: "build_profile", updateClass: "rebuild",
+  editableInSettings: false, status: "active", emitTargets: ["typescript", "zig"],
+}).defaultInteger;
 
 const handshakePoint = requirePoint("transport.handshake_timeout_ms", {
   family: "build", kind: "integer", owner: "build_profile", updateClass: "rebuild",
@@ -74,6 +90,9 @@ if (!bind || bind.host !== "127.0.0.1" || !Number.isInteger(bind.port)) {
 }
 if (profile.nativeInputClickCapability !== "native.input.click.v1") {
   throw new Error("The native input capability token must match the v1 subprotocol contract");
+}
+if (profile.nativeInputKeyboardCapability !== "native.input.keyboard.v1") {
+  throw new Error("The native keyboard capability token must match the v1 subprotocol contract");
 }
 if (!Number.isInteger(retryIntervalMs) || retryIntervalMs < 1000) {
   throw new Error("transport.retry_interval_ms must be an integer >= 1000");
@@ -135,9 +154,14 @@ pub const client_path = ${zigString(profile.clientPath)};
 pub const extension_subprotocol = ${zigString(profile.extensionSubprotocol)};
 pub const client_subprotocol = ${zigString(profile.clientSubprotocol)};
 pub const native_input_click_capability = ${zigString(profile.nativeInputClickCapability)};
+pub const native_input_keyboard_capability = ${zigString(profile.nativeInputKeyboardCapability)};
 pub const expected_extension_origin = ${zigString(extensionOrigin)};
 pub const retry_interval_ms: u32 = ${retryIntervalMs};
 pub const native_input_window_match_poll_ms: u32 = ${nativeInputWindowMatchPollMs};
+pub const native_keyboard_maximum_chord_keys: usize = ${nativeKeyboardMaximumChordKeys};
+pub const native_keyboard_maximum_wire_actions: usize = ${nativeKeyboardMaximumSequenceActions * 2};
+pub const native_keyboard_maximum_text_bytes: usize = ${nativeKeyboardMaximumTextBytes};
+pub const native_keyboard_maximum_wait_ms: u32 = ${nativeKeyboardMaximumWaitMs};
 pub const maximum_http_head_bytes: usize = ${profile.maximumHttpHeadBytes};
 pub const maximum_message_bytes: usize = ${profile.maximumMessageBytes};
 pub const maximum_online_extensions: usize = ${profile.maximumOnlineExtensions};
@@ -156,6 +180,7 @@ export const TRANSPORT_CONFIG = ${JSON.stringify(
     expectedExtensionId: extensionId,
     expectedExtensionOrigin: extensionOrigin,
     nativeInputClickCapability: profile.nativeInputClickCapability,
+    nativeInputKeyboardCapability: profile.nativeInputKeyboardCapability,
     nativeInputResponseMarginMs,
     retryIntervalMs,
     handshakeTimeoutMs,

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const commands = JSON.parse(await readFile(new URL("../../registries/commands.registry.json", import.meta.url), "utf8"));
 const ui = JSON.parse(await readFile(new URL("../../registries/ui.registry.json", import.meta.url), "utf8"));
+const groupPermissions = (groupId) => [...ui.permissionGroups.find((group) => group.groupId === groupId).permissionIds].sort();
 
 export async function probePermissionGroups(pageClient) {
   const samples = await pageEvaluate(pageClient, () => {
@@ -77,12 +78,14 @@ export async function probePermissionGroups(pageClient) {
   assert.equal(samples.initial.collapsed, true);
   assert.deepEqual(samples.cleared, []);
   assert.equal(samples.resetCount, samples.initial.count);
-  assert.deepEqual(samples.domOnly, ["dom.click", "dom.focus", "dom.scroll", "dom.select", "dom.setValue"]);
-  assert.deepEqual(samples.partial, { selected: ["dom.click", "dom.focus", "dom.select", "dom.setValue"], dom: { checked: false, mixed: true }, allMixed: true });
+  const domPermissions = groupPermissions("dom");
+  const nativePermissions = groupPermissions("native-input");
+  assert.deepEqual(samples.domOnly, domPermissions);
+  assert.deepEqual(samples.partial, { selected: domPermissions.filter((permission) => permission !== "dom.scroll"), dom: { checked: false, mixed: true }, allMixed: true });
   assert.deepEqual(samples.nativeIndependent, { native: true, javascript: false, dom: { checked: false, mixed: true } });
   assert.deepEqual(samples.debuggerIndependent, { debugger: true, javascript: true, native: true });
   assert.deepEqual(samples.filled, { checked: true, mixed: false });
-  assert.deepEqual(samples.domCleared, ["dom.click.real", "js.execute"]);
+  assert.deepEqual(samples.domCleared, [...nativePermissions, "js.execute"].sort());
   assert.deepEqual(samples.root, { hidden: true, note: true, disabled: true });
   assert.deepEqual(samples.backToRegular, { selected: samples.domCleared, enabled: true });
   for (const locale of samples.locales) {

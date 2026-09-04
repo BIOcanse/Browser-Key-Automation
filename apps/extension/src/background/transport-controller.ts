@@ -3,8 +3,11 @@ import { TRANSPORT_CONFIG } from "../generated/transport-config.js";
 import {
   NATIVE_INPUT_MESSAGE_CHANNEL,
   isNativeInputClickResponse,
+  isNativeInputKeyboardResponse,
   type NativeInputClickRequest,
   type NativeInputClickResponse,
+  type NativeInputKeyboardRequest,
+  type NativeInputKeyboardResponse,
 } from "../shared/native-input-protocol.js";
 import { CapabilityUnavailableError } from "./capability-error.js";
 import { NativeInputError } from "./native-input-error.js";
@@ -67,6 +70,17 @@ export function assertNativeInputClickAvailable(): number {
   return connectedGeneration;
 }
 
+export function assertNativeInputKeyboardAvailable(): number {
+  if (connectedGeneration === null || !connectedCapabilities.includes(TRANSPORT_CONFIG.nativeInputKeyboardCapability)) {
+    throw new CapabilityUnavailableError(
+      "platform.relay.native_keyboard",
+      "NATIVE_BACKEND_UNAVAILABLE",
+      "The connected local App does not advertise the native keyboard backend",
+    );
+  }
+  return connectedGeneration;
+}
+
 export async function requestNativeClick(
   request: NativeInputClickRequest,
   timeoutMs: number,
@@ -85,6 +99,33 @@ export async function requestNativeClick(
   }
   if (!isNativeInputClickResponse(response, request.requestId)) {
     throw new NativeInputError({ reason: "native_response_invalid", phase: "input", clickState: "unknown" });
+  }
+  if (!response.ok) throw new NativeInputError(response.error);
+  return response;
+}
+
+export async function requestNativeKeyboard(
+  request: NativeInputKeyboardRequest,
+  timeoutMs: number,
+): Promise<Extract<NativeInputKeyboardResponse, { readonly ok: true }>> {
+  const connectionGeneration = assertNativeInputKeyboardAvailable();
+  let response: unknown;
+  try {
+    response = await chrome.runtime.sendMessage({
+      channel: NATIVE_INPUT_MESSAGE_CHANNEL,
+      connectionGeneration,
+      timeoutMs,
+      payload: request,
+    });
+  } catch {
+    throw new NativeInputError({
+      reason: "transport_disconnected", phase: "input", inputState: "unknown", completedActions: 0,
+    });
+  }
+  if (!isNativeInputKeyboardResponse(response, request.requestId)) {
+    throw new NativeInputError({
+      reason: "native_response_invalid", phase: "input", inputState: "unknown", completedActions: 0,
+    });
   }
   if (!response.ok) throw new NativeInputError(response.error);
   return response;

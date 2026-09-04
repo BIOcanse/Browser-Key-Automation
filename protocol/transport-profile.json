@@ -7,6 +7,7 @@
   "extensionSubprotocol": "browser-key-extension-v1",
   "clientSubprotocol": "browser-key-client-v1",
   "nativeInputClickCapability": "native.input.click.v1",
+  "nativeInputKeyboardCapability": "native.input.keyboard.v1",
   "maximumHttpHeadBytes": 8192,
   "maximumMessageBytes": 65536,
   "maximumOnlineExtensions": 64,

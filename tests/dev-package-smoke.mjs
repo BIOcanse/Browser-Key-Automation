@@ -9,10 +9,9 @@ import { fileURLToPath } from "node:url";
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputRoot = path.resolve(workspaceRoot, process.argv[2] ?? "out");
 const extensionRoot = path.join(outputRoot, "browser-key-automation-extension-dev");
-const windowsAppRoot = path.join(
-  outputRoot,
-  "browser-key-automation-local-app-windows-x86_64-dev",
-);
+const windowsAppName = "browser-key-automation-local-app-windows-x86_64-dev";
+const windowsAppBaseRoot = path.join(outputRoot, windowsAppName);
+const windowsAppRoot = await resolveCurrentWindowsAppRoot(outputRoot, windowsAppName);
 const linuxAppRoot = path.join(
   outputRoot,
   "browser-key-automation-local-app-linux-x86_64-dev",
@@ -46,7 +45,7 @@ const linuxChecksumCount = await verifyChecksums(linuxAppRoot);
 
 const manifest = JSON.parse(await readFile(path.join(extensionRoot, "manifest.json"), "utf8"));
 assert.equal(manifest.name, "Browser Key Automation");
-assert.equal(manifest.version, "0.0.0.3");
+assert.equal(manifest.version, "0.0.0.4");
 assert.equal(manifest.minimum_chrome_version, "138");
 assert.equal(manifest.action.default_title, "__MSG_actionTitle__");
 assert.deepEqual(manifest.action.default_icon, {
@@ -140,7 +139,7 @@ assert.ok(JSON.parse(help.stdout.trim()).usage.some((item) => item.includes("dem
 
 if (process.platform === "win32") {
   const extensionZip = `${extensionRoot}.zip`;
-  const windowsZip = `${windowsAppRoot}.zip`;
+  const windowsZip = `${windowsAppBaseRoot}.zip`;
   const linuxZip = `${linuxAppRoot}.zip`;
   const extensionEntries = await listZip(extensionZip);
   const windowsEntries = await listZip(windowsZip);
@@ -174,10 +173,36 @@ console.log(
     linuxChecksumCount,
     windowsRelayFormat: "PE",
     linuxRelayFormat: "ELF",
+    windowsUnpackedDirectory: path.basename(windowsAppRoot),
     splitArchivesVerified: process.platform === "win32",
     legacyCombinedPackageAbsent: true,
   }),
 );
+
+async function resolveCurrentWindowsAppRoot(root, baseName) {
+  const expectedCommands = await readFile(path.join(workspaceRoot, "registries", "commands.registry.json"), "utf8");
+  const expectedFreedom = await readFile(path.join(workspaceRoot, "registries", "freedom.registry.json"), "utf8");
+  const candidates = (await readdir(root, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory() &&
+      (entry.name === baseName || new RegExp(`^${baseName}-build-[a-f0-9]{12}$`, "u").test(entry.name)))
+    .map((entry) => path.join(root, entry.name));
+  const current = [];
+  for (const candidate of candidates) {
+    try {
+      const commands = await readFile(path.join(candidate, "skill", "browser-key-automation", "references", "commands.registry.json"), "utf8");
+      const freedom = await readFile(path.join(candidate, "skill", "browser-key-automation", "references", "freedom.registry.json"), "utf8");
+      await stat(path.join(candidate, "skill", "browser-key-automation", "references", "debugger-and-element-capture.md"));
+      if (commands === expectedCommands && freedom === expectedFreedom) {
+        current.push({ candidate, modifiedAt: (await stat(candidate)).mtimeMs });
+      }
+    } catch {
+      // A locked historical package may be incomplete; it is not the just-published fallback candidate.
+    }
+  }
+  current.sort((left, right) => right.modifiedAt - left.modifiedAt || left.candidate.localeCompare(right.candidate, "en"));
+  assert.ok(current.length > 0, "No unpacked Windows App package matches the current registries");
+  return current[0].candidate;
+}
 
 async function verifyChecksums(root) {
   const checksumText = await readFile(path.join(root, "SHA256SUMS.txt"), "utf8");

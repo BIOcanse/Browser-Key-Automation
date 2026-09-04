@@ -2,11 +2,30 @@ const std = @import("std");
 
 const BOOL = i32;
 const UINT = u32;
+const DWORD = u32;
 const WPARAM = usize;
 const LPARAM = isize;
 const HWND = ?*anyopaque;
 
 const RECT = extern struct { left: i32, top: i32, right: i32, bottom: i32 };
+const MOUSEINPUT = extern struct {
+    dx: i32,
+    dy: i32,
+    mouse_data: DWORD,
+    flags: DWORD,
+    time: DWORD,
+    extra_info: usize,
+};
+const KEYBDINPUT = extern struct {
+    virtual_key: u16,
+    scan_code: u16,
+    flags: DWORD,
+    time: DWORD,
+    extra_info: usize,
+};
+const HARDWAREINPUT = extern struct { message: DWORD, parameter_low: u16, parameter_high: u16 };
+const INPUT_VALUE = extern union { mouse: MOUSEINPUT, keyboard: KEYBDINPUT, hardware: HARDWAREINPUT };
+const INPUT = extern struct { kind: DWORD, value: INPUT_VALUE };
 const EnumProc = *const fn (HWND, LPARAM) callconv(.winapi) BOOL;
 
 extern "user32" fn EnumWindows(callback: EnumProc, value: LPARAM) callconv(.winapi) BOOL;
@@ -19,7 +38,9 @@ extern "user32" fn IsWindow(window: HWND) callconv(.winapi) BOOL;
 extern "user32" fn IsWindowVisible(window: HWND) callconv(.winapi) BOOL;
 extern "user32" fn IsIconic(window: HWND) callconv(.winapi) BOOL;
 extern "user32" fn GetAsyncKeyState(key: i32) callconv(.winapi) i16;
+extern "user32" fn GetForegroundWindow() callconv(.winapi) HWND;
 extern "user32" fn PostMessageW(window: HWND, message: UINT, wparam: WPARAM, lparam: LPARAM) callconv(.winapi) BOOL;
+extern "user32" fn SendInput(count: UINT, inputs: [*]const INPUT, size: i32) callconv(.winapi) UINT;
 extern "user32" fn SetThreadDpiAwarenessContext(value: HWND) callconv(.winapi) HWND;
 
 pub const ClickError = error{
@@ -31,6 +52,16 @@ pub const ClickError = error{
     MoveFailed,
     DownFailed,
     UpFailed,
+};
+
+pub const KeyboardTargetError = error{
+    WindowNotMatched,
+    ForegroundMismatch,
+};
+
+pub const SendResult = struct {
+    accepted: usize,
+    total: usize,
 };
 
 const TopContext = struct {
@@ -123,6 +154,94 @@ fn held(key: i32) bool {
     return (GetAsyncKeyState(key) & @as(i16, @bitCast(@as(u16, 0x8000)))) != 0;
 }
 
+fn markedTopWindow(marker: []const u8) ?HWND {
+    var top: TopContext = .{ .marker = marker };
+    _ = EnumWindows(topCallback, lparamFor(&top));
+    return if (top.count == 1 and top.selected != null) top.selected else null;
+}
+
+pub fn keyboardTargetReady(marker: []const u8) KeyboardTargetError!void {
+    const top = markedTopWindow(marker) orelse return error.WindowNotMatched;
+    if (GetForegroundWindow() != top) return error.ForegroundMismatch;
+}
+
+fn trackedModifierFamily(owners: *const [256]u64, virtual_key: usize) bool {
+    return switch (virtual_key) {
+        0x10 => owners[0xa0] != 0 or owners[0xa1] != 0,
+        0x11 => owners[0xa2] != 0 or owners[0xa3] != 0,
+        0x12 => owners[0xa4] != 0 or owners[0xa5] != 0,
+        0xa0, 0xa1 => owners[0x10] != 0,
+        0xa2, 0xa3 => owners[0x11] != 0,
+        0xa4, 0xa5 => owners[0x12] != 0,
+        else => false,
+    };
+}
+
+pub fn hasUntrackedUserInput(owners: *const [256]u64) bool {
+    var virtual_key: usize = 1;
+    while (virtual_key < owners.len) : (virtual_key += 1) {
+        if (owners[virtual_key] == 0 and !trackedModifierFamily(owners, virtual_key) and held(@intCast(virtual_key))) return true;
+    }
+    return false;
+}
+
+test "aggregate and sided modifier virtual keys share one tracked family" {
+    var owners = [_]u64{0} ** 256;
+    try std.testing.expect(!trackedModifierFamily(&owners, 0x11));
+    owners[0xa2] = 7;
+    try std.testing.expect(trackedModifierFamily(&owners, 0x11));
+    owners[0xa2] = 0;
+    owners[0x11] = 7;
+    try std.testing.expect(trackedModifierFamily(&owners, 0xa2));
+    try std.testing.expect(trackedModifierFamily(&owners, 0xa3));
+}
+
+fn keyboardInput(virtual_key: u16, scan_code: u16, flags: DWORD) INPUT {
+    return .{
+        .kind = 1,
+        .value = .{ .keyboard = .{
+            .virtual_key = virtual_key,
+            .scan_code = scan_code,
+            .flags = flags,
+            .time = 0,
+            .extra_info = 0,
+        } },
+    };
+}
+
+pub fn sendVirtualKey(virtual_key: u16, extended: bool, down: bool) SendResult {
+    const extended_flag: DWORD = if (extended) 0x0001 else 0;
+    const up_flag: DWORD = if (down) 0 else 0x0002;
+    const input = keyboardInput(virtual_key, 0, extended_flag | up_flag);
+    return .{ .accepted = SendInput(1, @ptrCast(&input), @sizeOf(INPUT)), .total = 1 };
+}
+
+pub fn sendUnicodeScalar(codepoint: u21) SendResult {
+    var units: [2]u16 = undefined;
+    const unit_count: usize = if (codepoint <= 0xffff) single: {
+        units[0] = @intCast(codepoint);
+        break :single 1;
+    } else supplementary: {
+        const value: u32 = @as(u32, codepoint) - 0x10000;
+        units[0] = @intCast(0xd800 + (value >> 10));
+        units[1] = @intCast(0xdc00 + (value & 0x3ff));
+        break :supplementary 2;
+    };
+    var inputs: [4]INPUT = undefined;
+    var input_count: usize = 0;
+    var index: usize = 0;
+    while (index < unit_count) : (index += 1) {
+        inputs[input_count] = keyboardInput(0, units[index], 0x0004);
+        input_count += 1;
+        inputs[input_count] = keyboardInput(0, units[index], 0x0004 | 0x0002);
+        input_count += 1;
+    }
+    return .{
+        .accepted = SendInput(@intCast(input_count), &inputs, @sizeOf(INPUT)),
+        .total = input_count,
+    };
+}
+
 fn pointLparam(request: anytype, width: i32, height: i32) ClickError!LPARAM {
     const scaled_x = @round(request.point.x * @as(f64, @floatFromInt(width)) / request.viewport.width);
     const scaled_y = @round(request.point.y * @as(f64, @floatFromInt(height)) / request.viewport.height);
@@ -141,22 +260,20 @@ pub fn click(request: anytype) ClickError!void {
     const previous_dpi = SetThreadDpiAwarenessContext(per_monitor_v2);
     defer _ = SetThreadDpiAwarenessContext(previous_dpi);
 
-    var top: TopContext = .{ .marker = request.marker };
-    _ = EnumWindows(topCallback, lparamFor(&top));
-    if (top.count != 1 or top.selected == null) return error.WindowNotMatched;
+    const top_window = markedTopWindow(request.marker) orelse return error.WindowNotMatched;
 
     var content: ContentContext = .{
-        .root = top.selected,
+        .root = top_window,
         .viewport_width = request.viewport.width,
         .viewport_height = request.viewport.height,
     };
-    _ = EnumChildWindows(top.selected, contentCallback, lparamFor(&content));
+    _ = EnumChildWindows(top_window, contentCallback, lparamFor(&content));
     if (content.count != 1 or content.selected == null) return error.ContentNotMatched;
 
     if (held(1) or held(2) or held(4) or held(16) or held(17) or held(18)) return error.UserInputConflict;
-    if (IsWindow(top.selected) == 0 or IsWindowVisible(top.selected) == 0 or IsIconic(top.selected) != 0 or
+    if (IsWindow(top_window) == 0 or IsWindowVisible(top_window) == 0 or IsIconic(top_window) != 0 or
         IsWindow(content.selected) == 0 or IsWindowVisible(content.selected) == 0 or
-        GetAncestor(content.selected, 2) != top.selected) return error.GeometryChanged;
+        GetAncestor(content.selected, 2) != top_window) return error.GeometryChanged;
     const current = positiveClientRect(content.selected) orelse return error.GeometryChanged;
     if (current.width != content.width or current.height != content.height) return error.GeometryChanged;
     const lparam = try pointLparam(request, current.width, current.height);

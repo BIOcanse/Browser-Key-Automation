@@ -149,6 +149,10 @@ async function observe(request: PageWaitRequest, ended: () => boolean): Promise<
   };
 }
 
+export function observePageCondition(request: PageWaitRequest): Promise<PageWaitObservation | null> {
+  return observe(request, () => false);
+}
+
 export async function waitForPage(request: PageWaitRequest): Promise<PageWaitResult> {
   const started = performance.now();
   const expired = Symbol("wait-deadline");

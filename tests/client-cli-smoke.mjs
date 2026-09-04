@@ -128,6 +128,7 @@ try {
         reflectedCredential: apiKey,
         embeddedCredential: `before:${apiKey}:after`,
       },
+      trace: { state: "complete", traceRef: `xr1.${"T".repeat(43)}` },
     },
   });
   const success = await successfulCall;
@@ -135,6 +136,7 @@ try {
   assert.equal(success.lines.length, 1);
   assert.equal(success.json.ok, true);
   assert.equal(success.json.delivery, "extension_response");
+  assert.deepEqual(success.json.trace, { state: "complete", traceRef: `xr1.${"T".repeat(43)}` });
   assert.deepEqual(success.json.result, {
     product: "browser-key-automation",
     reflectedCredential: "[REDACTED_API_KEY]",
@@ -155,6 +157,7 @@ try {
       clientRequestId: rejectedRoute.payload.clientRequestId,
       ok: false,
       error: { code: "FORBIDDEN", details: { reflectedCredential: apiKey } },
+      trace: { state: "not_admitted", traceRef: null },
     },
   });
   const rejected = await rejectedCall;
@@ -162,12 +165,71 @@ try {
   assert.equal(rejected.lines.length, 1);
   assert.equal(rejected.json.ok, false);
   assert.equal(rejected.json.delivery, "extension_response");
+  assert.deepEqual(rejected.json.trace, { state: "not_admitted", traceRef: null });
   assert.deepEqual(rejected.json.error, {
     code: "FORBIDDEN",
     details: { reflectedCredential: "[REDACTED_API_KEY]" },
   });
   assert.equal(rejected.stdout.includes(apiKey), false);
   assert.equal(rejected.stderr.includes(apiKey), false);
+
+  const partialCall = runCli(
+    ["call", "--method", "tabs.list", "--params-json", "{\"afterTabId\":null,\"limit\":10}", "--read-timeout-ms", "5000"],
+    apiKey,
+  );
+  const partialRoute = await readRouteOrCliExit(extension, partialCall);
+  extension.sendJson({
+    kind: "route.response",
+    routeId: partialRoute.routeId,
+    payload: {
+      clientRequestId: partialRoute.payload.clientRequestId,
+      ok: false,
+      error: { code: "INTERNAL_ERROR" },
+      trace: { state: "partial", traceRef: `xr1.${"P".repeat(43)}` },
+    },
+  });
+  const partial = await partialCall;
+  assert.equal(partial.code, 5, partial.stderr);
+  assert.deepEqual(partial.json.trace, { state: "partial", traceRef: `xr1.${"P".repeat(43)}` });
+
+  const unavailableCall = runCli(
+    ["call", "--method", "system.describe", "--params-json", "{}", "--read-timeout-ms", "5000"],
+    apiKey,
+  );
+  const unavailableRoute = await readRouteOrCliExit(extension, unavailableCall);
+  extension.sendJson({
+    kind: "route.response",
+    routeId: unavailableRoute.routeId,
+    payload: {
+      clientRequestId: unavailableRoute.payload.clientRequestId,
+      ok: true,
+      result: { product: "browser-key-automation" },
+      trace: { state: "unavailable", traceRef: null },
+    },
+  });
+  const traceUnavailable = await unavailableCall;
+  assert.equal(traceUnavailable.code, 0, traceUnavailable.stderr);
+  assert.deepEqual(traceUnavailable.json.trace, { state: "unavailable", traceRef: null });
+
+  const malformedTraceCall = runCli(
+    ["call", "--method", "system.describe", "--params-json", "{}", "--read-timeout-ms", "5000"],
+    apiKey,
+  );
+  const malformedTraceRoute = await readRouteOrCliExit(extension, malformedTraceCall);
+  extension.sendJson({
+    kind: "route.response",
+    routeId: malformedTraceRoute.routeId,
+    payload: {
+      clientRequestId: malformedTraceRoute.payload.clientRequestId,
+      ok: true,
+      result: {},
+      trace: { state: "complete", traceRef: null },
+    },
+  });
+  const malformedTrace = await malformedTraceCall;
+  assert.equal(malformedTrace.code, 6, malformedTrace.stderr);
+  assert.equal(malformedTrace.json.error.code, "ROUTE_RESPONSE_INVALID");
+  assert.equal(malformedTrace.json.delivery, "unknown");
 
   const noKey = await runCli(
     ["call", "--method", "system.describe", "--read-timeout-ms", "5000"],
@@ -228,7 +290,7 @@ async function connectExtension() {
   assert.deepEqual(await socket.readJson(), {
     kind: "role.ready",
     role: "extension",
-    capabilities: process.platform === "win32" ? ["native.input.click.v1"] : [],
+    capabilities: process.platform === "win32" ? ["native.input.click.v1", "native.input.keyboard.v1"] : [],
   });
   return socket;
 }

@@ -71,7 +71,41 @@ try {
     auth: { apiKey: "synthetic-key" }, command: { method: "system.describe", schemaVersion: 1, params: {} },
   };
   client.sendJson(pendingRequest);
-  assert.equal((await firstExtension.readJson()).kind, "route.request", "request reached the retiring instance");
+  const routed = await firstExtension.readJson();
+  assert.equal(routed.kind, "route.request", "request reached the retiring instance");
+  firstExtension.sendJson({
+    kind: "native.input.keyboard",
+    requestId: "nk1.reset-route-owned",
+    routeId: routed.routeId,
+    timeoutMs: 1000,
+    marker: null,
+    operation: { kind: "reset" },
+  });
+  const resetResult = await firstExtension.readJson();
+  assert.equal(resetResult.kind, "native.keyboard.result");
+  if (process.platform === "win32") {
+    assert.deepEqual(resetResult, {
+      kind: "native.keyboard.result",
+      requestId: "nk1.reset-route-owned",
+      ok: true,
+      result: { status: "input_sent", completedActions: 0, submittedScalars: 0, correctedMistakes: 0, heldVirtualKeys: [] },
+    });
+  } else {
+    assert.equal(resetResult.ok, false);
+    assert.equal(resetResult.error.reason, "backend_unavailable");
+  }
+  firstExtension.sendJson({
+    kind: "native.input.keyboard",
+    requestId: "nk1.stale-route",
+    routeId: "999999",
+    timeoutMs: 1000,
+    marker: null,
+    operation: { kind: "reset" },
+  });
+  const staleKeyboard = await firstExtension.readJson();
+  assert.deepEqual(staleKeyboard.error, {
+    reason: "stale_route", phase: "prepare", inputState: "not_sent", completedActions: 0,
+  });
   firstExtension.close();
   assert.deepEqual(await client.readJson(), { kind: "transport.error", error: "EXTENSION_DISCONNECTED" });
   client.sendJson({ ...pendingRequest, clientRequestId: "after-unregister" });
@@ -119,7 +153,7 @@ async function connectExtension() {
   assert.deepEqual(await socket.readJson(), {
     kind: "role.ready",
     role: "extension",
-    capabilities: process.platform === "win32" ? ["native.input.click.v1"] : [],
+    capabilities: process.platform === "win32" ? ["native.input.click.v1", "native.input.keyboard.v1"] : [],
   });
   return socket;
 }

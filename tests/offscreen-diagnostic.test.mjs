@@ -31,6 +31,8 @@ test("offscreen diagnostics retain status only while forwarding the full request
     /import \{[\s\S]*?\} from "\.\/shared\/native-input-protocol\.js";\s*/u,
     `const NATIVE_INPUT_MESSAGE_CHANNEL = "browser-key-automation.native-input.v1";
      const isNativeInputClickResponse = (value) => value?.kind === "native.input.result" &&
+       typeof value.requestId === "string" && typeof value.ok === "boolean";
+     const isNativeInputKeyboardResponse = (value) => value?.kind === "native.keyboard.result" &&
        typeof value.requestId === "string" && typeof value.ok === "boolean";\n`,
   ).replace("export {};", "");
   vm.runInContext(executable, context);
@@ -69,4 +71,19 @@ test("offscreen diagnostics retain status only while forwarding the full request
     kind: "native.input.result", requestId: "ni1.test", ok: true, result: { status: "input_sent" },
   });
   assert.equal(messages.at(-1).payload.kind, "transport.connected", "native child response must not enter command dispatch");
+
+  const keyboardRequest = {
+    kind: "native.input.keyboard", requestId: "nk1.test", routeId: "2", timeoutMs: 1000,
+    marker: null, operation: { kind: "reset" },
+  };
+  assert.equal(runtimeListener(
+    { channel: "browser-key-automation.native-input.v1", connectionGeneration: 7, timeoutMs: 1000, payload: keyboardRequest },
+    { id: "extension-id" },
+    (value) => { nativeResponse = value; },
+  ), true);
+  listeners.get("message")({ data: { kind: "transport.inbound", connectionGeneration: 7, payload: {
+    kind: "native.keyboard.result", requestId: "nk1.test", ok: true,
+    result: { status: "input_sent", completedActions: 0, submittedScalars: 0, correctedMistakes: 0, heldVirtualKeys: [] },
+  } } });
+  assert.equal(nativeResponse.kind, "native.keyboard.result");
 });

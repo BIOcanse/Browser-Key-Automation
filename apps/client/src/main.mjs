@@ -23,6 +23,7 @@ const DEFAULT_READ_TIMEOUT_MS = TRANSPORT.defaultReadTimeoutMs;
 const MAXIMUM_READ_TIMEOUT_MS = TRANSPORT.maximumReadTimeoutMs;
 const API_KEY_PATTERN = /^bk1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$/u;
 const RELAY_EPOCH_PATTERN = /^[A-Za-z0-9_-]{22}$/u;
+const TRACE_REF_PATTERN = /^xr1\.[A-Za-z0-9_-]{43}$/u;
 const INSTANCE_NUMBER_PATTERN = /^[1-9][0-9]*$/u;
 const METHOD_PATTERN = /^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)+$/u;
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/u;
@@ -245,16 +246,18 @@ async function forwardCommand(connection, readTimeoutMs, targetInstance, apiKey,
     response.kind !== "route.response" ||
     !isRecord(response.payload) ||
     response.payload.clientRequestId !== clientRequestId ||
-    typeof response.payload.ok !== "boolean"
+    typeof response.payload.ok !== "boolean" ||
+    !isTraceMetadata(response.payload.trace)
   ) {
     throw failure("ROUTE_RESPONSE_INVALID", EXIT.deliveryUnknown, "unknown");
   }
+  const trace = response.payload.trace;
 
   if (!response.payload.ok) {
     const business = isRecord(response.payload.error) && typeof response.payload.error.code === "string"
       ? response.payload.error : { code: "BUSINESS_ERROR_INVALID" };
     const error = failure(business.code, EXIT.business, "extension_response", business.details);
-    error.responseMetadata = { targetInstance, clientRequestId };
+    error.responseMetadata = { targetInstance, clientRequestId, trace };
     throw error;
   }
 
@@ -264,6 +267,7 @@ async function forwardCommand(connection, readTimeoutMs, targetInstance, apiKey,
     delivery: "extension_response",
     targetInstance,
     clientRequestId,
+    trace,
     result: response.payload.result,
   };
 }
@@ -471,6 +475,14 @@ function hasExactKeys(value, expected) {
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isTraceMetadata(value) {
+  if (!hasExactKeys(value, ["state", "traceRef"])) return false;
+  if (value.state === "complete" || value.state === "partial") {
+    return typeof value.traceRef === "string" && TRACE_REF_PATTERN.test(value.traceRef);
+  }
+  return (value.state === "unavailable" || value.state === "not_admitted") && value.traceRef === null;
 }
 
 function helpOutput() {

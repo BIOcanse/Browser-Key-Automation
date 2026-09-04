@@ -10,6 +10,7 @@ Browser Key Automation 把你正在使用的 Chromium 瀏覽器變成供可信 A
 
 - **無縫操作眼前這一個瀏覽器。** 隨時列出、建立、選取、導覽、重新整理與關閉分頁，同時保留使用者真實的登入狀態、Cookie、擴充功能與手動到達的頁面狀態。
 - **把完整網頁變成 Agent 看得懂的乾淨視圖。** 快取的 canonical 操作樹始終保留整體結構，只展開請求的分支；每枚 Key 的展開狀態會保留到文件改變，並可一次性讀取指定深度、區間或子樹而不改變快取狀態。
+- **讓狀態變更自行證明結果。** `ensure.run` 在一條總期限內組合嚴格條件、一個已登錄瀏覽器動作、有界準備與可觀察目標。即時 iframe 路徑會在每次觀察時重新解析，巢狀捲動搜尋可穿越虛擬列表；每個已接納呼叫都會回傳一份由 Key 擁有的有界脫敏軌跡參照。不可重複動作送出後絕不重播；無法證實的結果會明確回傳 `unknown`。
 - **用 Key 劃定信任，而不是暴露偵錯端點。** Root/Regular Key 具有明確權限、有效期、再次顯示、停用與撤銷控制。同一 Key 的呼叫串行，不同 Key 可以互不干擾地工作。
 - **一個後綴切換到原生點擊。** Windows 上的 `dom.click.real` 會把擴充功能取得的元素幾何資訊交給本機 App，在網頁拒絕合成 DOM 啟用時傳送作業系統級滑鼠左鍵點擊；目標仍須存活、可見、可用且未被遮擋。
 - **檔案是一等能力。** 一鍵儲存 MHTML、擷取可見視埠、把資源取得為有界 Artifact 並落盤、上傳自包含 HTML，再無需本機 Web 服務直接在瀏覽器開啟展示。
@@ -31,7 +32,7 @@ Browser Key Automation 把你正在使用的 Chromium 瀏覽器變成供可信 A
 
 Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代 DevTools 深度診斷。它填補的是另一塊：低摩擦、可設定權限地控制人正在使用的瀏覽器，並提供足夠乾淨的結構與檔案能力，讓 Agent 完成實際工作。
 
-> 發布方式：[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 提供適用於 Chrome/Chromium 138 以上版本的解壓縮擴充功能套件與獨立本機 App；Chrome 線上應用程式商店採用另一套發布流程。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.3.zip` 與 `browser-key-automation-local-app-v0.0.0.3.zip`。
+> 發布方式：[GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 提供適用於 Chrome/Chromium 138 以上版本的解壓縮擴充功能套件與獨立本機 App；Chrome 線上應用程式商店採用另一套發布流程。每個 Release 固定只有兩個下載項目：`browser-key-automation-extension-v0.0.0.4.zip` 與 `browser-key-automation-local-app-v0.0.0.4.zip`。
 
 ## 目前能力
 
@@ -43,6 +44,7 @@ Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代
 - 等待導覽、`interactive`、`complete`、DOM 或文字條件。
 - 將目前網頁儲存為 MHTML、取得經驗證的視埠截圖、傳輸有界 Artifact，以及在沒有本機 HTTP 伺服器的情況下開啟自包含 HTML 展示。
 - 透過 `dom.click.real` 傳送明確的 Windows 原生滑鼠左鍵點擊；其權限獨立於一般 `dom.click`。
+- 用 `dom.insertText` 在目前游標處放入文字，或用 Windows 原生鍵盤指令傳送精確文字、人類化文字、命名按鍵、任意快速鍵、明確 down/up 狀態並按執行個體重設。
 - 讓某個 Key 佔用分頁或全域範圍。其他獲授權的 Key 必須先明確解除原佔用，再自行取得佔用。
 
 精確方法、schema、權限與錯誤以 Command Registry 為準。`system.describe` 會回報目前建置及呼叫 Key 的實際有效權限。
@@ -59,8 +61,8 @@ Browser Key Automation 不取代 Playwright/Selenium 測試套件，也不取代
 
 從[最新 Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) 下載兩個 ZIP，分別解壓縮到獨立目錄。
 
-- 擴充功能: `browser-key-automation-extension-v0.0.0.3.zip`
-- 本機 App: `browser-key-automation-local-app-v0.0.0.3.zip`
+- 擴充功能: `browser-key-automation-extension-v0.0.0.4.zip`
+- 本機 App: `browser-key-automation-local-app-v0.0.0.4.zip`
 
 App ZIP 內含 `windows-x86_64/`、`linux-x86_64/`、CLI 與 Agent skill，無需自行編譯。
 
@@ -142,11 +144,17 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 `{ "status": "input_sent" }` 只表示一組輸入已被接受，不代表網站已完成業務目標；之後必須重新觀察頁面。未知或失敗的原生輸入絕不可自動重播。Linux App 目前不宣告 `native.input.click.v1`，因此擴充功能會在任何頁面準備動作之前拒絕 `.real`。
 
+### 原生鍵盤輸入
+
+`keyboard.type` 會立即傳送精確 Unicode 文字；`keyboard.typeHuman` 是獨立且有界的人類化輸入模式。`keyboard.press` 接受命名按鍵與組合鍵：一般名稱預設完成一次按下與放開，動作陣列則可明確把 raw `down`/`up` 狀態保留到後續指令。`keyboard.reset` 只釋放目前擴充功能執行個體持有的按鍵。`dom.insertText` 仍是獨立、非 trusted 的 DOM 游標或選取範圍插入。
+
+原生鍵盤指令可指向 NodeRef 或 TabRef，並要求精確的 Chromium 視窗位於前景。目標或前景改變、或出現衝突的實體按鍵時，App 會在繼續傳送前停止；已接受的效果絕不重播。Windows 宣告 `native.input.keyboard.v1`，Linux 目前不宣告此後端。
+
 ## Key、權限與佔用
 
 - Key 是唯一外部身分。Agent 品牌、程序、帳號、socket 與 App 執行個體都不是額外的授權身分。
 - Root 動態擁有全部 active 權限；Regular 只擁有明確選取的權限。
-- JavaScript、一般 DOM 操作、原生 `.real` 輸入、網路存取與明確啟用的 `debugger` 偵錯是平行權限；授予其中一項不會暗中授予其他項。
+- JavaScript、一般 DOM 操作、原生點擊、每項原生鍵盤操作、網路存取與明確啟用的 `debugger` 偵錯是平行權限；授予其中一項不會暗中授予其他項。
 - 同一 Key 的指令在目前擴充功能執行期內序列化。不同 Key 有獨立 lane，但對同一網頁的效果仍可能競爭。
 - 佔用歸 Key 所有。沒有隱藏 takeover、force 或 replace：必須先 release，再 acquire。
 - 完整 Key 保存在擴充功能內部。受信任的管理頁，以及另外獲授權 `keys.create` 或 `keys.reveal` 的呼叫方可以取得它；一般清單與診斷不包含完整 Key。CLI 只從 `BKA_API_KEY` 或明確指定的環境變數讀取。
@@ -157,7 +165,7 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 
 Chromium 仍控制 host access、受限頁面、file URL 存取、**允許使用者指令碼** 開關、擴充功能啟停與 DevTools 偵錯確認。Root 無法繞過這些瀏覽器邊界。
 
-Windows/Linux App 都提供路由與檔案落地；Windows 額外宣告目前的原生點擊後端，Linux 暫不宣告。無痕模式及其他 Chromium 衍生瀏覽器必須依各自 profile 與原則實際驗證。
+Windows/Linux App 都提供路由與檔案落地；Windows 額外宣告目前的原生點擊與鍵盤後端，Linux 暫不宣告。無痕模式及其他 Chromium 衍生瀏覽器必須依各自 profile 與原則實際驗證。
 
 Agent 接入：[Browser Key Automation skill](skills/browser-key-automation/SKILL.md)。
 

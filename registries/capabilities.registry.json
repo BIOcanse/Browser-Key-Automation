@@ -355,6 +355,25 @@
       "description": "Send one route-owned native click subrequest over the existing extension connection; only a platform build with the validated backend advertises availability."
     },
     {
+      "capabilityId": "platform.relay.native_keyboard",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "role_ready_native_keyboard_capability_route_ownership_foreground_binding_and_instance_key_state",
+      "consumers": [
+        "apps/extension/src/background/keyboard-service.ts",
+        "apps/extension/src/background/transport-controller.ts",
+        "apps/relay/src/native_input.zig",
+        "apps/relay/src/native_input/windows.zig"
+      ],
+      "description": "Send route-owned Unicode typing, named key actions and instance-scoped key reset through the implemented foreground native keyboard backend."
+    },
+    {
       "capabilityId": "platform.transport.loopback_websocket",
       "kind": "platform",
       "status": "active",

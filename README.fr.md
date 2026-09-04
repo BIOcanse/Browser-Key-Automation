@@ -10,6 +10,7 @@ Le chemin principal utilise les API ordinaires d'extension, et non CDP, WebDrive
 
 - **Contrôle transparent du navigateur déjà devant vous.** Lister, créer, sélectionner, naviguer, recharger et fermer des onglets à tout moment, tout en conservant les sessions, cookies, extensions et états de page atteints manuellement.
 - **Toute la page dans une vue adaptée à l'Agent.** L'arbre d'opérations canonical mis en cache garde la structure globale visible, ne développe que les branches demandées et conserve l'état de chaque Key jusqu'au changement de document. Les vues ponctuelles par profondeur, plage ou sous-arbre ne modifient pas cet état.
+- **Des changements d'état qui prouvent leur résultat.** `ensure.run` réunit sous un délai global une condition stricte, une seule action navigateur enregistrée, une préparation bornée et un objectif observable. Les chemins d'iframe actifs sont résolus à nouveau à chaque observation, la recherche par défilement imbriqué traverse les listes virtuelles et chaque appel admis renvoie une référence de trace bornée, expurgée et détenue par la Key. Une action non répétable n'est jamais rejouée après son envoi ; un résultat impossible à confirmer est signalé `unknown`.
 - **Une confiance délimitée par Key plutôt qu'un endpoint de débogage ouvert.** Les Keys Root et Regular ont des permissions, une expiration, une nouvelle révélation, une désactivation et une révocation explicites. Les appels d'une même Key sont sérialisés ; des Keys différentes travaillent indépendamment.
 - **Un clic natif avec un seul suffixe.** Sous Windows, `dom.click.real` combine la géométrie d'élément observée par l'extension avec l'App locale pour envoyer un clic gauche au niveau OS lorsqu'une page refuse l'activation DOM synthétique. La cible doit rester présente, visible, active et non masquée.
 - **Les fichiers sont de première classe.** Enregistrer une page en MHTML, capturer le viewport visible, récupérer des ressources comme Artifacts bornés et les écrire sur disque, téléverser du HTML autonome et l'ouvrir comme démonstration sans serveur Web local.
@@ -31,7 +32,7 @@ Modèles de connexion vérifiés le 2026-09-01. La comparaison porte sur les par
 
 Browser Key Automation ne remplace ni les suites de tests Playwright/Selenium ni les diagnostics DevTools approfondis. Il occupe un autre rôle : contrôler avec peu de friction et des permissions explicites le navigateur qu'une personne utilise déjà, avec une structure claire et des fichiers suffisants pour les tâches pratiques d'un Agent.
 
-> Distribution : [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) fournit une extension unpacked pour Chrome/Chromium 138 ou version ultérieure et une App locale distincte. La publication sur le Chrome Web Store suit une procédure séparée. Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.3.zip` et `browser-key-automation-local-app-v0.0.0.3.zip`.
+> Distribution : [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) fournit une extension unpacked pour Chrome/Chromium 138 ou version ultérieure et une App locale distincte. La publication sur le Chrome Web Store suit une procédure séparée. Chaque Release comporte exactement deux téléchargements : `browser-key-automation-extension-v0.0.0.4.zip` et `browser-key-automation-local-app-v0.0.0.4.zip`.
 
 ## Fonctionnalités
 
@@ -43,6 +44,7 @@ Browser Key Automation ne remplace ni les suites de tests Playwright/Selenium ni
 - Attendre la navigation, `interactive`, `complete`, une condition DOM ou une condition de texte.
 - Enregistrer la page actuelle en MHTML, capturer une image vérifiée du viewport, transférer des Artifacts bornés et ouvrir des démonstrations HTML autonomes sans serveur HTTP local.
 - Envoyer un clic gauche natif Windows explicite avec `dom.click.real`, dont la permission est indépendante de `dom.click`.
+- Insérer du texte au curseur avec `dom.insertText`, ou utiliser les commandes clavier natives Windows pour le texte exact, la frappe cadencée, les touches nommées, les raccourcis arbitraires, l'état down/up explicite et la réinitialisation par Instance.
 - Permettre à une Key d'occuper un onglet ou la portée globale. Une autre Key autorisée doit libérer explicitement l'occupation avant de l'acquérir.
 
 La Command Registry est la source de vérité pour les méthodes, schemas, permissions et erreurs exacts. `system.describe` renvoie le build actif et les permissions effectives de la Key appelante.
@@ -59,8 +61,8 @@ La Command Registry est la source de vérité pour les méthodes, schemas, permi
 
 Téléchargez les deux ZIP de la [dernière Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest), puis extrayez chacun dans un dossier distinct.
 
-- Extension: `browser-key-automation-extension-v0.0.0.3.zip`
-- App locale: `browser-key-automation-local-app-v0.0.0.3.zip`
+- Extension: `browser-key-automation-extension-v0.0.0.4.zip`
+- App locale: `browser-key-automation-local-app-v0.0.0.4.zip`
 
 Le ZIP de l'App contient `windows-x86_64/` et `linux-x86_64/`, ainsi que la CLI et le skill Agent. Aucune compilation des sources n'est nécessaire.
 
@@ -142,11 +144,17 @@ La capture d'élément utilise seulement le viewport actuel d'un onglet déjà a
 
 `{ "status": "input_sent" }` signifie uniquement qu'une séquence d'entrée a été acceptée, pas que le site a terminé l'action métier. Observer ensuite la page. Ne jamais rejouer automatiquement une entrée native inconnue ou échouée. L'App Linux n'annonce actuellement pas `native.input.click.v1` ; l'extension y refuse donc `.real` avant toute préparation de page.
 
+### Saisie clavier native
+
+`keyboard.type` envoie immédiatement le texte Unicode exact ; `keyboard.typeHuman` est le mode séparé, borné et cadencé comme une frappe humaine. `keyboard.press` accepte les touches nommées et les accords : un nom simple exécute toujours un appui puis un relâchement complets, tandis qu'un tableau d'actions peut conserver volontairement un état raw `down`/`up` entre plusieurs commandes. `keyboard.reset` ne relâche que les touches détenues par l'Instance actuelle de l'extension. `dom.insertText` reste une insertion DOM distincte et non trusted au curseur ou dans la sélection.
+
+Les commandes clavier natives ciblent une NodeRef ou TabRef et exigent que la fenêtre Chromium exacte soit au premier plan. Si la cible ou le premier plan change, ou si des touches physiques entrent en conflit, l'App s'arrête avant d'envoyer davantage d'entrée ; les effets acceptés ne sont jamais rejoués. Windows annonce `native.input.keyboard.v1` ; Linux ne fournit pas encore ce backend.
+
 ## Keys, permissions et occupations
 
 - La Key est l'unique identité externe. La marque de l'Agent, le processus, le compte, le socket et l'Instance de l'App ne sont pas des identités d'autorisation supplémentaires.
 - Root reçoit dynamiquement toutes les permissions actives. Regular ne reçoit que les permissions sélectionnées explicitement.
-- JavaScript, les actions DOM ordinaires, l'entrée native `.real`, l'accès réseau et l'accès explicite `debugger` sont des permissions parallèles ; l'une n'accorde pas silencieusement les autres.
+- JavaScript, les actions DOM ordinaires, le clic natif, chaque opération clavier native, l'accès réseau et l'accès explicite `debugger` sont des permissions parallèles ; l'une n'accorde pas silencieusement les autres.
 - Les commandes d'une même Key sont sérialisées dans le runtime actuel de l'extension. Des Keys différentes ont des lanes indépendantes, mais leurs effets sur une même page peuvent entrer en concurrence.
 - Une occupation appartient à une Key. Il n'existe pas de takeover, force ou replace caché : release d'abord, acquire ensuite.
 - La Key complète reste dans l'extension. La page d'administration de confiance et les appelants autorisés séparément pour `keys.create` ou `keys.reveal` peuvent la recevoir ; les listes et diagnostics ordinaires ne la contiennent pas. La CLI la lit uniquement depuis `BKA_API_KEY` ou une variable d'environnement explicitement choisie.
@@ -157,7 +165,7 @@ Traitez une Key puissante comme un identifiant local de contrôle du navigateur 
 
 Chromium contrôle toujours le host access, les pages restreintes, l'accès aux file URLs, **Allow User Scripts**, l'activation de l'extension et toute confirmation de débogage DevTools. Root ne contourne pas ces limites.
 
-Les Apps Windows et Linux fournissent toutes deux le routage et l'écriture de fichiers. Windows annonce en plus le backend actuel de clic natif ; Linux ne l'annonce pas encore. Le mode navigation privée et les dérivés Chromium doivent être vérifiés avec leur propre profil et leurs propres politiques.
+Les Apps Windows et Linux fournissent toutes deux le routage et l'écriture de fichiers. Windows annonce en plus les backends actuels de clic et de clavier natifs ; Linux ne les annonce pas encore. Le mode navigation privée et les dérivés Chromium doivent être vérifiés avec leur propre profil et leurs propres politiques.
 
 Configuration de l'Agent : [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
 

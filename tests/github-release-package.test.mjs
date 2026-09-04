@@ -99,7 +99,10 @@ for (const [index, file] of [extensionZip, appZip].entries()) {
   assert.match(releaseNotes, new RegExp(`${digest}  ${escapeRegExp(path.basename(file))}`, "u"));
 }
 assert.match(releaseNotes, /exactly two downloads/u);
-assert.match(releaseNotes, /transparent element screenshots and explicit CDP debugging/u);
+assert.match(releaseNotes, /verified state-change workflows and native keyboard input/u);
+assert.match(releaseNotes, /`ensure\.run`/u);
+assert.match(releaseNotes, /`keyboard\.reset`/u);
+assert.match(releaseNotes, /59 commands, 48 permissions, 128 schemas, and 105 explicit Freedom Points/u);
 assert.match(releaseNotes, /Chrome Web Store distribution uses a separate package and review process/u);
 assert.equal(/user authorization/iu.test(releaseNotes), false);
 

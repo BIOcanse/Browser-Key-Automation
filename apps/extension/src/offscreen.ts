@@ -1,8 +1,11 @@
 import {
   NATIVE_INPUT_MESSAGE_CHANNEL,
   isNativeInputClickResponse,
+  isNativeInputKeyboardResponse,
   type NativeInputClickRequest,
   type NativeInputClickResponse,
+  type NativeInputKeyboardRequest,
+  type NativeInputKeyboardResponse,
 } from "./shared/native-input-protocol.js";
 
 const TRANSPORT_MESSAGE_CHANNEL = "browser-key-automation.transport.v1";
@@ -33,9 +36,10 @@ let lastWorkerState: unknown = null;
 let transportWorker: Worker | undefined;
 let activeGeneration: number | null = null;
 const pendingNative = new Map<string, {
+  readonly requestKind: "native.input.click" | "native.input.keyboard";
   readonly generation: number;
   readonly timer: number;
-  readonly respond: (response: NativeInputClickResponse) => void;
+  readonly respond: (response: NativeInputClickResponse | NativeInputKeyboardResponse) => void;
 }>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,7 +55,20 @@ function nativeFailure(requestId: string, reason: string, clickState: "not_sent"
   };
 }
 
-function settleNative(response: NativeInputClickResponse): boolean {
+function keyboardFailure(
+  requestId: string,
+  reason: string,
+  inputState: "not_sent" | "partially_sent" | "unknown",
+): NativeInputKeyboardResponse {
+  return {
+    kind: "native.keyboard.result",
+    requestId,
+    ok: false,
+    error: { reason, phase: "input", inputState, completedActions: 0 },
+  };
+}
+
+function settleNative(response: NativeInputClickResponse | NativeInputKeyboardResponse): boolean {
   const pending = pendingNative.get(response.requestId);
   if (pending === undefined) return false;
   pendingNative.delete(response.requestId);
@@ -61,8 +78,10 @@ function settleNative(response: NativeInputClickResponse): boolean {
 }
 
 function failPendingNative(reason: string): void {
-  for (const requestId of [...pendingNative.keys()]) {
-    settleNative(nativeFailure(requestId, reason, "unknown"));
+  for (const [requestId, pending] of [...pendingNative.entries()]) {
+    settleNative(pending.requestKind === "native.input.click"
+      ? nativeFailure(requestId, reason, "unknown")
+      : keyboardFailure(requestId, reason, "unknown"));
   }
 }
 
@@ -116,7 +135,7 @@ try {
         failPendingNative("transport_disconnected");
       } else if (kind === "transport.inbound") {
         const response = event.data.payload;
-        if (isNativeInputClickResponse(response) && settleNative(response)) return;
+        if ((isNativeInputClickResponse(response) || isNativeInputKeyboardResponse(response)) && settleNative(response)) return;
       }
     }
     publishToBackground(event.data);
@@ -139,22 +158,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const request = message.payload;
   const generation = message.connectionGeneration;
   const timeoutMs = message.timeoutMs;
-  if (!isRecord(request) || request.kind !== "native.input.click" || typeof request.requestId !== "string" ||
+  if (!isRecord(request) || (request.kind !== "native.input.click" && request.kind !== "native.input.keyboard") ||
+      typeof request.requestId !== "string" ||
       !Number.isSafeInteger(generation) || generation !== activeGeneration || !Number.isSafeInteger(timeoutMs) ||
       (timeoutMs as number) < 1 || transportWorker === undefined) {
     const requestId = isRecord(request) && typeof request.requestId === "string" ? request.requestId : "invalid";
-    sendResponse(nativeFailure(requestId, "transport_disconnected", "not_sent"));
+    sendResponse(isRecord(request) && request.kind === "native.input.keyboard"
+      ? keyboardFailure(requestId, "transport_disconnected", "not_sent")
+      : nativeFailure(requestId, "transport_disconnected", "not_sent"));
     return;
   }
   if (pendingNative.has(request.requestId)) {
-    sendResponse(nativeFailure(request.requestId, "duplicate_request", "not_sent"));
+    sendResponse(request.kind === "native.input.keyboard"
+      ? keyboardFailure(request.requestId, "duplicate_request", "not_sent")
+      : nativeFailure(request.requestId, "duplicate_request", "not_sent"));
     return;
   }
   const requestId = request.requestId;
+  const requestKind = request.kind;
   const timer = setTimeout(() => {
-    settleNative(nativeFailure(requestId, "native_response_timeout", "unknown"));
+    settleNative(requestKind === "native.input.keyboard"
+      ? keyboardFailure(requestId, "native_response_timeout", "unknown")
+      : nativeFailure(requestId, "native_response_timeout", "unknown"));
   }, timeoutMs as number);
   pendingNative.set(requestId, {
+    requestKind,
     generation: generation as number,
     timer,
     respond: sendResponse,
@@ -162,7 +190,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   transportWorker.postMessage({
     kind: "transport.outbound",
     connectionGeneration: generation,
-    payload: request as unknown as NativeInputClickRequest,
+    payload: request as unknown as NativeInputClickRequest | NativeInputKeyboardRequest,
   });
   return true;
 });

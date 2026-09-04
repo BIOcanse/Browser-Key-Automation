@@ -13,6 +13,7 @@ import { NativeWebSocket } from "../apps/client/src/native-websocket.mjs";
 import { runUsabilityProbe } from "./lib/usability-probe.mjs";
 import { runShotDemoProbe } from "./lib/shot-demo-probe.mjs";
 import { runDebuggerElementProbe } from "./lib/debugger-element-probe.mjs";
+import { runAdvancedEnsureProbe } from "./lib/ensure-advanced-probe.mjs";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { assertIsolatedFixture } = await import("./lib/isolation.mjs");
@@ -29,6 +30,14 @@ const profileDir = path.join(runRoot, "profile");
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const realInputAcceptance = process.argv.includes("--real-input");
 const debuggerElementOnly = process.argv.includes("--debugger-element-only");
+
+function payloadWithoutTrace(payload, expectedState) {
+  assert.equal(payload.trace?.state, expectedState, JSON.stringify(payload));
+  if (expectedState === "complete" || expectedState === "partial") assert.match(payload.trace.traceRef, /^xr1\.[A-Za-z0-9_-]{43}$/u);
+  else assert.equal(payload.trace.traceRef, null);
+  const { trace: _trace, ...rest } = payload;
+  return rest;
+}
 
 const chromiumExecutable = findChromiumExecutable();
 assert.ok(chromiumExecutable, "No Chromium executable was found");
@@ -67,9 +76,46 @@ for (let index = 0; index < largeResourceBytes.length; index += 1) {
 await mkdir(profileDir, { recursive: true });
 const usabilityGates = { pending: null, defer: null, image: null };
 const elementCaptureHtml = await readFile(new URL("./lib/fixtures/element-capture.html", import.meta.url));
+const advancedFrameServer = http.createServer((request, response) => {
+  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  if (url.searchParams.get("generation") === "1") {
+    response.end('<!doctype html><title>Frame generation 1</title><button id="frame-action" onclick="location.replace(\'/frame?generation=2\')">navigate</button>');
+    return;
+  }
+  if (url.searchParams.get("generation") === "2") {
+    response.end('<!doctype html><title>Frame generation 2</title><div id="frame-goal">navigated</div>');
+    return;
+  }
+  response.end('<!doctype html><title>Replacement frame</title><div id="replacement-goal">replaced</div>');
+});
+const advancedFramePort = await listenServer(advancedFrameServer);
+const advancedFrameBaseUrl = `http://127.0.0.1:${advancedFramePort}/`;
 const testPageServer = http.createServer((request, response) => {
   if (request.url === "/element-capture") {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end(elementCaptureHtml); return;
+  }
+  if (request.url === "/advanced") {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(`<!doctype html><title>BKA advanced ensure fixture</title>
+      <style>html,body{margin:0}#feed{height:180px;overflow-y:auto;border:1px solid #999}#virtual-content{height:700px;position:relative}#virtual-target{position:absolute;top:145px}</style>
+      <div id="feed"><div id="virtual-content"></div></div>
+      <button id="replace-frame">replace frame</button>
+      <button id="crash-action" onclick="window.crashClicks+=1">interrupt action</button>
+      <div id="crash-goal">waiting</div>
+      <iframe id="advanced-frame" src="${advancedFrameBaseUrl}frame?generation=1"></iframe>
+      <script>
+        window.virtualClicks=0;window.virtualGeneration=0;window.crashClicks=0;
+        const feed=document.querySelector('#feed');const content=document.querySelector('#virtual-content');
+        function renderVirtual(done=false){window.virtualGeneration+=1;content.replaceChildren();
+          if(feed.scrollTop>0){const button=document.createElement('button');button.id='virtual-target';button.textContent=done?'done':'virtual action';
+            button.onclick=()=>{window.virtualClicks+=1;renderVirtual(true)};content.append(button)}}
+        let observedFeedTop=0;feed.addEventListener('scroll',()=>{observedFeedTop=feed.scrollTop;renderVirtual(false)});
+        setInterval(()=>{if(feed.scrollTop!==observedFeedTop){observedFeedTop=feed.scrollTop;renderVirtual(false)}},20);renderVirtual(false);
+        document.querySelector('#replace-frame').onclick=()=>{const old=document.querySelector('#advanced-frame');const next=document.createElement('iframe');
+          next.id='advanced-frame';next.src='${advancedFrameBaseUrl}frame?generation=replaced';old.replaceWith(next)};
+      </script>`);
+    return;
   }
   if (request.url === "/usability") {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -118,11 +164,13 @@ const testPageServer = http.createServer((request, response) => {
       "<section hidden>tree-hidden-sentinel</section></article>" +
       "<input id=probe-input value=before>" +
       "<button id=probe-button onclick=\"window.buttonClicks=(window.buttonClicks||0)+1\">click</button>" +
+      "<button id=ensure-button onclick=\"this.textContent=this.textContent==='ensure'?'done':'done-2'\">ensure</button>" +
       "<select id=probe-select multiple><option value=a>A</option><option value=b>B</option></select>" +
       "<img alt=probe-resource src=/resource.txt><div id=shadow-host></div></main>" +
       "<iframe id=bulk-frame src=/bulk></iframe>" +
       "<script>window.pageOwnedValue=73;window.treeScriptSentinel='tree-script-sentinel';" +
       "window.clickEvidence={trusted:0,untrusted:0};document.querySelector('#probe-button').addEventListener('click',event=>{window.clickEvidence[event.isTrusted?'trusted':'untrusted']+=1});" +
+      "window.keyboardEvidence=[];for(const type of ['keydown','keyup','beforeinput','input'])document.querySelector('#probe-input').addEventListener(type,event=>window.keyboardEvidence.push({type,key:event.key??null,data:event.data??null,inputType:event.inputType??null,trusted:event.isTrusted}));" +
       "document.querySelector('#shadow-host').attachShadow({mode:'open'}).textContent='tree-shadow-sentinel'</script>" +
       "</body></html>",
   );
@@ -166,6 +214,7 @@ let pageClient;
 let relay;
 let relayOutput = "";
 let nativeClient;
+let interruptionClient;
 let ownsRelay = false;
 let preserveRelay = false;
 let realInputEvidence = null;
@@ -531,7 +580,7 @@ try {
     { treeRef: initialTreeView.payload.result.items[1].treeRef },
     1,
   );
-  assert.deepEqual(wrongExpandSchema.payload, {
+  assert.deepEqual(payloadWithoutTrace(wrongExpandSchema.payload, "not_admitted"), {
     clientRequestId: "",
     ok: false,
     error: { code: "SCHEMA_INVALID" },
@@ -544,7 +593,7 @@ try {
     "page.tree.view.get",
     { rootRef: pageTree.payload.result.rootRef, range: { from: [1, 4], toExclusive: [1, 2] } },
   );
-  assert.deepEqual(invalidTreeViewRange.payload, {
+  assert.deepEqual(payloadWithoutTrace(invalidTreeViewRange.payload, "not_admitted"), {
     clientRequestId: "",
     ok: false,
     error: { code: "SCHEMA_INVALID" },
@@ -1208,6 +1257,96 @@ try {
   );
   assert.equal(selectResult.payload.result.descriptor.value, "b");
 
+  const ensureLocator = {
+    kind: "locator",
+    tabRef: coreTab.tabRef,
+    selector: "#ensure-button",
+    role: "button",
+    name: null,
+    nameMatch: "exact",
+    match: "unique",
+  };
+  const ensuredClick = await forwardCommand(
+    nativeClient,
+    targetInstance,
+    createdKey.apiKey,
+    "ensure-click-button",
+    "ensure.run",
+    {
+      mode: "ensure",
+      timeoutMs: 3000,
+      scrollIntoView: true,
+      searchByScrolling: false,
+      precondition: { kind: "ready", target: ensureLocator },
+      goal: { kind: "text_contains", target: ensureLocator, text: "done" },
+      action: { method: "dom.click", schemaVersion: 1, target: ensureLocator, params: {} },
+    },
+  );
+  assert.equal(ensuredClick.payload.ok, true, JSON.stringify(ensuredClick.payload));
+  assert.equal(ensuredClick.payload.result.status, "satisfied", JSON.stringify(ensuredClick.payload.result));
+  assert.equal(ensuredClick.payload.result.effectAttempts, 1);
+  assert.equal(ensuredClick.payload.result.effectSent, true);
+  assert.match(ensuredClick.payload.result.matchedNodeRef, /^nr1\./u);
+
+  const strictNoClick = await forwardCommand(
+    nativeClient,
+    targetInstance,
+    createdKey.apiKey,
+    "strict-condition-false",
+    "ensure.run",
+    {
+      mode: "strict",
+      timeoutMs: 3000,
+      scrollIntoView: true,
+      searchByScrolling: true,
+      precondition: { kind: "text_contains", target: ensureLocator, text: "never" },
+      goal: null,
+      action: { method: "dom.click", schemaVersion: 1, target: ensureLocator, params: {} },
+    },
+  );
+  assert.deepEqual(strictNoClick.payload.error, {
+    code: "CONDITION_NOT_MET",
+    details: { conditionKind: "text_contains", matchedNodeRef: ensuredClick.payload.result.matchedNodeRef },
+  });
+  const workflowOnlyKey = await pageEvaluate(pageClient, async ({ mutationId }) => {
+    const service = await import(chrome.runtime.getURL("background/key-service.js"));
+    return service.createKey({
+      mutationId,
+      displayName: "Workflow permission isolation",
+      keyKind: "regular",
+      permissions: ["workflow.run"],
+      expiresAt: null,
+      enabled: true,
+    });
+  }, { mutationId: adminMutationId() });
+  const deniedChild = await forwardCommand(
+    nativeClient,
+    targetInstance,
+    workflowOnlyKey.apiKey,
+    "ensure-child-permission-denied",
+    "ensure.run",
+    {
+      action: {
+        method: "tabs.create",
+        schemaVersion: 1,
+        params: { windowId: coreTab.windowId, url: "about:blank", active: false },
+      },
+    },
+  );
+  assert.equal(deniedChild.payload.ok, true, JSON.stringify(deniedChild.payload));
+  assert.equal(deniedChild.payload.result.status, "failed");
+  assert.equal(deniedChild.payload.result.effectSent, false);
+  assert.deepEqual(deniedChild.payload.result.error, { code: "FORBIDDEN" });
+  const ensureButtonAfterStrict = await forwardCommand(
+    nativeClient,
+    targetInstance,
+    createdKey.apiKey,
+    "ensure-button-after-strict",
+    "dom.query",
+    { documentRef: mainFrame.documentRef, selector: "#ensure-button", limit: 1 },
+  );
+  assert.equal(ensureButtonAfterStrict.payload.result.items[0].descriptor.text, "done");
+
   const buttonQuery = await forwardCommand(
     nativeClient,
     targetInstance,
@@ -1251,9 +1390,120 @@ try {
       assert.equal(observed.evidence.untrusted, 1);
       assert.equal(observed.evidence.trusted, 1);
       assert.equal(observed.title, "BKA core probe");
+      await runtimeEvaluate(corePage, "document.querySelector('#probe-input').value='select-me';window.keyboardEvidence=[];true");
       realInputEvidence = { status: realClick.payload.result.status, ...observed.evidence, titleRestored: true };
     } finally {
       corePage.close();
+    }
+
+    const selectAll = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-select-all",
+      "keyboard.press",
+      { targetRef: inputNodeRef, keys: "ControlLeft+KeyA" },
+    );
+    assert.deepEqual(selectAll.payload.result, {
+      targetRef: inputNodeRef, status: "input_sent", completedActions: 1, heldKeys: [],
+    }, JSON.stringify(selectAll.payload));
+    const exactText = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-type-exact",
+      "keyboard.type",
+      { targetRef: inputNodeRef, text: "键盘🙂" },
+    );
+    assert.deepEqual(exactText.payload.result, {
+      targetRef: inputNodeRef, status: "input_sent", submittedScalars: 3,
+    }, JSON.stringify(exactText.payload));
+    const humanText = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-type-human",
+      "keyboard.typeHuman",
+      { targetRef: inputNodeRef, text: "abcdef", charactersPerMinute: 1200, mistakePercent: 25, randomSeed: 7 },
+    );
+    assert.deepEqual(humanText.payload.result, {
+      targetRef: inputNodeRef,
+      status: "input_sent",
+      submittedScalars: 6,
+      correctedMistakes: 1,
+      randomSeed: 7,
+    }, JSON.stringify(humanText.payload));
+    const shiftDown = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-shift-down",
+      "keyboard.press",
+      { targetRef: inputNodeRef, keys: [{ key: "ShiftLeft", action: "down" }] },
+    );
+    assert.deepEqual(shiftDown.payload.result.heldKeys, ["ShiftLeft"]);
+    const shiftedZ = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-shifted-z",
+      "keyboard.press",
+      { targetRef: inputNodeRef, keys: "KeyZ" },
+    );
+    assert.deepEqual(shiftedZ.payload.result.heldKeys, ["ShiftLeft"]);
+    const shiftUp = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-shift-up",
+      "keyboard.press",
+      { targetRef: inputNodeRef, keys: [{ key: "ShiftLeft", action: "up" }] },
+    );
+    assert.deepEqual(shiftUp.payload.result.heldKeys, []);
+    const controlDown = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-control-down-before-reset",
+      "keyboard.press",
+      { targetRef: inputNodeRef, keys: [{ key: "ControlLeft", action: "down" }] },
+    );
+    assert.deepEqual(controlDown.payload.result.heldKeys, ["ControlLeft"]);
+    const keyboardReset = await forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      "keyboard-reset",
+      "keyboard.reset",
+      {},
+    );
+    assert.deepEqual(keyboardReset.payload.result, {
+      status: "input_sent", completedActions: 1, heldKeys: [],
+    }, JSON.stringify(keyboardReset.payload));
+
+    const keyboardTarget = await waitForTarget(debugPort, (candidate) => candidate.id === coreTarget.targetId);
+    const keyboardPage = await CdpClient.connect(keyboardTarget.webSocketDebuggerUrl);
+    try {
+      const observed = await runtimeEvaluate(
+        keyboardPage,
+        "({value:document.querySelector('#probe-input').value,events:window.keyboardEvidence,title:document.title})",
+      );
+      assert.equal(observed.value, "键盘🙂abcdefZ");
+      assert.ok(observed.events.length >= 14, JSON.stringify(observed));
+      assert.equal(observed.events.every((event) => event.trusted === true), true, JSON.stringify(observed.events));
+      assert.equal(observed.title, "BKA core probe");
+      realInputEvidence = {
+        ...realInputEvidence,
+        keyboard: {
+          value: observed.value,
+          trustedEvents: observed.events.length,
+          explicitDownUp: true,
+          resetReleased: keyboardReset.payload.result.completedActions,
+          titleRestored: true,
+        },
+      };
+    } finally {
+      keyboardPage.close();
     }
   }
 
@@ -1581,7 +1831,7 @@ try {
   assert.deepEqual(JSON.parse(effectiveMainExecution.payload.result.valueJson), {
     pageOwnedValue: 73,
     bodyText: "live DOM payload",
-    inputValue: "after",
+    inputValue: realInputAcceptance ? "键盘🙂abcdefZ" : "after",
     selectValue: "b",
     buttonClicks: realInputAcceptance ? 2 : 1,
   });
@@ -1603,6 +1853,43 @@ try {
     pageOwnedType: "undefined",
     bodyText: "live DOM payload",
   });
+
+  let advancedEnsureSequence = 0;
+  const advancedEnsure = await runAdvancedEnsureProbe({
+    forward: (method, params) => forwardCommand(
+      nativeClient,
+      targetInstance,
+      createdKey.apiKey,
+      `advanced-ensure-${++advancedEnsureSequence}`,
+      method,
+      params,
+    ),
+    baseUrl: testPageUrl,
+    frameBaseUrl: advancedFrameBaseUrl,
+    windowId: coreTab.windowId,
+  });
+  const traceOnlyKey = await pageEvaluate(pageClient, async ({ mutationId }) => {
+    const service = await import(chrome.runtime.getURL("background/key-service.js"));
+    return service.createKey({
+      mutationId,
+      displayName: "Trace ownership probe",
+      keyKind: "regular",
+      permissions: ["trace.read"],
+      expiresAt: null,
+      enabled: true,
+    });
+  }, { mutationId: adminMutationId() });
+  const foreignTrace = await forwardCommand(
+    nativeClient,
+    targetInstance,
+    traceOnlyKey.apiKey,
+    "advanced-trace-foreign-key",
+    "trace.read",
+    { traceRef: advancedEnsure.trace.traceRef },
+  );
+  assert.equal(foreignTrace.payload.ok, false);
+  assert.equal(foreignTrace.payload.error.code, "TRACE_NOT_FOUND");
+  assert.deepEqual(foreignTrace.payload.trace, { state: "unavailable", traceRef: null });
 
   const jsOnlyKey = await pageEvaluate(
     pageClient,
@@ -1682,7 +1969,7 @@ try {
     "tabs.list",
     { afterTabId: null, limit: 10 },
   );
-  assert.deepEqual(forbiddenTabs.payload, {
+  assert.deepEqual(payloadWithoutTrace(forbiddenTabs.payload, "not_admitted"), {
     clientRequestId: "tabs-forbidden",
     ok: false,
     error: { code: "FORBIDDEN" },
@@ -1695,7 +1982,7 @@ try {
     "page.dom.get",
     { root: "document", tabRef: coreTab.tabRef },
   );
-  assert.deepEqual(forbiddenDom.payload, {
+  assert.deepEqual(payloadWithoutTrace(forbiddenDom.payload, "not_admitted"), {
     clientRequestId: "dom-forbidden",
     ok: false,
     error: { code: "FORBIDDEN" },
@@ -1708,7 +1995,7 @@ try {
     "page.tree.open",
     { targetRef: coreTab.tabRef },
   );
-  assert.deepEqual(forbiddenTree.payload, {
+  assert.deepEqual(payloadWithoutTrace(forbiddenTree.payload, "not_admitted"), {
     clientRequestId: "page-tree-forbidden",
     ok: false,
     error: { code: "FORBIDDEN" },
@@ -1721,7 +2008,7 @@ try {
     "page.tree.view.get",
     { rootRef: pageTree.payload.result.rootRef },
   );
-  assert.deepEqual(forbiddenTreeView.payload, {
+  assert.deepEqual(payloadWithoutTrace(forbiddenTreeView.payload, "not_admitted"), {
     clientRequestId: "page-tree-view-forbidden",
     ok: false,
     error: { code: "FORBIDDEN" },
@@ -1734,7 +2021,7 @@ try {
     "page.tree.expand",
     { treeRef: htmlTreeItem.treeRef },
   );
-  assert.deepEqual(forbiddenTreeExpand.payload, {
+  assert.deepEqual(payloadWithoutTrace(forbiddenTreeExpand.payload, "not_admitted"), {
     clientRequestId: "page-tree-expand-forbidden",
     ok: false,
     error: { code: "FORBIDDEN" },
@@ -1764,7 +2051,7 @@ try {
       method,
       params,
     );
-    assert.deepEqual(response.payload, {
+    assert.deepEqual(payloadWithoutTrace(response.payload, "not_admitted"), {
       clientRequestId,
       ok: false,
       error: { code: "FORBIDDEN" },
@@ -1777,7 +2064,7 @@ try {
     jsOnlyKey.apiKey,
     "describe-forbidden",
   );
-  assert.deepEqual(forbiddenDescribe.payload, {
+  assert.deepEqual(payloadWithoutTrace(forbiddenDescribe.payload, "not_admitted"), {
     clientRequestId: "describe-forbidden",
     ok: false,
     error: { code: "FORBIDDEN" },
@@ -1792,7 +2079,7 @@ try {
     "tabs.get",
     { tabRef: staleTab.tabRef },
   );
-  assert.deepEqual(staleGetResponse.payload, {
+  assert.deepEqual(payloadWithoutTrace(staleGetResponse.payload, "complete"), {
     clientRequestId: "tabs-get-stale",
     ok: false,
     error: { code: "TAB_REF_STALE" },
@@ -1832,7 +2119,7 @@ try {
     "page.tree.expand",
     { treeRef: pageTree.payload.result.rootRef },
   );
-  assert.deepEqual(staleTreeExpand.payload, {
+  assert.deepEqual(payloadWithoutTrace(staleTreeExpand.payload, "complete"), {
     clientRequestId: "page-tree-expand-stale",
     ok: false,
     error: { code: "TARGET_REF_STALE" },
@@ -1845,7 +2132,7 @@ try {
     "page.tree.view.get",
     { rootRef: pageTree.payload.result.rootRef },
   );
-  assert.deepEqual(staleTreeView.payload, {
+  assert.deepEqual(payloadWithoutTrace(staleTreeView.payload, "complete"), {
     clientRequestId: "page-tree-view-stale",
     ok: false,
     error: { code: "TARGET_REF_STALE" },
@@ -1890,6 +2177,68 @@ try {
   const expandedTreePaths = (result) => result.items.filter((item) => item.expanded).map((item) => item.indexPath);
   assert.equal(expandedTreePaths(beforeRestart2.result).length, 2);
 
+  const advancedTarget = await waitForTarget(
+    debugPort,
+    (target) => target.type === "page" && String(target.url ?? "") === `${testPageUrl}advanced`,
+  );
+  const advancedPageClient = await CdpClient.connect(advancedTarget.webSocketDebuggerUrl);
+  await advancedPageClient.send("Runtime.enable");
+  interruptionClient = await connectNativeCommandClient();
+  const interruptedRequestId = `worker-interruption-${Date.now()}`;
+  interruptionClient.sendJson({
+    kind: "forward",
+    clientRequestId: interruptedRequestId,
+    targetInstance,
+    auth: { apiKey: createdKey.apiKey },
+    command: {
+      method: "ensure.run",
+      schemaVersion: 1,
+      params: {
+        mode: "ensure",
+        timeoutMs: 2000,
+        scrollIntoView: false,
+        searchByScrolling: false,
+        precondition: null,
+        goal: {
+          kind: "text_contains",
+          target: { kind: "locator", tabRef: advancedEnsure.tabRef, framePath: [], selector: "#crash-goal", role: null, name: null, nameMatch: "exact", match: "unique" },
+          text: "never",
+        },
+        action: {
+          method: "dom.click",
+          schemaVersion: 1,
+          target: { kind: "locator", tabRef: advancedEnsure.tabRef, framePath: [], selector: "#crash-action", role: null, name: null, nameMatch: "exact", match: "unique" },
+          params: {},
+        },
+      },
+    },
+  });
+  let interruptedRouteSettled = false;
+  const interruptedRoute = interruptionClient.readJson(30_000)
+    .then((value) => { interruptedRouteSettled = true; return value; })
+    .catch((error) => { interruptedRouteSettled = true; return error; });
+  let interruptedClickCount = 0;
+  const interruptedClickDeadline = Date.now() + 1500;
+  while (Date.now() < interruptedClickDeadline && interruptedClickCount !== 1) {
+    interruptedClickCount = await runtimeEvaluate(advancedPageClient, "window.crashClicks");
+    if (interruptedClickCount !== 1) await sleep(25);
+  }
+  assert.equal(interruptedClickCount, 1, "the effect did not enter before the interruption deadline");
+  assert.equal(interruptedRouteSettled, false, "the ensure workflow must still be verifying when its worker is stopped");
+  let interruptedDraft = null;
+  const interruptedDraftDeadline = Date.now() + 1500;
+  while (Date.now() < interruptedDraftDeadline) {
+    interruptedDraft = await runtimeEvaluate(workerClient,
+      `new Promise((resolve,reject)=>{const open=indexedDB.open('browser-key-automation');open.onerror=()=>reject(open.error);open.onsuccess=()=>{const request=open.result.transaction(['execution_traces'],'readonly').objectStore('execution_traces').get(${JSON.stringify(createdKey.key.keyId)});request.onerror=()=>reject(request.error);request.onsuccess=()=>resolve(request.result?.traces?.at(-1)??null)}})`);
+    if (interruptedDraft?.method === "ensure.run" && interruptedDraft.effectEntries === 1 && interruptedDraft.finishedAt === null) break;
+    await sleep(25);
+  }
+  assert.equal(interruptedDraft?.method, "ensure.run", JSON.stringify(interruptedDraft));
+  assert.equal(interruptedDraft.effectEntries, 1);
+  assert.equal(interruptedDraft.finishedAt, null);
+  assert.ok(interruptedDraft.events.some((event) => event.operation === "effect_entered"));
+  const interruptedTraceRef = interruptedDraft.traceRef;
+
   await runtimeEvaluate(workerClient, "globalThis.__BKA_TEST_WORKER_SENTINEL = 'before-stop'");
   const workerTarget = await waitForTarget(debugPort, (target) =>
     target.type === "service_worker" && target.url === `chrome-extension://${extensionId}/background.js`);
@@ -1897,6 +2246,12 @@ try {
   assert.equal(workerStopped.success, true);
   workerClient.close();
   workerClient = undefined;
+  interruptionClient.close();
+  interruptionClient = undefined;
+  await interruptedRoute;
+  await sleep(2200);
+  assert.equal(await runtimeEvaluate(advancedPageClient, "window.crashClicks"), 1, "an interrupted non-repeat effect was not replayed");
+  advancedPageClient.close();
 
   // The first post-stop request must use an old child ref, before any open/view
   // could return and re-register it. The relay/offscreen path wakes the worker.
@@ -1912,6 +2267,24 @@ try {
   assert.notEqual(afterRestart.result.tabRef, beforeRestart2.result.tabRef);
   workerClient = await waitForExtensionWorker(debugPort);
   assert.equal(await runtimeEvaluate(workerClient, "typeof globalThis.__BKA_TEST_WORKER_SENTINEL"), "undefined");
+  const recoveredInterruptedTrace = await restartTreeCall(
+    "trace.read",
+    { traceRef: interruptedTraceRef },
+    "interrupted-trace-after-worker-stop",
+  );
+  assert.equal(recoveredInterruptedTrace.ok, true, JSON.stringify(recoveredInterruptedTrace));
+  assert.equal(recoveredInterruptedTrace.result.trace.outcome, "interrupted");
+  assert.equal(recoveredInterruptedTrace.result.trace.finishedAt, null);
+  assert.equal(recoveredInterruptedTrace.result.trace.effectEntries, 1);
+  assert.ok(recoveredInterruptedTrace.result.trace.events.some((event) => event.operation === "effect_entered"));
+  const persistedTrace = await restartTreeCall(
+    "trace.read",
+    { traceRef: advancedEnsure.trace.traceRef },
+    "advanced-trace-after-worker-stop",
+  );
+  assert.equal(persistedTrace.ok, true, JSON.stringify(persistedTrace));
+  assert.equal(persistedTrace.result.trace.traceRef, advancedEnsure.trace.traceRef);
+  assert.equal(persistedTrace.result.trace.outcome, "succeeded");
 
   const oldTabAfterRestart = await restartTreeCall("tabs.get",
     { tabRef: beforeRestart2.result.tabRef }, "tree-worker-old-tab-remains-stale");
@@ -1957,7 +2330,7 @@ try {
     wrongApiKey,
     "describe-wrong-key",
   );
-  assert.deepEqual(wrongKeyResponse.payload, {
+  assert.deepEqual(payloadWithoutTrace(wrongKeyResponse.payload, "not_admitted"), {
     clientRequestId: "describe-wrong-key",
     ok: false,
     error: { code: "UNAUTHENTICATED" },
@@ -1981,7 +2354,7 @@ try {
     createdKey.apiKey,
     "describe-revoked",
   );
-  assert.deepEqual(revokedResponse.payload, {
+  assert.deepEqual(payloadWithoutTrace(revokedResponse.payload, "not_admitted"), {
     clientRequestId: "describe-revoked",
     ok: false,
     error: { code: "UNAUTHENTICATED" },
@@ -2015,6 +2388,20 @@ try {
       systemDescribeAuthenticationStates: ["valid", "wrong-secret", "revoked"],
       tabsReadStates: ["paged", "live", "forbidden", "stale"],
       controlStates: ["acquired", "idempotent", "conflict", "foreign-release", "global-conflict", "effect-gate"],
+      ensureStates: [
+        "locator-re-resolved",
+        "nested-scroll",
+        "virtualized-replacement",
+        "iframe-navigation-recovery",
+        "iframe-replacement-recovery",
+        "safe-preparation",
+        "single-effect",
+        "verified",
+        "strict-no-effect",
+        "child-permission-denied",
+      ],
+      advancedEnsure,
+      workerInterruption: { outcome: "interrupted", effectEntries: 1, replayed: false },
       liveDomReadThroughScripting: true,
       pageTreeStates: [
         "opened",
@@ -2051,10 +2438,12 @@ try {
   throw error;
 } finally {
   nativeClient?.close();
+  interruptionClient?.close();
   pageClient?.close();
   browserClient?.close();
   workerClient?.close();
   await closeServer(testPageServer);
+  await closeServer(advancedFrameServer);
   if (relay?.exitCode === null && preserveRelay) {
     relay.stdout?.destroy();
     relay.stderr?.destroy();
@@ -2110,6 +2499,17 @@ async function forwardCommand(
     },
   });
   return client.readJson(30_000);
+}
+
+async function connectNativeCommandClient() {
+  const client = await NativeWebSocket.connect({
+    path: "/v1/client",
+    subprotocol: "browser-key-client-v1",
+  });
+  assert.equal((await client.readJson()).kind, "relay.hello");
+  client.sendJson({ kind: "role.hello", role: "client", protocolVersion: 1 });
+  assert.deepEqual(await client.readJson(), { kind: "role.ready", role: "client" });
+  return client;
 }
 
 async function readPageTreeView(client, targetInstance, apiKey, rootRef, params, requestId) {
