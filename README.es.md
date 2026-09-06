@@ -2,83 +2,30 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Deutsch](README.de.md) | [Français](README.fr.md) | Español | [Português (Brasil)](README.pt-BR.md) | [Русский](README.ru.md)
 
-Browser Key Automation convierte el navegador Chromium que ya usas en una superficie de automatización delimitada por Key para Agents y programas de confianza. Tras instalar la extensión una vez y crear una Key, un cliente autorizado puede moverse entre tus pestañas ya autenticadas sin iniciar otro navegador de automatización.
+**Tu navegador de siempre, también para tu Agent.**
 
-La ruta principal utiliza API ordinarias de extensión, no CDP, WebDriver, opciones remote-debugging ni `chrome.debugger`. Chromium sigue gestionando la instalación, el acceso a sitios y el ajuste único **Allow User Scripts**. Después de esa configuración, los comandos habituales no adjuntan un depurador ni muestran la confirmación o barra de advertencia de depuración de Chrome.
+Trabaja en pestañas Chromium con la sesión ya iniciada: leer, actuar y guardar resultados. Las órdenes habituales usan permisos de extensión, sin navegador aparte, conexión automática de depurador ni confirmación propia por cada orden. Los controles del navegador siguen vigentes.
 
-## Por qué Browser Key Automation
+## Qué facilita
 
-- **Control fluido del navegador que ya tienes delante.** Enumera, crea, selecciona, navega, recarga y cierra pestañas en cualquier momento conservando sesiones, cookies, extensiones y estados de página alcanzados manualmente.
-- **Toda la página en una vista del tamaño adecuado para un Agent.** El árbol de operaciones canonical en caché mantiene visible la estructura global, solo expande las ramas solicitadas y conserva el estado de cada Key hasta que cambia el documento. Las vistas puntuales por profundidad, intervalo o subárbol no alteran ese estado.
-- **Cambios de estado que demuestran su resultado.** `ensure.run` reúne bajo un único plazo una condición estricta, una acción de navegador registrada, preparación acotada y un objetivo observable. Las rutas de iframe activas se resuelven de nuevo en cada observación, la búsqueda por desplazamiento anidado recorre listas virtuales y cada llamada admitida devuelve una referencia de traza acotada, depurada y propiedad de la Key. Las acciones no repetibles nunca se reenvían tras su despacho; un resultado que no pueda comprobarse se informa como `unknown`.
-- **Confianza delimitada por Key, no un endpoint de depuración abierto.** Las Keys Root y Regular tienen permisos, caducidad, nueva revelación, desactivación y revocación explícitos. Las llamadas de una misma Key son seriales; Keys distintas pueden trabajar de forma independiente.
-- **Clic nativo con un solo sufijo.** En Windows, `dom.click.real` combina la geometría observada por la extensión con la App local para enviar un clic izquierdo a nivel de sistema operativo cuando una página rechaza la activación DOM sintética. El objetivo debe seguir existiendo, visible, habilitado y sin obstrucciones.
-- **Los archivos son de primera clase.** Guarda MHTML, captura el viewport visible, obtiene recursos como Artifacts acotados y los escribe en disco, sube HTML autocontenido y lo abre como demostración sin servidor Web local.
-- **Coordinación de varios clientes de confianza.** Una Key puede ocupar una pestaña o el ámbito global para evitar estado inconsistente; otra Key autorizada debe liberar explícitamente la ocupación antes de adquirirla.
+- **Leer solo lo necesario.** El árbol en caché conserva la estructura global y expande las ramas solicitadas. El estado permanece al cambiar de pestaña mientras no cambie el documento. Profundidad, intervalo y subárbol son vistas puntuales, no limpieza con pérdida.
+- **Trabajar entre pestañas.** Referencias explícitas, ejecución secuencial por Key y ocupación de pestañas, ventanas o ámbito global reducen conflictos.
+- **Llevarte el resultado.** MHTML, capturas de página o elementos Canvas, transferencia de recursos y demostraciones HTML sin servidor local.
+- **Elegir la entrada.** DOM, entrada real de Windows, ratón/teclado virtuales independientes y CDP opcional.
+- **Comprobar efectos.** `ensure.run` une condiciones, preparación acotada, acción y objetivo observable. Un resultado desconocido no provoca repeticiones a ciegas.
 
-### Comparación de flujos de trabajo
+## Primeros pasos
 
-Modelos de conexión verificados el 2026-09-01. Se comparan rutas de uso normales, no límites teóricos de funciones.
+> Cada instalación nueva crea la misma **Key Root pública de prueba**, incluida en el skill del Agent. No es una credencial privada. En un navegador personal, crea una Key privada, cambia los clientes y revoca la de prueba. Crear otra no desactiva la anterior. Las actualizaciones no la reponen.
 
-| Enfoque | Chromium existente con sesión iniciada | Ruta de control habitual | Mejor para |
-| --- | --- | --- | --- |
-| **Browser Key Automation** | Sí, entre cualquier pestaña autorizada | API ordinarias de extensión + autenticación Key; la App local añade enrutamiento, archivos y clic `.real` opcional | Acceso Agent duradero sin adjuntar depurador, árbol selectivo en caché y flujos de archivo integrados |
-| [Playwright](https://playwright.dev/docs/api/class-browsertype), [Puppeteer](https://pptr.dev/guides/browser-management), [Selenium](https://www.selenium.dev/documentation/overview/) | La ruta habitual crea una sesión de automatización; también permiten conectar un Chromium existente | Playwright/CDP, Puppeteer/CDP o WebDriver | Pruebas deterministas, validación entre navegadores, CI y ecosistemas maduros de locators y depuración |
-| [Extensión Playwright MCP](https://github.com/microsoft/playwright/tree/main/packages/extension#readme) | Sí; un token de perfil puede omitir su propia aprobación posterior | Playwright retransmitido por una extensión que declara el permiso `debugger` de Chrome | Acciones Playwright y accessibility snapshots en pestañas existentes seleccionadas |
-| [Chrome DevTools MCP](https://developer.chrome.com/docs/devtools/agents/use-cases/auto-connect) | Sí, después de activar remote debugging o exponer un endpoint de depuración | DevTools/CDP; auto-connect de Chrome solicita permiso para cada sesión de depuración | Diagnóstico profundo con Console, Network, Performance, memoria y otros DevTools |
-| [Browser MCP](https://browsermcp.io/) | Sí, cuando el usuario conecta la pestaña actual | Extensión + MCP local, limitado a la pestaña de trabajo conectada explícitamente | Una superficie MCP compacta para una pestaña existente elegida |
-| [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | Sí, entre pestañas | Extensión + native-messaging bridge; el manifest solicita `debugger` además de permisos ordinarios | Herramientas MCP amplias entre pestañas, captura de red, descargas y subida de archivos |
-| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | Sí | Agent integrado en el navegador sobre Puppeteer/CDP, con Keys del LLM provider aportadas por el usuario | Una UI multi-Agent integrada en vez de un plano de control independiente del provider |
+1. Necesitas Chromium **138+**, Windows o Linux x64 y **Node.js 20+** para la CLI. Descarga los dos ZIP de la [última versión](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) y extráelos por separado.
 
-Browser Key Automation no sustituye las suites de pruebas Playwright/Selenium ni el diagnóstico profundo de DevTools. Cumple otra función: control autorizado y de baja fricción del navegador que una persona ya usa, con una estructura limpia y archivos suficientes para que un Agent complete trabajo real.
+   - `browser-key-automation-extension-v0.0.0.5.zip`
+   - `browser-key-automation-local-app-v0.0.0.5.zip`
 
-> Distribución: [GitHub Releases](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) ofrece una extensión unpacked para Chrome/Chromium 138 o posterior y una App local independiente. La publicación en Chrome Web Store sigue un proceso separado. Cada Release tiene exactamente dos descargas: `browser-key-automation-extension-v0.0.0.4.zip` y `browser-key-automation-local-app-v0.0.0.4.zip`.
+2. En `chrome://extensions`, activa el modo desarrollador y carga la carpeta con `manifest.json`. Gestiona Keys desde el icono. **Allow User Scripts** es necesario para `js.execute`, no para DOM ni árboles.
 
-## Funciones
-
-- Crear, volver a mostrar, copiar, actualizar, desactivar y revocar Keys Root o Regular desde una página de administración local. Una Key completa guardada se puede volver a mostrar más adelante.
-- Enumerar pestañas y usar `TabRef`, `DocumentRef`, `NodeRef`, `TreeRef` y `ArtifactRef` vinculados al runtime en lugar de identificadores de navegador sin protección.
-- Explorar un árbol de operaciones de página almacenado en caché. El estado expandido pertenece a cada Key y se conserva al salir y volver a una página hasta que el documento se actualice o reemplace.
-- Buscar nodos sin expandir el árbol, solicitar vistas puntuales por profundidad, intervalo de hermanos o subárbol, leer live DOM acotado, describir nodos y ejecutar acciones DOM.
-- Ejecutar JavaScript en un world `USER_SCRIPT` o `MAIN` explícito cuando **Allow User Scripts** esté habilitado en Chromium.
-- Esperar navegación, `interactive`, `complete`, una condición DOM o de texto.
-- Guardar la página actual como MHTML, capturar una imagen verificada del viewport, transferir Artifacts acotados y abrir demostraciones HTML autocontenidas sin un servidor HTTP local.
-- Enviar un clic izquierdo nativo de Windows con `dom.click.real`, que tiene un permiso independiente de `dom.click`.
-- Insertar texto en el cursor actual con `dom.insertText` o usar comandos de teclado nativo de Windows para texto exacto, texto con ritmo humano, teclas con nombre, atajos arbitrarios, estado down/up explícito y restablecimiento por instancia.
-- Permitir que una Key ocupe una pestaña o el ámbito global. Otra Key autorizada debe liberar explícitamente esa ocupación antes de adquirirla.
-
-Command Registry es la fuente de verdad para los métodos, schemas, permisos y errores exactos. `system.describe` devuelve la compilación activa y los permisos efectivos de la Key que llama.
-
-## Inicio rápido
-
-### Requisitos
-
-- Chrome o un navegador Chromium compatible, versión 138 o posterior
-- App complementaria para Windows x86_64 o Linux x86_64
-- Node.js 20 o posterior para la CLI incluida
-
-### 1. Descargar la extensión y la App
-
-Descarga los dos ZIP de la [última Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) y extrae cada uno en una carpeta independiente.
-
-- Extensión: `browser-key-automation-extension-v0.0.0.4.zip`
-- App local: `browser-key-automation-local-app-v0.0.0.4.zip`
-
-El ZIP de la App incluye `windows-x86_64/` y `linux-x86_64/`, además de la CLI y el skill de Agent. No hace falta compilar el código fuente.
-
-### 2. Cargar la extensión
-
-1. Extraer por completo el archivo de la extensión.
-2. Abrir `chrome://extensions`, habilitar el modo de desarrollador y elegir **Cargar descomprimida**.
-3. Seleccionar el directorio extraído cuya raíz contenga directamente `manifest.json`.
-4. En los detalles de la extensión, habilitar **Allow User Scripts** y volver a cargarla. Este interruptor controlado por el navegador solo es necesario para `js.execute`; la administración de Keys, el DOM y el árbol de página siguen disponibles sin él.
-5. Abrir **Browser Key Automation** desde la barra de herramientas. Crear una Root Key para control plenamente confiable o una Regular Key con solo los permisos necesarios.
-
-La primera instalación abre una página local de configuración. Las actualizaciones y recargas no la abren repetidamente.
-
-### 3. Iniciar la App complementaria
-
-Extraer el archivo App de GitHub Release y mantener en ejecución el relay de la plataforma actual:
+3. Inicia la App con las órdenes de abajo. En Windows, conserva `virtual-mouse-hook.dll` junto al ejecutable. La extensión reintenta `127.0.0.1:32189` aproximadamente cada 10 segundos.
 
 ```text
 # Windows
@@ -89,84 +36,57 @@ chmod +x ./linux-x86_64/browser-key-relay
 ./linux-x86_64/browser-key-relay
 ```
 
-El endpoint predeterminado es `127.0.0.1:32189`. Si la App no está disponible, la extensión vuelve a intentarlo con el intervalo nominal configurado de 10 segundos hasta conectarse. No iniciar una segunda App si una instancia compatible ya posee el endpoint fijo.
-
-### 4. Conectar la CLI
-
-Desde el directorio extraído de la App local:
+4. Carga el `skill/browser-key-automation/SKILL.md` incluido en tu Agent. Enumera instancias y elige el navegador. Pasa la Key privada mediante `BKA_API_KEY`, nunca como argumento, y no la pruebes en todas las instancias.
 
 ```text
 node client/browser-key-cli.mjs instances
+node client/browser-key-cli.mjs call --method system.describe --schema-version 1 --params-json "{}"
 ```
 
-Este comando no requiere una Key. Cero instancias significa que todavía no hay una extensión conectada. Si hay varias, seleccionar explícitamente una `relayEpoch/instanceNumber` actual; nunca probar una bearer Key en todas las instancias.
+## De la página al resultado
 
-Proporcionar la Key mediante una variable de entorno, nunca por argv:
+Consulta versión y permisos con `system.describe`; los parámetros exactos están en el [registro de órdenes](dev/skills/browser-key-automation/references/commands.registry.json).
 
-```powershell
-# PowerShell
-$env:BKA_API_KEY = "bk1.<key-id>.<secret>"
-node .\client\browser-key-cli.mjs call --method system.describe --schema-version 1 --params-json "{}"
-```
-
-```bash
-# Bash
-export BKA_API_KEY='bk1.<key-id>.<secret>'
-node client/browser-key-cli.mjs call --method system.describe --schema-version 1 --params-json '{}'
-```
-
-La CLI vuelve a enumerar las instancias antes de leer la Key. Si delivery se informa como `unknown`, el resultado es realmente desconocido; no se debe reintentar automáticamente un comando con efectos.
-
-## Flujos habituales
-
-- Descubrir una página: `tabs.list` → `page.tree.open` → `page.tree.find` o `page.tree.expand.v2` → `page.tree.view.get`
-- Sincronizar: `page.wait`; sin timeout se usan 10 segundos y una condición ya satisfecha devuelve de inmediato.
-- Guardar una página: `node client/browser-key-cli.mjs page-save --tab-ref <TabRef> --output ./page.mhtml`
-- Capturar el viewport: `node client/browser-key-cli.mjs page-shot --tab-ref <TabRef> --output ./page.png`
-- Abrir una demostración: `node client/browser-key-cli.mjs demo-open ./demo.html`
-- Antes de usar un comando desconocido, consultar `skills/browser-key-automation/references/commands.registry.json`. El skill de Agent incluido contiene las mismas referencias generadas.
-
-### Imágenes de elementos y depuración explícita
-
-`page.screenshot.element` permite a un Agent ver un Canvas, gráfico o contenedor mediante su NodeRef existente. Incluye los hijos visibles, aplica una máscara a las formas compatibles y centra el conjunto proporcionalmente en un PNG transparente del tamaño exacto. No necesita calcular coordenadas de pantalla ni adjuntar un depurador.
+| | API / CLI |
+| --- | --- |
+| Explorar, seleccionar, expandir | `tabs.list` → `page.tree.open` → `page.tree.find` / `page.tree.expand.v2` → `page.tree.view.get` |
+| Esperar una condición | `page.wait` · `ensure.run` |
+| Guardar página / capturar página o elemento | `page-save` · `page-shot` · `element-shot` |
+| Subir y mostrar HTML | `demo-open` |
+| DOM / clic real | `dom.click` · `dom.click.real` |
+| Texto / atajos / soltar teclas | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
+| Ratón / teclado virtual | `virtualMouse.*` · `virtualKeyboard.*` |
+| Medir el destino nativo | `input.calibrate` |
+| Sesión CDP explícita | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
+node client/browser-key-cli.mjs page-save --tab-ref <TabRef> --output ./page.mhtml
 node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --height 600 --output ./element.png
+node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
-Para un diagnóstico más profundo: `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach`. El permiso independiente `debugger` proporciona comandos y eventos CDP; la confirmación y advertencia de depuración de Chrome permanecen. Las operaciones ordinarias conservan su ruta habitual.
+## Keys y límites de entrada
 
-La captura de elementos usa solo el viewport actual de una pestaña ya activa, sin desplazamiento automático ni reconstrucción de contenido oculto. Consulta las formas compatibles, el alcance del documento principal, regiones locales, resultados CDP grandes y errores en [la guía del Agent](skills/browser-key-automation/references/debugger-and-element-capture.md).
+- Root obtiene todos los permisos activos. Las Keys Regular ofrecen grupos desplegables, caducidad, consulta posterior, desactivación y revocación. JavaScript y entrada nativa son permisos independientes. Una Key no sustituye el consentimiento para pagar, publicar o borrar.
+- El estado virtual pertenece a la Key, persiste entre pestañas y requiere ocupar toda la ventana destino. Las acciones virtuales normales usan un `input.calibrate` válido; `ensure.run` lo comprueba y actualiza si hace falta. La entrada real exige primer plano; la virtual no mueve el cursor físico.
+- Windows ofrece entrada nativa. Linux ofrece actualmente enrutamiento del navegador y archivos, no entrada nativa. No se admiten ventanas minimizadas. La calibración inicial requiere una página medible; reutilizarla con la ventana tapada tiene condiciones. Siguen pendientes casos de calibración inicial multiventana y arrastre HTML5/OLE nativo completo.
+- Las imágenes de elementos usan el viewport visible y máscaras de formas compatibles. Chrome controla páginas restringidas, acceso a sitios y User Scripts; `debugger.attach` mantiene el aviso de depuración. Eventos sintéticos y mensajes virtuales no eluden todas las restricciones.
 
-### Clic nativo `.real`
+## Cuándo elegirlo
 
-`dom.click.real` es explícito e independiente de `dom.click`. En Windows solicita a Chromium activar la pestaña de destino y enfocar su ventana, comprueba que el elemento referenciado siga presente, visible, habilitado y sin obstrucciones, y después pide a la App que envíe un único clic izquierdo nativo a la ventana de contenido Chromium correspondiente.
+BKA se centra en el navegador personal, árboles selectivos y flujos integrados de acciones y archivos. No sustituye universalmente a los frameworks de prueba ni a DevTools.
 
-`{ "status": "input_sent" }` solo significa que se aceptó una secuencia de entrada, no que el sitio haya completado la acción de negocio. Se debe observar la página después. Nunca se reproduce automáticamente una entrada nativa desconocida o fallida. La App de Linux no anuncia actualmente `native.input.click.v1`, por lo que la extensión rechaza `.real` antes de preparar la página.
+| | |
+| --- | --- |
+| [Playwright](https://playwright.dev/docs/intro) · [Selenium](https://www.selenium.dev/documentation/overview/) | Pruebas multinavegador y CI |
+| [Puppeteer](https://pptr.dev/) | Automatización programable |
+| [Playwright MCP](https://github.com/microsoft/playwright-mcp) | Herramientas Agent con instantáneas de accesibilidad |
+| [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp) | Diagnóstico profundo del navegador |
+| [Browser MCP](https://browsermcp.io/) · [Chrome MCP Server](https://github.com/hangwin/mcp-chrome) | Herramientas MCP para navegadores existentes |
+| [Nanobrowser](https://github.com/nanobrowser/nanobrowser) | Interfaz Agent en el navegador |
 
-### Entrada de teclado nativa
+## Guías y mantenimiento
 
-`keyboard.type` envía texto Unicode exacto de inmediato; `keyboard.typeHuman` es el modo separado y acotado con ritmo humano. `keyboard.press` acepta teclas con nombre y acordes: un nombre simple siempre completa pulsación y liberación, mientras un arreglo de acciones puede conservar deliberadamente el estado raw `down`/`up` entre comandos. `keyboard.reset` libera solo las teclas retenidas por la instancia actual de la extensión. `dom.insertText` sigue siendo una inserción DOM independiente y no trusted en el cursor o selección.
+[Agent skill](dev/skills/browser-key-automation/SKILL.md) · [Operation tree](dev/skills/browser-key-automation/references/operation-tree.md) · [Ensure](dev/skills/browser-key-automation/references/ensure-workflows.md) · [Virtual input](dev/skills/browser-key-automation/references/virtual-mouse.md) · [Capture & CDP](dev/skills/browser-key-automation/references/debugger-and-element-capture.md)
 
-Los comandos de teclado nativo apuntan a una NodeRef o TabRef y requieren la ventana Chromium exacta en primer plano. Si cambia el objetivo o el primer plano, o aparecen teclas físicas en conflicto, la App se detiene antes de enviar más entrada; los efectos aceptados nunca se repiten. Windows anuncia `native.input.keyboard.v1`; Linux todavía no ofrece este backend.
-
-## Keys, permisos y ocupaciones
-
-- Una Key es la única identidad externa. La marca del Agent, el proceso, la cuenta, el socket y la Instance de la App no son identidades de autorización adicionales.
-- Root recibe dinámicamente todos los permisos activos. Regular recibe solo los permisos seleccionados explícitamente.
-- JavaScript, las acciones DOM normales, el clic nativo, cada operación de teclado nativo, el acceso de red y el acceso explícito `debugger` son permisos paralelos; uno no concede silenciosamente los demás.
-- Los comandos de una misma Key se serializan en el runtime actual de la extensión. Keys diferentes tienen lanes independientes, aunque sus efectos sobre la misma página pueden competir.
-- Una ocupación pertenece a una Key. No hay takeover, force ni replace ocultos: primero release y después acquire.
-- La Key completa permanece dentro de la extensión. La página de administración de confianza y los llamantes autorizados por separado para `keys.create` o `keys.reveal` pueden recibirla; las listas y diagnósticos normales no la incluyen. La CLI solo la lee de `BKA_API_KEY` o de una variable de entorno elegida explícitamente.
-
-Una Key potente debe tratarse como una credencial local de control del navegador y entregarse únicamente a Agents o automatizaciones de confianza. Un permiso técnico nunca sustituye la autorización del usuario para pagos, publicaciones, mensajes, cambios de cuenta, eliminaciones u otras acciones importantes.
-
-## Límites del navegador y de plataforma
-
-Chromium sigue controlando host access, páginas restringidas, acceso a file URLs, **Allow User Scripts**, activación de la extensión y cualquier confirmación de depuración de DevTools. Root no puede eludir esos límites.
-
-Las Apps de Windows y Linux ofrecen enrutamiento y escritura de archivos. Windows anuncia además los backends nativos actuales de clic y teclado; Linux todavía no. El modo incógnito y los derivados de Chromium deben verificarse con su propio perfil y políticas.
-
-Configuración del Agent: [Browser Key Automation skill](skills/browser-key-automation/SKILL.md).
-
-Este proyecto lo mantiene su autor. No se aceptan contribuciones externas ni Pull Requests.
+La interfaz ofrece 20 idiomas; los README tienen diez variantes. [Privacidad](PRIVACY.md) · [Estructura de desarrollo](dev/README.md). Mantenido por el autor; no se aceptan contribuciones externas ni Pull Requests.

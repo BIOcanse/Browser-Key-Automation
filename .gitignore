@@ -3,12 +3,12 @@ node_modules/
 zig-out/
 out/
 generated/
-apps/extension/dist/
-apps/extension/src/generated/
-apps/extension/wasm/
-apps/extension/artifact.seal.json
+extension/dist/
+extension/src/generated/
+extension/wasm/
+extension/artifact.seal.json
 .codex/subagent-results/
-/docs/
+/dev/docs/
 *.zip
 *.crx
 *.pem

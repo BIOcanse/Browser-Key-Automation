@@ -1,54 +1,51 @@
-# Browser Key Automation Privacy Policy
+# Privacy — Browser Key Automation
 
-Effective date: September 3, 2026
+Effective date: September 5, 2026
 
-Browser Key Automation provides user-authorized, API-Key-scoped browser automation to trusted agents and programs. This policy describes the data handled by the Browser Key Automation Chrome extension and its separately installed local companion App.
+Browser Key Automation connects Key-authenticated clients to an existing Chromium browser through an extension and a separately installed local App. There is no developer-operated cloud service, telemetry service or advertising system.
 
-## Data handled
+## What is handled
 
-The extension handles data only when needed to provide its browser-automation purpose. Depending on the page selected by the user and the command authorized by an API Key, that data may include:
+Depending on requested operations and Key permissions, the product handles:
 
-- API Keys and their local management metadata, including names, identifiers, permissions, status, and optional expiration dates.
-- Tab and navigation information, including tab identifiers, URLs, titles, loading state, frame information, and document identity.
-- Website content and resources, including DOM structure, text, attributes, form values, resource URLs, visible viewport or selected-element screenshots, MHTML archives, and explicitly fetched page resources.
-- Content already present on a selected page that may contain personally identifiable information, health information, financial or payment information, authentication information, personal communications, or location information.
-- Automation inputs and results, including target references, selectors, values supplied for requested actions, wait conditions, user-provided JavaScript or demo HTML, and explicitly requested DevTools Protocol commands, events, and results.
-- Local runtime state needed to prevent conflicting automation and stale references, including connection state, tab or global occupations, expansion state for operation trees, and bounded Artifacts created by explicit commands.
+- Keys, names, permissions, expiry and management settings.
+- Tab URLs, titles, navigation/frame/document references and selected webpage contents, including DOM text, attributes and form values.
+- Requested resources, MHTML archives, screenshots, element images, uploaded HTML demonstrations, and files explicitly transferred by a client.
+- Commands and results, supplied JavaScript, CDP events/results, conditions, bounded execution traces and error diagnostics.
+- Local operation-tree state, tab/window/global occupation, native-window geometry, calibration, and Key-owned virtual mouse/keyboard state.
 
-The extension does not continuously record human clicks, mouse position, scrolling, or keystrokes. It does not access Chrome cookies through the cookies API.
+Selected pages and results can contain personal information, private messages, financial or health information, location data or authentication information. Local processing is still data handling; it does not make those contents non-sensitive.
 
-## How data is used
+The extension does not use Chrome's cookies API. It does not continuously log the user's browsing input. Explicit Windows native-input commands inspect the target window and relevant input state. Enabling virtual-input interception loads the bundled hook into the targeted process to serve virtual cursor/key state through supported APIs; this is not a general-purpose activity recording service.
 
-Data is used only to perform the browser operation explicitly requested by a Key-authenticated client, return the result to that client, maintain the user's Key configuration, prevent conflicting operations, and preserve bounded local Artifacts requested by the user. It is not used for advertising, profiling, generalized analytics, credit decisions, or unrelated research.
+## Where data goes
 
-## Local processing and disclosure to authorized clients
+The extension and App communicate over the same computer's loopback connection. Requested results go to the Key-authenticated client. Browser Key Automation does not send page contents, Keys or results to the developer, and does not sell data or use it for advertising, profiling or unrelated analytics.
 
-The extension communicates with the companion App over the loopback address on the same computer. Browser Key Automation has no developer-operated cloud service and does not send page data, API Keys, or command results to the developer.
+A connected Agent or automation client may send results to an AI provider or another service under that client's own policies. Browser Key Automation cannot make such a client local-only. Review the client before giving it access.
 
-The user decides which clients receive an API Key. A client holding a valid Key can receive data and perform operations allowed by that Key's permissions. Such a client may process or transmit the returned data under its own terms and privacy policy. Users should review a client's data practices before sharing a Key and should grant only the permissions and validity period that client needs.
+**Every fresh installation creates the same publicly documented Root trial Key.** Anyone able to reach the local route and present that active Key has its full permissions. It is intended only for testing or trying the product, not protection of a personal browser. Create a private Key, switch clients and revoke the trial Key. Creating another Key alone does not disable it. Updates do not inject or restore the trial Key.
 
-Browser Key Automation does not sell user data. It does not transfer user data to advertising platforms, data brokers, or information resellers. The developer does not permit humans to read user data except where the user gives explicit consent for specific support data, or where access is required for security or legal reasons.
+## Local storage and retention
 
-## Storage and retention
+Keys, their administrative metadata, settings and bounded Artifacts are stored in the extension's browser profile. Keys can be revealed again. Revocation prevents authentication but keeps the local administrative record and revealable value until extension data is cleared or the extension is uninstalled.
 
-API Keys, Key metadata, settings, and requested Artifacts are stored locally in the extension's browser profile. Revoking a Key prevents it from authenticating but retains its local administrative record and revealable value, as shown in the Key-management interface. These records remain until the user clears the extension's data or uninstalls the extension.
+Document references and tree data follow the relevant document lifecycle. Input state is owned by the Key and can persist across tab changes and extension worker restarts; explicit reset/release and runtime cleanup rules apply. Artifacts and execution traces have local count, size and lifetime bounds. The App holds live routing and native-input state, not a separate Key database.
 
-Runtime-only session and document state is discarded as the relevant browser, extension, tab, or document lifecycle ends. Artifacts are bounded by local size, count, and lifetime limits and can also be released explicitly. Ordinary command results are returned to the authorized client and are not retained on a developer server.
+Files saved to disk remain until the user deletes them. Clients control their own copies of returned data. Stopping the App or revoking a Key does not erase those copies.
 
-## Security and user controls
+## Controls and boundaries
 
-The product uses scoped API Keys, optional expiration, disable and revoke controls, exact tab and document references, bounded inputs and outputs, and Chrome's extension security boundaries. Explicit DevTools Protocol access has its own Key permission and retains Chrome's debugging UI; routine extension operations do not attach a debugger. The companion App accepts the extension connection only through the configured local loopback route. Chrome-restricted pages remain inaccessible to the extension.
+Use permission groups and individual permissions, expiry, disable or revoke to limit access. Reset held input state, release occupations and Artifacts, stop the App or disable/uninstall the extension to end the corresponding operation paths. Avoid clearing or stopping components while an input gesture is intentionally held; release/reset first when possible.
 
-Users can reduce or end access by changing a Key's permissions or expiration, disabling or revoking the Key, releasing saved Artifacts, stopping the companion App, clearing extension data, or uninstalling the extension.
+Root does not bypass Chrome's restricted pages, site-access controls or User Scripts switch. Explicit debugger access is separate and retains Chrome's debugging UI. A technically valid Key does not substitute for consent to consequential actions.
 
-## Chrome Web Store Limited Use
+## Limited Use
 
-The use of information received from Google APIs will adhere to the Chrome Web Store User Data Policy, including the Limited Use requirements.
+The use of information received from Google APIs will adhere to the Chrome Web Store User Data Policy, including the Limited Use requirements. See [Chrome's user-data guidance](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
 
-## Changes
+The developer does not permit human access to user data except with explicit consent for specific support material, or when necessary for security or legal reasons. Do not include Keys or private page captures in public support reports.
 
-If the product's data practices change, the updated practices will be disclosed before the changed handling begins, and this policy's effective date will be updated.
+## Contact and updates
 
-## Contact
-
-Support and privacy questions can be sent to biocanse@gmail.com.
+Contact: biocanse@gmail.com. If data practices change, this policy and its effective date will be updated before the changed handling begins.

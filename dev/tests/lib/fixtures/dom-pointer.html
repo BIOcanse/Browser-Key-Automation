@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>BKA pointer fixture</title>
+<style>
+  body { margin: 20px; font: 16px system-ui; background: #f2f2ef; color: #242621; }
+  h1 { font-size: 20px; }
+  #hover { display: inline-block; padding: 18px; background: #ddd; border: 2px solid #777; }
+  #hover:hover { background: #f8be52; }
+  #pad { display: block; margin: 20px 0; background: white; border: 1px solid #333; }
+  #row { display: flex; gap: 30px; height: 100px; }
+  #source, #drop, #reject { width: 140px; padding: 15px; border: 1px solid #333; }
+  #source { background: #c7d5c4; }
+  #drop { background: #fff; }
+  #covered { position: relative; width: 90px; height: 30px; margin-top: 15px; }
+  #cover { position: absolute; inset: 0; background: #888; }
+  iframe { display: block; width: 320px; height: 100px; margin-top: 15px; border: 1px solid #aaa; }
+  #scrollbox { position: absolute; top: 60px; left: 620px; width: 160px; height: 80px; overflow: auto; border: 1px solid #777; overscroll-behavior: contain; }
+</style>
+<h1>Hover · pointer drawing · HTML drag/drop</h1>
+<div id="hover">Hover target</div> <output id="hover-status">idle</output>
+<output id="click-count">0 clicks</output>
+<input id="keys" aria-label="Keyboard input" value="">
+<canvas id="pad" width="360" height="120"></canvas>
+<div id="row"><div id="source" draggable="true">Drag card</div><div id="drop">Drop accepted</div><div id="reject">Drop rejected</div></div>
+<div id="covered"><button id="blocked">Covered</button><span id="cover"></span></div>
+<iframe id="frame" srcdoc="<!doctype html><style>body{margin:8px}button{width:150px;height:55px}</style><button id='inside' onpointerenter='this.textContent=&quot;frame hovered&quot;'>frame idle</button>"></iframe>
+<div id="scrollbox"><div style="width:600px;height:400px;background:repeating-linear-gradient(#ddd 0 40px,#aaa 40px 80px)">Wheel target</div></div>
+<script>
+  const eventLog = [];
+  const state = { drawing: false, points: [], dropData: null, cancelStart: false, clickCount: 0 };
+  const hover = document.querySelector('#hover'), pad = document.querySelector('#pad');
+  const source = document.querySelector('#source'), drop = document.querySelector('#drop');
+  const context = pad.getContext('2d'); context.strokeStyle = '#354f38'; context.lineWidth = 3;
+  for (const type of ['pointerover','pointerenter','pointermove','pointerout','pointerleave','pointerdown','pointerup','pointercancel',
+    'mouseover','mouseenter','mousemove','mouseout','mouseleave','mousedown','mouseup','click','dblclick','contextmenu','wheel',
+    'dragstart','drag','dragenter','dragleave','dragover','drop','dragend','keydown','keyup']) {
+    document.addEventListener(type, event => {
+      if (eventLog.length >= 4000) return;
+      eventLog.push({ type, target: event.target.id || event.target.tagName, x: event.clientX, y: event.clientY,
+        buttons: event.buttons, button: event.button, detail: event.detail, deltaX: event.deltaX, deltaY: event.deltaY,
+        ctrlKey: event.ctrlKey, shiftKey: event.shiftKey, altKey: event.altKey, key: event.key, code: event.code,
+        trusted: event.isTrusted, bubbles: event.bubbles, related: event.relatedTarget?.id || null });
+    }, true);
+  }
+  hover.addEventListener('pointerenter', () => { document.querySelector('#hover-status').textContent = 'hovered'; });
+  hover.addEventListener('pointerleave', () => { document.querySelector('#hover-status').textContent = 'left'; });
+  hover.addEventListener('contextmenu', event => { event.preventDefault(); });
+  hover.addEventListener('click', () => { document.querySelector('#click-count').textContent = `${++state.clickCount} clicks`; });
+  pad.addEventListener('pointerdown', event => {
+    state.drawing = true; state.points = []; context.beginPath();
+    const rect = pad.getBoundingClientRect(); context.moveTo(event.clientX - rect.x, event.clientY - rect.y);
+  });
+  document.addEventListener('pointermove', event => {
+    if (!state.drawing) return;
+    const rect = pad.getBoundingClientRect(); state.points.push([event.clientX - rect.x, event.clientY - rect.y]);
+    context.lineTo(event.clientX - rect.x, event.clientY - rect.y); context.stroke();
+  });
+  for (const type of ['pointerup','pointercancel']) document.addEventListener(type, () => { state.drawing = false; });
+  source.addEventListener('dragstart', event => {
+    if (state.cancelStart) { event.preventDefault(); return; }
+    event.dataTransfer.setData('text/plain', 'fixture-card'); event.dataTransfer.effectAllowed = 'move';
+  });
+  drop.addEventListener('dragover', event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; });
+  drop.addEventListener('drop', event => { event.preventDefault(); state.dropData = event.dataTransfer.getData('text/plain'); drop.textContent = 'Received: ' + state.dropData; });
+  // Separate ordinary pointer-driven card fixture. The default page above still tests HTML5 DataTransfer.
+  if (location.hash.startsWith('#key-input')) {
+    source.draggable = false;
+    let cardHeld = false;
+    source.addEventListener('pointerdown', event => { event.preventDefault(); cardHeld = true; source.setPointerCapture(event.pointerId); });
+    source.addEventListener('pointerup', event => {
+      const rect = drop.getBoundingClientRect();
+      if (cardHeld && event.clientX >= rect.left && event.clientX < rect.right && event.clientY >= rect.top && event.clientY < rect.bottom) {
+        state.dropData = 'fixture-card'; drop.textContent = 'Received: fixture-card';
+      }
+      cardHeld = false;
+    });
+  }
+  const documentToken = crypto.randomUUID();
+  globalThis.__pointerProbe = {
+    reset() { eventLog.length = 0; state.drawing = false; state.points = []; state.dropData = null; state.cancelStart = false; state.clickCount = 0;
+      document.querySelector('#click-count').textContent = '0 clicks';
+      document.querySelector('#hover-status').textContent = 'idle'; drop.textContent = 'Drop accepted'; context.clearRect(0, 0, pad.width, pad.height); },
+    cancelStart() { state.cancelStart = true; },
+    snapshot() { return { ...state, documentToken, events: eventLog.slice(), hoverText: document.querySelector('#hover-status').textContent,
+      cssHover: hover.matches(':hover'), hoverColor: getComputedStyle(hover).backgroundColor,
+      dropText: drop.textContent, visibility: document.visibilityState, keyValue: document.querySelector('#keys').value,
+      scrollTop: document.querySelector('#scrollbox').scrollTop, scrollLeft: document.querySelector('#scrollbox').scrollLeft,
+      rects: Object.fromEntries(['hover','pad','source','drop','reject','scrollbox'].map(id => [id, document.querySelector('#' + id).getBoundingClientRect().toJSON()])) }; },
+  };
+</script>
+</html>

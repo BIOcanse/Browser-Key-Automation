@@ -1,0 +1,352 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { COMMAND_CATALOG } from "../../out/extension/generated/command-config.js";
+
+const originalChrome = globalThis.chrome;
+const event = { addListener() {} };
+globalThis.chrome = { tabs: { onRemoved: event, onReplaced: event }, webNavigation: { onCommitted: event } };
+const { parseCommand } = await import("../../out/extension/background/command-dispatcher.js");
+if (originalChrome === undefined) delete globalThis.chrome;
+else globalThis.chrome = originalChrome;
+
+const workspace = fileURLToPath(new URL("../../", import.meta.url));
+const tabRef = `tr1.${"A".repeat(22)}.1.${"B".repeat(22)}`;
+const nodeRef = `nr1.${"A".repeat(43)}`;
+const parse = (method, params) => parseCommand({ method, params, schemaVersion: 1 });
+
+test("virtual mouse shortcuts use the same permission, defaults, strict limits and no ensure replay", () => {
+  const examples = {
+    move: { x: 1, y: 2 }, click: {}, down: {}, up: {}, drag: { to: { x: 30, y: 40 } }, scroll: { deltaY: -120 },
+  };
+  for (const [name, params] of Object.entries(examples)) {
+    const result = parse(`virtualMouse.${name}`, { tabRef, ...params });
+    assert.equal(result.kind, `virtualMouse.${name}`);
+    assert.equal(result.requiredPermission, "virtualMouse");
+    assert.equal(result.params.timeoutMs, 10000);
+    assert.deepEqual(COMMAND_CATALOG.ensurePolicyByMethod[result.kind], { allowed: true, completion: "explicit_goal", repeat: "never" });
+    assert.equal(parse(result.kind, { tabRef, ...params, interception: true }), null);
+    assert.equal(parse(result.kind, { tabRef, ...params, timeoutMs: null }), null);
+  }
+  assert.deepEqual(parse("virtualMouse.click", { tabRef }).params, {
+    tabRef, at: null, button: "left", timeoutMs: 10000, actions: [{ kind: "button", button: "left", action: "press" }],
+  });
+  const explicit = parse("virtualMouse.click", { tabRef, button: "right", at: { x: 0, y: 0 }, timeoutMs: 1000 });
+  assert.equal(explicit.params.actions[1].button, "right");
+  assert.equal(explicit.params.timeoutMs, 1000);
+  assert.equal(parse("virtualMouse.scroll", { tabRef }).params.actions[0].deltaY, 0);
+  assert.equal(parse("virtualMouse.drag", { tabRef, to: { x: 1, y: 2 }, via: Array(254).fill({ x: 1, y: 1 }) }), null);
+});
+
+test("input calibration is explicit and native ensure keeps normalized actions without replay", () => {
+  assert.deepEqual(parse("input.calibrate", { tabRef }).params, { tabRef, timeoutMs: 10000 });
+  assert.equal(parse("input.calibrate", { tabRef }).requiredPermission, "input.calibrate");
+  for (const params of [{}, { tabRef, refresh: false }, { tabRef, timeoutMs: 0 }, { tabRef, timeoutMs: null }]) assert.equal(parse("input.calibrate", params), null);
+  for (const [method, params] of [["virtualMouse.click", { tabRef }], ["virtualKeyboard.input", { tabRef, keys: "A" }],
+    ["virtualMouse.dragDrop", { fromNodeRef: nodeRef, toNodeRef: nodeRef }]]) {
+    const action = { method, schemaVersion: 1, params };
+    assert.equal(parse("ensure.run", { action }), null);
+    const parsed = parse("ensure.run", { action, goal: { kind: "loaded", tabRef, state: "complete" } });
+    assert.ok(parsed, method);
+    assert.equal(parsed.ensureRequest.action.policy.repeat, "never");
+    if (method !== "virtualMouse.dragDrop") assert.ok(parsed.ensureRequest.action.params.actions.length > 0);
+    else assert.equal(parsed.ensureRequest.action.params.toNodeRef, nodeRef);
+  }
+});
+
+test("command boundary expands declared omissions once and preserves explicit values", () => {
+  assert.equal(parse("virtualMouse.create", { tabRef, x: 1, y: 2 }), null);
+  assert.equal(parse("virtualMouse.interception", { tabRef, enabled: false }).params.enabled, false);
+  assert.equal(parse("virtualMouse.input", { tabRef, actions: [{ kind: "button", button: "left", action: "press" }] }).requiredPermission, "virtualMouse");
+  for (const method of ["virtualMouse.get", "virtualMouse.reset", "virtualKeyboard.get", "virtualKeyboard.reset"]) {
+    assert.deepEqual(parse(method, {}).params, { timeoutMs: 10000 });
+    assert.equal(parse(method, { tabRef, enabled: true }), null);
+  }
+  assert.equal(parse("virtualMouse.create", { tabRef, x: 1, y: 2, interception: true }), null);
+  assert.equal(parse("virtualMouse.input", { tabRef, actions: [{ kind: "drag", toX: 1, toY: 2 }] }), null);
+  assert.deepEqual(parse("page.wait", { tabRef }).params, { tabRef, until: "complete", timeoutMs: 10000 });
+  assert.equal(parse("page.wait", { tabRef, timeoutMs: 250 }).params.timeoutMs, 250);
+  assert.equal(parse("page.wait", { tabRef, until: "text", selector: "#x", text: "ready" }).params.until, "text");
+  for (const params of [{ tabRef, timeoutMs: null }, { tabRef, timeoutMs: 0 }, { tabRef, timeoutMs: 60001 },
+    { tabRef, until: "ready" }, { tabRef, until: "text" }, { tabRef, until: "url" }, { tabRef, selector: "#x" },
+    { tabRef, text: "orphan" }, { tabRef, extra: true }]) assert.equal(parse("page.wait", params), null);
+  assert.deepEqual(parse("tabs.list", {}).params, { afterTabId: null, limit: 100 });
+  assert.deepEqual(parse("artifact.read", { artifactRef: `ar1.${"A".repeat(43)}` }).params,
+    { artifactRef: `ar1.${"A".repeat(43)}`, maximumBytes: 36000, offset: 0 });
+  assert.equal(parse("dom.focus", { nodeRef }).params.preventScroll, true);
+  assert.deepEqual(parse("dom.hover", { nodeRef }).params, { nodeRef, offset: null, phase: "enter" });
+  assert.equal(parse("dom.hover", { nodeRef, phase: "leave", offset: { x: 0, y: 1.5 } }).params.phase, "leave");
+  assert.deepEqual(parse("dom.drag", { nodeRef, toNodeRef: nodeRef }).params, {
+    nodeRef, toNodeRef: nodeRef, fromOffset: null, toOffset: null, mode: "pointer", steps: 12,
+  });
+  assert.equal(parse("dom.drag", { nodeRef, toNodeRef: nodeRef, mode: "html5", steps: 1 }).params.steps, 1);
+  for (const params of [{ nodeRef, phase: null }, { nodeRef, phase: "move" }, { nodeRef, offset: { x: -1, y: 0 } },
+    { nodeRef, offset: { x: 1, y: Infinity } }, { nodeRef, offset: { x: 1, y: 0, z: 0 } }, { nodeRef, extra: true }]) {
+    assert.equal(parse("dom.hover", params), null);
+  }
+  for (const extra of [{ toNodeRef: "bad" }, { mode: "auto" }, { steps: 0 }, { steps: 121 }, { steps: 1.5 },
+    { fromOffset: [] }, { toOffset: { x: 0 } }, { delay: 1 }]) {
+    assert.equal(parse("dom.drag", { nodeRef, toNodeRef: nodeRef, ...extra }), null);
+  }
+  for (const method of ["dom.hover", "dom.drag"]) {
+    const action = { method, schemaVersion: 1, target: { kind: "node", nodeRef }, params: method === "dom.drag" ? { toNodeRef: nodeRef } : {} };
+    assert.equal(parse("ensure.run", { action }), null, "pointer actions need explicit outcome goals");
+    const ensuredPointer = parse("ensure.run", { action, goal: { kind: "focused", target: { kind: "node", nodeRef } } });
+    assert.equal(ensuredPointer.ensureRequest.action.policy.repeat, "never");
+    assert.equal(ensuredPointer.ensureRequest.action.requiredPermission, method);
+  }
+  assert.deepEqual(parse("dom.click.real", { nodeRef }).params, {
+    nodeRef, scrollIntoView: true, timeoutMs: 10000,
+  });
+  assert.deepEqual(parse("dom.click.real", { nodeRef, scrollIntoView: false, timeoutMs: 60000 }).params, {
+    nodeRef, scrollIntoView: false, timeoutMs: 60000,
+  });
+  for (const params of [
+    { nodeRef, scrollIntoView: null }, { nodeRef, timeoutMs: null }, { nodeRef, timeoutMs: 0 },
+    { nodeRef, timeoutMs: 60001 }, { nodeRef: "bad" }, { nodeRef, extra: true },
+  ]) assert.equal(parse("dom.click.real", params), null);
+  assert.equal(parse("dom.insertText", { nodeRef, text: "x" }).kind, "dom.insertText");
+  assert.equal(parse("dom.insertText", { nodeRef, text: "" }), null);
+  assert.deepEqual(parse("keyboard.type", { targetRef: nodeRef, text: "hello" }).params, {
+    targetRef: nodeRef, text: "hello", timeoutMs: 10000,
+  });
+  assert.deepEqual(parse("keyboard.typeHuman", { targetRef: tabRef, text: "hello" }).params, {
+    targetRef: tabRef, text: "hello", charactersPerMinute: 400, mistakePercent: 3,
+    randomSeed: null, timeoutMs: 120000,
+  });
+  const keyPress = parse("keyboard.press", { targetRef: tabRef, keys: "Ctrl+Shift+P" });
+  assert.equal(keyPress.params.holdMs, 0);
+  assert.equal(keyPress.params.gapMs, 0);
+  assert.deepEqual(keyPress.params.actions.map((action) => action.kind), ["press"]);
+  assert.deepEqual(parse("keyboard.reset", {}).params, { timeoutMs: 10000 });
+  for (const params of [
+    { targetRef: tabRef, keys: "Ctrl++P" },
+    { targetRef: tabRef, keys: [{ key: "A", action: "tap" }] },
+    { targetRef: tabRef, keys: [{ waitMs: 5001 }] },
+    { targetRef: "bad", keys: "A" },
+  ]) assert.equal(parse("keyboard.press", params), null);
+  assert.equal(parse("keyboard.type", { targetRef: tabRef, text: "\ud800" }), null);
+  assert.equal(parse("keyboard.typeHuman", { targetRef: tabRef, text: "x", randomSeed: 0x1_0000_0000 }), null);
+  assert.deepEqual(parse("page.screenshot.capture", { tabRef }).params, { tabRef, format: "png", quality: 80 });
+  assert.equal(parse("page.screenshot.capture", { tabRef, format: "jpeg", quality: 0 }).params.quality, 0);
+  assert.equal(parse("page.screenshot.capture", { tabRef, format: null }), null);
+  assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 1024, height: 768 });
+  assert.deepEqual(parse("page.screenshot.element", { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 } }).params,
+    { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 } });
+  for (const params of [{ nodeRef, width: 0 }, { nodeRef, width: null }, { nodeRef, width: 8193 },
+    { nodeRef, width: 8192, height: 8192 }, { nodeRef, region: null }, { nodeRef, region: { x: 0, y: 0, width: 0, height: 1 } },
+    { nodeRef, region: { x: -1, y: 0, width: 1, height: 1 } }, { nodeRef, format: "jpeg" }]) assert.equal(parse("page.screenshot.element", params), null);
+  assert.deepEqual(parse("debugger.attach", { tabRef }).params, { tabRef });
+  assert.equal(parse("debugger.detach", { tabRef, extra: true }), null);
+  assert.deepEqual(parse("debugger.send", { tabRef, method: "Runtime.enable" }).params,
+    { tabRef, method: "Runtime.enable", params: {}, response: "inline" });
+  assert.deepEqual(parse("debugger.events.get", { tabRef }).params, { tabRef, afterSequence: 0, limit: 100 });
+  assert.equal(parse("debugger.send", { tabRef, method: "Runtime.evaluate", params: { expression: "42" }, sessionId: "child-session", response: "artifact" }).params.sessionId, "child-session");
+  for (const params of [{ tabRef, method: "broken" }, { tabRef, method: "Runtime.enable", params: null },
+    { tabRef, method: "Runtime.enable", params: [] }, { tabRef, method: "Runtime.enable", params: { text: "x".repeat(48_001) } },
+    { tabRef, method: "Runtime.enable", response: "automatic" }, { tabRef, method: "Runtime.enable", sessionId: "" }]) assert.equal(parse("debugger.send", params), null);
+  assert.equal(parse("debugger.events.get", { tabRef, afterSequence: -1 }), null);
+  assert.equal(parse("debugger.events.get", { tabRef, limit: 0 }), null);
+  const artifactRef = `ar1.${"A".repeat(43)}`;
+  assert.deepEqual(parse("demo.open", { artifactRef }).params, { artifactRef, tabRef: null, windowId: null, active: true });
+  assert.equal(parse("demo.open", { artifactRef, tabRef, windowId: 1 }), null);
+  assert.equal(parse("demo.open", { artifactRef, active: false }).params.active, false);
+  assert.equal(parse("artifact.upload.begin", { byteLength: 10, mediaType: "text/html" }).kind, "artifact.upload.begin");
+  assert.equal(parse("artifact.upload.begin", { byteLength: -1, mediaType: "text/html" }), null);
+  assert.equal(parse("dom.focus", { nodeRef, preventScroll: false }).params.preventScroll, false);
+  assert.deepEqual(parse("dom.scroll", { nodeRef }).params, { nodeRef, behavior: "auto", block: "center", inline: "nearest" });
+  const traceRef = `xr1.${"T".repeat(43)}`;
+  assert.deepEqual(parse("trace.read", {}).params, { traceRef: null });
+  assert.equal(parse("trace.export", { traceRef }).params.traceRef, traceRef);
+  assert.equal(parse("trace.read", { traceRef: "xr1.short" }), null);
+  assert.equal(parse("trace.read", { traceRef: null, extra: true }), null);
+  const setValueAction = {
+    method: "dom.setValue", schemaVersion: 1, target: { kind: "node", nodeRef }, params: { value: "Alice" },
+  };
+  const ensured = parse("ensure.run", { action: setValueAction });
+  assert.deepEqual(ensured.params, {
+    action: setValueAction,
+    goal: null,
+    mode: "ensure",
+    precondition: null,
+    scrollIntoView: true,
+    searchByScrolling: true,
+    timeoutMs: 10000,
+  });
+  assert.deepEqual(ensured.ensureRequest.goal, { kind: "value_is", target: { kind: "node", nodeRef }, value: "Alice" });
+  const framedTarget = {
+    kind: "locator",
+    tabRef,
+    framePath: [
+      { urlPattern: "https://frame.test/*" },
+      { urlPattern: "https://child.test/editor", match: "first" },
+    ],
+    selector: "button",
+    role: "button",
+    name: "Save",
+    nameMatch: "exact",
+    match: "unique",
+  };
+  const framed = parse("ensure.run", {
+    action: { method: "dom.focus", schemaVersion: 1, target: framedTarget, params: {} },
+  });
+  assert.deepEqual(framed.ensureRequest.action.target.framePath, [
+    { urlPattern: "https://frame.test/*", match: "unique" },
+    { urlPattern: "https://child.test/editor", match: "first" },
+  ]);
+  const keyboardLocator = parse("ensure.run", {
+    action: { method: "keyboard.press", schemaVersion: 1, target: framedTarget, params: { keys: "Enter" } },
+    goal: { kind: "loaded", tabRef, state: "complete" },
+  });
+  assert.equal(keyboardLocator.ensureRequest.action.target.selector, "button");
+  assert.equal(Object.hasOwn(keyboardLocator.ensureRequest.action.params, "targetRef"), false);
+  assert.equal(parse("ensure.run", {
+    action: { method: "keyboard.type", schemaVersion: 1, params: { targetRef: tabRef, text: "x" } },
+    goal: { kind: "loaded", tabRef, state: "complete" },
+  }).ensureRequest.action.target, null);
+  assert.equal(parse("ensure.run", {
+    action: { method: "dom.focus", schemaVersion: 1, target: { ...framedTarget, framePath: [{ urlPattern: "*", match: "last" }] }, params: {} },
+  }), null);
+  assert.equal(parse("ensure.run", {
+    action: { method: "dom.click", schemaVersion: 1, target: { kind: "node", nodeRef }, params: {} },
+  }), null, "click requires an explicit observable goal");
+  assert.equal(parse("ensure.run", { action: setValueAction, mode: "strict" }), null, "strict requires a precondition");
+  assert.equal(parse("ensure.run", {
+    action: setValueAction,
+    mode: "strict",
+    precondition: { kind: "visible", target: { kind: "node", nodeRef } },
+  }).ensureRequest.goal, null);
+  assert.equal(parse("ensure.run", {
+    action: { ...setValueAction, params: { nodeRef, value: "Alice" } },
+  }), null, "a target action cannot also smuggle nodeRef through params");
+  assert.equal(parse("ensure.run", {
+    action: { method: "dom.describe", schemaVersion: 1, params: { nodeRef } },
+  }), null, "read-only primitives are not workflow effects");
+  assert.equal(parse("ensure.run", { action: setValueAction, timeoutMs: 60001 }), null);
+  assert.equal(parse("ensure.run", {
+    action: setValueAction,
+    goal: { kind: "present", target: { kind: "locator", tabRef, selector: null, role: null, name: null, nameMatch: "exact", match: "unique" } },
+  }), null);
+  const rootRef = `tr2.${"A".repeat(43)}`;
+  assert.equal(parse("page.tree.find", { rootRef }), null);
+  assert.equal(parse("page.tree.find", { rootRef, text: "x" }).params.limit, 256);
+  assert.equal(parse("page.tree.find", { rootRef, text: "" }), null);
+});
+
+test("Freedom mutation reaches actual extension parsing and both CLI endpoint consumers", async () => {
+  const artifacts = path.join(workspace, "out", "test-artifacts"); await mkdir(artifacts, { recursive: true });
+  const fixture = await mkdtemp(path.join(artifacts, "freedom-generation-"));
+  for (const relative of ["app", "extension", "dev/registries", "dev/protocol", "dev/tools", "dev/skills"]) {
+    await cp(path.join(workspace, relative), path.join(fixture, relative), { recursive: true, errorOnExist: true, force: false });
+  }
+  const registryPath = path.join(fixture, "dev", "registries", "freedom.registry.json");
+  const registry = JSON.parse(await readFile(registryPath, "utf8"));
+  const point = (id) => registry.points.find((item) => item.pointId === id);
+  point("command.page.wait.default_timeout_ms").defaultInteger = 7000;
+  point("command.dom.click.real.default_scroll_into_view").defaultBoolean = false;
+  point("command.dom.click.real.default_timeout_ms").defaultInteger = 7000;
+  point("command.dom.click.real.maximum_timeout_ms").defaultInteger = 8000;
+  point("command.dom.focus.default_prevent_scroll").defaultBoolean = false;
+  point("command.dom.scroll.default_block").defaultString = "start";
+  point("command.dom.hover.default_phase").defaultString = "leave";
+  point("command.dom.drag.default_mode").defaultString = "html5";
+  point("command.dom.drag.default_steps").defaultInteger = 5;
+  point("command.virtualMouse.default_button").defaultString = "right";
+  point("command.page.screenshot.default_format").defaultString = "jpeg";
+  point("command.page.screenshot.default_quality").defaultInteger = 42;
+  point("command.page.screenshot.default_width").defaultInteger = 640;
+  point("command.page.screenshot.default_height").defaultInteger = 480;
+  point("command.debugger.default_response").defaultString = "artifact";
+  point("command.debugger.default_event_limit").defaultInteger = 50;
+  point("command.demo.open.default_active").defaultBoolean = false;
+  point("command.ensure.default_scroll_into_view").defaultBoolean = false;
+  point("command.ensure.default_search_by_scrolling").defaultBoolean = false;
+  point("command.ensure.default_timeout_ms").defaultInteger = 7000;
+  point("command.ensure.maximum_timeout_ms").defaultInteger = 8000;
+  point("build.transport.loopback_bind").defaultLoopbackBind.port = 32190;
+  await writeFile(registryPath, JSON.stringify(registry));
+  const manifestPath = path.join(fixture, "extension", "manifest.json");
+  await writeFile(manifestPath, (await readFile(manifestPath, "utf8")).replaceAll("32189", "32190"));
+  await run(fixture, "dev/tools/generate-command-config.mjs"); await run(fixture, "dev/tools/generate-transport-config.mjs");
+  const generated = await readFile(path.join(fixture, "extension", "src", "generated", "command-config.ts"), "utf8");
+  const projected = JSON.parse(generated.match(/export const COMMAND_CATALOG = ([\s\S]*?) as const;/u)[1]);
+  const trialKey = JSON.parse(generated.match(/export const PUBLIC_TRIAL_KEY = ("[^"]+") as const;/u)[1]);
+  assert.equal(trialKey, point("build.keys.public_trial_key").defaultString);
+  const previous = COMMAND_CATALOG.parameterDefaultsByMethod;
+  try {
+    COMMAND_CATALOG.parameterDefaultsByMethod = projected.parameterDefaultsByMethod;
+    assert.equal(parse("page.wait", { tabRef }).params.timeoutMs, 7000);
+    assert.deepEqual(parse("dom.click.real", { nodeRef }).params, {
+      nodeRef, scrollIntoView: false, timeoutMs: 7000,
+    });
+    assert.equal(parse("dom.focus", { nodeRef }).params.preventScroll, false);
+    assert.equal(parse("dom.scroll", { nodeRef }).params.block, "start");
+    assert.equal(parse("dom.hover", { nodeRef }).params.phase, "leave");
+    assert.equal(parse("dom.drag", { nodeRef, toNodeRef: nodeRef }).params.mode, "html5");
+    assert.equal(parse("dom.drag", { nodeRef, toNodeRef: nodeRef }).params.steps, 5);
+      assert.equal(parse("virtualMouse.click", { tabRef }).params.actions[0].button, "right");
+    assert.equal(parse("virtualMouse.down", { tabRef, button: "left" }).params.actions[0].button, "left");
+    assert.equal(parse("virtualMouse.drag", { tabRef, to: { x: 1, y: 2 } }).params.actions[0].button, "right");
+    assert.equal(parse("page.screenshot.capture", { tabRef }).params.format, "jpeg");
+    assert.equal(parse("page.screenshot.capture", { tabRef }).params.quality, 42);
+    assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 640, height: 480 });
+    assert.equal(parse("debugger.send", { tabRef, method: "Runtime.enable" }).params.response, "artifact");
+    assert.equal(parse("debugger.events.get", { tabRef }).params.limit, 50);
+    assert.equal(parse("demo.open", { artifactRef: `ar1.${"A".repeat(43)}` }).params.active, false);
+    assert.deepEqual(parse("ensure.run", { action: {
+      method: "dom.setValue", schemaVersion: 1, target: { kind: "node", nodeRef }, params: { value: "x" },
+    } }).params, {
+      action: { method: "dom.setValue", schemaVersion: 1, target: { kind: "node", nodeRef }, params: { value: "x" } },
+      goal: null, mode: "ensure", precondition: null, scrollIntoView: false, searchByScrolling: false, timeoutMs: 7000,
+    });
+  } finally { COMMAND_CATALOG.parameterDefaultsByMethod = previous; }
+  const transport = await import(pathToFileURL(path.join(fixture, "app", "client", "src", "generated-config.mjs")));
+  assert.equal(transport.TRANSPORT.port, 32190);
+  for (const name of ["main.mjs", "native-websocket.mjs"]) {
+    const consumer = await readFile(path.join(fixture, "app", "client", "src", name), "utf8");
+    assert.match(consumer, /import \{ TRANSPORT \} from "\.\/generated-config\.mjs"/);
+    assert.equal(consumer.includes("32189"), false);
+  }
+  assert.match(await readFile(path.join(fixture, "app", "src", "generated_config.zig"), "utf8"), /loopback_port: u16 = 32190/);
+  point("command.dom.click.real.default_timeout_ms").defaultInteger = 9000;
+  point("command.dom.drag.default_steps").defaultInteger = 121;
+  await writeFile(registryPath, JSON.stringify(registry));
+  await assert.rejects(run(fixture, "dev/tools/generate-command-config.mjs"), /DOM drag default_steps/);
+  point("command.dom.drag.default_steps").defaultInteger = 5;
+  await writeFile(registryPath, JSON.stringify(registry));
+  await assert.rejects(run(fixture, "dev/tools/generate-command-config.mjs"), /dom\.click\.real default timeout/);
+  point("command.dom.click.real.default_timeout_ms").defaultInteger = 7000;
+  point("command.ensure.default_timeout_ms").defaultInteger = 9000;
+  await writeFile(registryPath, JSON.stringify(registry));
+  await assert.rejects(run(fixture, "dev/tools/generate-command-config.mjs"), /ensure defaults/);
+  point("command.ensure.default_timeout_ms").defaultInteger = 7000;
+  point("command.dom.scroll.default_block").defaultString = "invalid-alignment";
+  await writeFile(registryPath, JSON.stringify(registry));
+  await assert.rejects(run(fixture, "dev/tools/generate-command-config.mjs"), /typed default/);
+  point("command.dom.scroll.default_block").defaultString = "start";
+  await writeFile(registryPath, JSON.stringify(registry));
+  const commandPath = path.join(fixture, "dev", "registries", "commands.registry.json");
+  const commands = JSON.parse(await readFile(commandPath, "utf8"));
+  commands.schemaDeclarations.find((schema) => schema.schemaId === "schema.dom.focus.params.v1")
+    .fields.find((field) => field.fieldName === "preventScroll").defaultFromFreedomPoint = "command.page.wait.default_timeout_ms";
+  const focus = commands.commandDeclarations.find((command) => command.method === "dom.focus");
+  focus.limitRefs.push("command.page.wait.default_timeout_ms"); focus.limitRefs.sort();
+  await writeFile(commandPath, JSON.stringify(commands));
+  await assert.rejects(run(fixture, "dev/tools/generate-command-config.mjs"), /parameter default type/);
+  commands.schemaDeclarations.find((schema) => schema.schemaId === "schema.dom.focus.params.v1")
+    .fields.find((field) => field.fieldName === "preventScroll").defaultFromFreedomPoint = "command.dom.focus.default_prevent_scroll";
+  focus.limitRefs = focus.limitRefs.filter((pointId) => pointId !== "command.page.wait.default_timeout_ms");
+  commands.commandDeclarations.find((command) => command.method === "dom.click").ensurePolicy.repeat = "safe";
+  await writeFile(commandPath, JSON.stringify(commands));
+  await assert.rejects(run(fixture, "dev/tools/generate-command-config.mjs"), /invalid ensure policy/);
+});
+
+async function run(cwd, script) {
+  const child = spawn(process.execPath, [script], { cwd, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  let output = ""; child.stdout.on("data", (value) => { output += value; }); child.stderr.on("data", (value) => { output += value; });
+  const code = await new Promise((resolve, reject) => { child.once("error", reject); child.once("exit", resolve); });
+  if (code !== 0) throw new Error(output);
+}
