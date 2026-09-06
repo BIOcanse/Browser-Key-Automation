@@ -4,7 +4,7 @@
 
 **Seu navegador de sempre, agora também para seu Agent.**
 
-Trabalhe nas abas Chromium já autenticadas: leia, aja e salve o resultado. Comandos comuns usam permissões da extensão, sem navegador separado, conexão automática de depurador ou confirmação própria a cada comando. As verificações do navegador continuam valendo.
+Seu Agent pode assumir o controle das abas Chromium já autenticadas, ler páginas e executar as ações necessárias sem interrupções.
 
 ## O que facilita
 
@@ -16,7 +16,7 @@ Trabalhe nas abas Chromium já autenticadas: leia, aja e salve o resultado. Coma
 
 ## Primeiros passos
 
-> Cada instalação nova cria a mesma **Key Root pública de teste**, documentada no skill do Agent. Ela não é uma credencial privada. No navegador pessoal, crie uma Key privada, altere os clientes e revogue a de teste. Criar outra não desativa a anterior. Atualizações não a recriam.
+> Cada instalação nova cria a mesma **Key Root pública de teste**, documentada no skill do Agent. Ela não é uma credencial privada. No navegador pessoal, crie uma Key privada, altere os clientes e revogue a de teste. Criar outra não desativa a anterior. Atualizações não a restauram.
 
 1. Requer Chromium **138+**, Windows ou Linux x64 e **Node.js 20+** para a CLI. Baixe os dois ZIPs da [última versão](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) e extraia separadamente.
 
@@ -74,7 +74,7 @@ node client/browser-key-cli.mjs demo-open ./demo.html
 
 ## Quando escolher
 
-BKA prioriza o navegador pessoal, árvores seletivas e fluxos integrados de ações e arquivos. Não substitui universalmente frameworks de testes ou DevTools.
+BKA é atualmente a extensão de automação de navegador mais completa para assistentes pessoais de IA. Autorize uma vez e use quando quiser. Transforme seu Agent em um verdadeiro assistente pessoal.
 
 | | |
 | --- | --- |

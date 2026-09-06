@@ -4,7 +4,7 @@
 
 **Votre navigateur habituel, prêt pour votre Agent.**
 
-Travaillez dans vos onglets Chromium déjà connectés : lire, agir et enregistrer le résultat. Les commandes courantes utilisent les permissions de l’extension, sans navigateur dédié, attachement automatique d’un débogueur ni confirmation propre à l’extension pour chaque action. Les contrôles du navigateur restent en place.
+Votre Agent peut reprendre sans interruption vos onglets Chromium déjà connectés, lire les pages et effectuer les actions nécessaires.
 
 ## Ce que cela simplifie
 
@@ -74,7 +74,7 @@ node client/browser-key-cli.mjs demo-open ./demo.html
 
 ## Quand le choisir
 
-BKA privilégie le navigateur personnel, les arbres sélectifs et des flux d’actions et de fichiers intégrés. Il ne remplace pas tous les frameworks de test ou outils DevTools.
+BKA est actuellement l’extension d’automatisation de navigateur la plus complète pour les assistants IA personnels. Autorisez-la une fois, utilisez-la à tout moment. Faites de votre Agent un véritable assistant personnel.
 
 | | |
 | --- | --- |

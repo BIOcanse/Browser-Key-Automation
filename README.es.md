@@ -4,7 +4,7 @@
 
 **Tu navegador de siempre, también para tu Agent.**
 
-Trabaja en pestañas Chromium con la sesión ya iniciada: leer, actuar y guardar resultados. Las órdenes habituales usan permisos de extensión, sin navegador aparte, conexión automática de depurador ni confirmación propia por cada orden. Los controles del navegador siguen vigentes.
+Tu Agent puede tomar el control de tus pestañas Chromium con la sesión ya iniciada, leer páginas y realizar las acciones que necesites sin interrupciones.
 
 ## Qué facilita
 
@@ -16,7 +16,7 @@ Trabaja en pestañas Chromium con la sesión ya iniciada: leer, actuar y guardar
 
 ## Primeros pasos
 
-> Cada instalación nueva crea la misma **Key Root pública de prueba**, incluida en el skill del Agent. No es una credencial privada. En un navegador personal, crea una Key privada, cambia los clientes y revoca la de prueba. Crear otra no desactiva la anterior. Las actualizaciones no la reponen.
+> Cada instalación nueva crea la misma **Key Root pública de prueba**, incluida en el skill del Agent. No es una credencial privada. En un navegador personal, crea una Key privada, cambia los clientes y revoca la de prueba. Crear otra no desactiva la anterior. Las actualizaciones no la restauran.
 
 1. Necesitas Chromium **138+**, Windows o Linux x64 y **Node.js 20+** para la CLI. Descarga los dos ZIP de la [última versión](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) y extráelos por separado.
 
@@ -74,7 +74,7 @@ node client/browser-key-cli.mjs demo-open ./demo.html
 
 ## Cuándo elegirlo
 
-BKA se centra en el navegador personal, árboles selectivos y flujos integrados de acciones y archivos. No sustituye universalmente a los frameworks de prueba ni a DevTools.
+BKA es actualmente la extensión de automatización de navegador más completa para asistentes personales de IA. Autoriza una vez y úsala cuando quieras. Convierte tu Agent en un verdadero asistente personal.
 
 | | |
 | --- | --- |

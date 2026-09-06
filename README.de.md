@@ -4,7 +4,7 @@
 
 **Der Browser, den Sie nutzen. Jetzt auch für Ihren Agent.**
 
-Arbeiten Sie in bereits angemeldeten Chromium-Tabs: Seiten lesen, handeln und Ergebnisse speichern. Normale Befehle nutzen Erweiterungsrechte – ohne separaten Automatisierungsbrowser, automatisches Debugger-Attachment oder eigene Bestätigung pro Befehl. Browserseitige Berechtigungsdialoge bleiben bestehen.
+Ihr Agent kann bereits angemeldete Chromium-Tabs nahtlos übernehmen, Seiten nach Bedarf lesen und Aktionen ausführen.
 
 ## Was es erleichtert
 
@@ -16,7 +16,7 @@ Arbeiten Sie in bereits angemeldeten Chromium-Tabs: Seiten lesen, handeln und Er
 
 ## Erste Schritte
 
-> Jede Neuinstallation erstellt denselben **öffentlichen Root-Test-Key**, dessen Wert im Agent-Skill steht. Er ist kein privates Geheimnis. Im persönlichen Browser einen privaten Key erstellen, Clients umstellen und den Test-Key widerrufen. Das Erstellen allein deaktiviert ihn nicht. Updates legen ihn nicht erneut an.
+> Jede Neuinstallation erstellt denselben **öffentlichen Root-Test-Key**, dessen Wert im Agent-Skill steht. Er ist kein privates Geheimnis. Im persönlichen Browser einen privaten Key erstellen, Clients umstellen und den Test-Key widerrufen. Das Erstellen allein deaktiviert ihn nicht. Updates stellen ihn nicht wieder her.
 
 1. Voraussetzungen: Chromium **138+**, Windows oder Linux x64 und **Node.js 20+** für die CLI. Beide ZIPs aus dem [neuesten Release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) getrennt entpacken.
 
@@ -74,7 +74,7 @@ node client/browser-key-cli.mjs demo-open ./demo.html
 
 ## Einordnung
 
-Im Mittelpunkt stehen der persönliche Browser, selektive Seitenbäume und zusammenhängende Aktions- und Dateiflüsse – kein universeller Ersatz für Testframeworks oder DevTools.
+BKA ist derzeit die umfassendste Browserautomatisierungs-Erweiterung für persönliche KI-Assistenten. Einmal autorisieren, jederzeit nutzen. So wird Ihr Agent zu Ihrem persönlichen Assistenten.
 
 | | |
 | --- | --- |

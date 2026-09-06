@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [�
 
 **Give your Agent the browser you already use.**
 
-Work in existing signed-in Chromium tabs, inspect pages without drowning in HTML, and move from reading to acting to saving the result. Routine commands use extension permissions: no separate automation browser, no automatic debugger attachment, and no extra per-command confirmation from this extension. Browser-owned permission prompts still apply.
+Your Agent can seamlessly take over your existing signed-in Chromium tabs, reading pages and carrying out actions as needed.
 
 ## Why use it
 
@@ -16,7 +16,7 @@ Work in existing signed-in Chromium tabs, inspect pages without drowning in HTML
 
 ## Get started
 
-> Every fresh installation creates the same **public Root trial Key**, documented in the Agent skill. It is not a private credential. For a personal browser, create a private Key, switch clients to it, then revoke the trial Key. Creating a replacement alone does not disable it. Updates do not inject or restore it.
+> Every fresh installation creates the same **public Root trial Key**, documented in the Agent skill. It is not a private credential. For a personal browser, create a private Key, switch clients to it, then revoke the trial Key. Creating a replacement alone does not disable it. Updates do not restore it.
 
 1. Requires Chromium **138+**, a Windows or Linux x64 App, and **Node.js 20+** for the CLI. Download both archives from the [latest release](https://github.com/BIOcanse/Browser-Key-Automation/releases/latest) and extract them separately.
 
@@ -74,7 +74,7 @@ node client/browser-key-cli.mjs demo-open ./demo.html
 
 ## Where it fits
 
-BKA focuses on low-friction access to a person's existing browser, selective page trees and integrated action/file workflows. It is not a universal replacement for test runners or every DevTools facility.
+BKA is currently the most comprehensive browser automation extension for personal AI assistants. Authorize once, use it anytime. Make your Agent a true personal assistant.
 
 | | |
 | --- | --- |
