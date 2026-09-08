@@ -190,6 +190,15 @@ fn markedTopWindow(marker: []const u8) ?HWND {
     return if (top.count == 1 and top.selected != null) top.selected else null;
 }
 
+pub fn resolveRootWindowReady(io: std.Io, marker: []const u8, started: i96, timeout: u32, poll_ms: u32) !usize {
+    while (true) {
+        if (markedTopWindow(marker)) |root| return @intFromPtr(root);
+        const elapsed = @max(0, @divTrunc(std.Io.Clock.awake.now(io).nanoseconds - started, std.time.ns_per_ms));
+        if (elapsed >= timeout) return error.WindowNotMatched;
+        try io.sleep(.fromMilliseconds(@intCast(@min(timeout - @as(u32, @intCast(elapsed)), poll_ms))), .awake);
+    }
+}
+
 /// Browser adapter only: the reusable mouse backend receives an HWND, not a tab.
 pub fn resolveMouseWindow(marker: []const u8, viewport: anytype) !usize {
     const previous_dpi = SetThreadDpiAwarenessContext(@ptrFromInt(@as(usize, @bitCast(@as(isize, -4)))));
@@ -228,6 +237,20 @@ pub fn measureInput(marker: []const u8, viewport: anytype) !InputCalibration {
         .x = point.x, .y = point.y, .width = content.width, .height = content.height };
 }
 
+pub fn measureInputReady(io: std.Io, marker: []const u8, viewport: anytype, started: i96, timeout: u32, poll_ms: u32) !InputCalibration {
+    while (true) {
+        if (measureInput(marker, viewport)) |value| return value else |err| {
+            const elapsed = @max(0, @divTrunc(std.Io.Clock.awake.now(io).nanoseconds - started, std.time.ns_per_ms));
+            if (elapsed >= timeout) {
+                diagnoseMouseWindow(marker, viewport);
+                return err;
+            }
+            const budget = timeout - @as(u32, @intCast(elapsed));
+            try io.sleep(.fromMilliseconds(@intCast(@min(budget, poll_ms))), .awake);
+        }
+    }
+}
+
 pub fn inputGeometryCurrent(value: InputCalibration) bool {
     const previous = SetThreadDpiAwarenessContext(@ptrFromInt(@as(usize, @bitCast(@as(isize, -4)))));
     defer if (previous != null) { _ = SetThreadDpiAwarenessContext(previous); };
@@ -252,10 +275,14 @@ pub fn inputGeometryCurrent(value: InputCalibration) bool {
 }
 
 pub fn verifyInputMarker(marker: []const u8, value: InputCalibration) !void {
+    return verifyRootMarker(marker, value.root);
+}
+
+pub fn verifyRootMarker(marker: []const u8, root: usize) !void {
     // Calibration already resolved a unique root. Check that exact recipient,
     // including between events of one sequence (a key may switch active tabs).
     var title: [768]u16 = undefined;
-    const length = GetWindowTextW(@ptrFromInt(value.root), &title, title.len);
+    const length = GetWindowTextW(@ptrFromInt(root), &title, title.len);
     if (length <= 0 or !containsAsciiWide(title[0..@intCast(length)], marker)) return error.WindowNotMatched;
 }
 

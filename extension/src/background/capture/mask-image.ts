@@ -53,6 +53,10 @@ export function paintGeometryMask(
       const viewportClip = new Path2D();
       viewportClip.rect(geometry.contentViewport.x, geometry.contentViewport.y, geometry.contentViewport.width, geometry.contentViewport.height);
       context.clip(viewportClip);
+      for (const frame of geometry.frameClips ?? []) {
+        transform(frame.matrix);
+        const clip = new Path2D(); clip.rect(frame.rect.x, frame.rect.y, frame.rect.width, frame.rect.height); context.clip(clip);
+      }
       if (region) {
         transform(root.matrix);
         const selection = new Path2D(); selection.rect(region.x, region.y, region.width, region.height); context.clip(selection);

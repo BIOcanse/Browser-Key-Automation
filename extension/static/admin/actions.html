@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark"><title>Actions · Browser Key Automation</title>
+    <link rel="stylesheet" href="admin.css"><link rel="stylesheet" href="actions.css">
+  </head>
+  <body>
+    <header class="app-bar">
+      <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><span></span></span><strong>Browser Key</strong></a>
+      <div class="app-meta">
+        <a class="guide-link" href="index.html" data-i18n="keys">Keys</a>
+        <span class="connection-pill"><span class="connection-dot" aria-hidden="true"></span><span data-connection>Connected</span></span>
+        <label class="select-control"><span class="sr-only" data-i18n="language">Language</span><select data-locale data-i18n-aria="language"><option value="auto">Browser · English</option></select></label>
+        <label class="select-control theme-control"><span class="sr-only" data-i18n="theme">Theme</span><select data-theme data-i18n-aria="theme"><option value="system" data-i18n="followSystem">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select></label>
+        <span data-preference-warning hidden role="status"></span>
+      </div>
+    </header>
+    <main class="page-shell action-page">
+      <section class="page-heading"><div><h1 data-i18n="libraryTitle">Actions and recordings</h1><p data-i18n="libraryHint">Choose a Key to manage actions and its recordings.</p></div></section>
+      <section class="action-keybar">
+        <label class="field"><span data-i18n="chooseKey">Key for this operation</span><select data-action-key><option value="" data-i18n="chooseKey">Key for this operation</option></select></label>
+        <button class="button button-secondary" data-keys-refresh data-i18n="refresh">Refresh</button>
+        <button class="button button-quiet" data-keys-more data-i18n="loadMore" hidden>Load more</button>
+      </section>
+      <p class="action-notice" data-action-status role="status" aria-live="polite"></p>
+      <div class="action-layout">
+        <section class="keys-panel action-panel" aria-labelledby="library-heading">
+          <div class="panel-heading"><h2 id="library-heading" data-i18n="actionLibrary">Action library</h2><button class="button button-primary" data-action-new data-i18n="newAction">New action</button></div>
+          <form class="action-search" data-action-search-form><label class="field"><input type="search" data-action-search data-i18n-placeholder="name" data-i18n-aria="name"></label><button class="button button-secondary" data-i18n="refresh">Refresh</button></form>
+          <ul class="action-list" data-action-list></ul>
+          <div class="panel-footer"><button class="button button-quiet" data-action-more data-i18n="loadMore" hidden>Load more</button></div>
+        </section>
+        <section class="keys-panel action-panel" aria-labelledby="action-editor-title">
+          <div class="panel-heading"><h2 id="action-editor-title" data-i18n="actionDetails">Action details</h2><span data-action-identity></span></div>
+          <form class="form-stack action-editor" data-action-editor>
+            <label class="field"><span data-i18n="name">Name</span><input data-action-name required></label>
+            <label class="field"><span data-i18n="actionDescription">Description</span><textarea data-action-description rows="2"></textarea></label>
+            <label class="field"><span data-i18n="actionInstructions">Instructions</span><textarea class="action-code" data-action-source spellcheck="false" rows="11">[]</textarea></label>
+            <p class="inline-note" data-i18n="compileHint">Compile to preview instructions, requirements and suggested checks. Saving and running are separate actions.</p>
+            <div class="action-buttons"><button type="button" class="button button-secondary" data-action-compile data-i18n="compileAction">Compile preview</button><button type="button" class="button button-quiet" data-action-use-preview data-i18n="useCompiled" disabled>Edit compiled instructions</button><button type="submit" class="button button-primary" data-action-save data-i18n="save">Save</button><button type="button" class="button button-danger-quiet" data-action-delete data-i18n="deleteItem" disabled>Delete</button></div>
+            <label class="field"><span data-i18n="runInputs">Run parameters</span><textarea class="action-code" data-action-inputs spellcheck="false" rows="2">{}</textarea></label>
+            <label class="field"><span data-i18n="durationMs">Maximum duration (ms)</span><input type="number" data-action-timeout min="1" required></label>
+            <button type="button" class="button button-secondary" data-action-run data-i18n="runSavedAction" disabled>Run saved action</button>
+          </form>
+        </section>
+      </div>
+      <section class="keys-panel action-panel" aria-labelledby="recordings-heading">
+        <div class="panel-heading"><h2 id="recordings-heading" data-i18n="recordingsTitle">Recordings</h2><button class="button button-secondary" data-recordings-refresh data-i18n="refresh">Refresh</button></div>
+        <form class="action-record-form" data-record-form>
+          <label class="field"><span data-i18n="recordingTarget">Target tab</span><select data-record-tab required></select></label>
+          <div class="action-buttons"><button type="button" class="button button-quiet" data-tabs-refresh data-i18n="refresh">Refresh</button><button type="button" class="button button-quiet" data-tabs-more data-i18n="loadMore" hidden>Load more</button></div>
+          <label class="field"><span data-i18n="recordingScope">Scope</span><select data-record-scope><option value="tab" data-i18n="scopeTab">Selected tab</option><option value="window" data-i18n="scopeWindow">Its browser window</option></select></label>
+          <label class="field"><span data-i18n="recordingMode">Mode</span><select data-record-mode><option value="dom">DOM</option><option value="real" data-i18n="realRecording">Real input (Windows)</option></select></label>
+          <label class="field"><span data-i18n="durationMs">Maximum duration (ms)</span><input type="number" data-record-duration min="1" required></label>
+          <label class="field"><span data-i18n="retentionMs">Retention (ms)</span><input type="number" data-record-retention min="1" required></label>
+          <label class="switch-row"><span data-i18n="includeFrames">Include frames</span><input data-record-frames type="checkbox" checked></label>
+          <button class="button button-primary" data-record-start data-i18n="startRecording">Start recording</button>
+        </form>
+        <ul class="action-list" data-recording-list></ul>
+        <div class="panel-footer"><button class="button button-quiet" data-recordings-more data-i18n="loadMore" hidden>Load more</button></div>
+        <div class="action-record-details" data-record-details hidden>
+          <p class="action-code" data-record-identity></p><p data-record-summary></p>
+          <div class="action-buttons"><button class="button button-secondary" data-record-pause data-i18n="pauseRecording">Pause</button><button class="button button-secondary" data-record-resume data-i18n="resumeRecording">Resume</button><button class="button button-secondary" data-record-stop data-i18n="stopRecording">Stop</button><button class="button button-danger-quiet" data-record-delete data-i18n="deleteItem">Delete</button></div>
+          <div class="action-buttons"><button class="button button-secondary" data-record-compile data-i18n="compileRecording">Compile into editor</button><button class="button button-quiet" data-record-events data-i18n="rawEvents">Read raw events</button><button class="button button-quiet" data-events-more data-i18n="loadMore" hidden>Load more</button></div>
+          <pre class="action-output" data-record-events-output></pre>
+        </div>
+      </section>
+      <section class="keys-panel action-panel" aria-labelledby="result-heading"><div class="panel-heading"><h2 id="result-heading" data-i18n="operationResult">Result and compilation preview</h2></div><pre class="action-output" data-action-result></pre></section>
+      <section class="keys-panel action-panel" aria-labelledby="trace-heading">
+        <div class="panel-heading"><h2 id="trace-heading" data-i18n="traceTitle">Execution review</h2><button class="button button-secondary" data-trace-read data-i18n="readTrace">Read review</button></div>
+        <label class="field action-trace-ref"><span>TraceRef</span><input class="action-code" data-trace-ref spellcheck="false"></label>
+        <ol class="action-trace" data-trace-events></ol><pre class="action-output" data-trace-output></pre>
+      </section>
+    </main>
+    <script type="module" src="actions.js"></script>
+  </body>
+</html>

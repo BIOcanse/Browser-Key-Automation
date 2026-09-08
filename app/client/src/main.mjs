@@ -79,6 +79,7 @@ function fileRequest(command, options) {
   if (options.width !== undefined) args.push("--width", String(options.width));
   if (options.height !== undefined) args.push("--height", String(options.height));
   if (options.region !== undefined) args.push("--region-json", JSON.stringify(options.region));
+  if (options.frameMapping !== undefined) args.push("--frame-mapping", options.frameMapping);
   return parseArguments(connectionArguments(args, options));
 }
 
@@ -116,7 +117,7 @@ async function execute(request) {
     }
     if (request.command === "element-shot") {
       const result = await saveElementScreenshotFile({ call, nodeRef: request.nodeRef, output: request.output,
-        width: request.width, height: request.height, region: request.region });
+        width: request.width, height: request.height, region: request.region, frameMapping: request.frameMapping });
       return { ok: true, command: request.command, delivery: "local_file", targetInstance: session.targetInstance, ...result };
     }
     const result = request.command === "page-save"
@@ -342,6 +343,9 @@ export function parseArguments(args) {
       options.artifactRef = value;
     } else if (name === "--node-ref") {
       options.nodeRef = value;
+    } else if (name === "--frame-mapping") {
+      if (value !== "none" && value !== "debugger") throw usageFailure();
+      options.frameMapping = value;
     } else if (name === "--width" || name === "--height") {
       options[name.slice(2)] = parseBoundedInteger(value, 1, Number.MAX_SAFE_INTEGER);
     } else if (name === "--region-json") {
@@ -379,7 +383,7 @@ export function parseArguments(args) {
         (command === "artifact-save" ? !/^ar1\.[A-Za-z0-9_-]{43}$/u.test(options.artifactRef ?? "") :
           !/^tr1\.[A-Za-z0-9_-]{22}\.[1-9][0-9]{0,15}\.[A-Za-z0-9_-]{22}$/u.test(options.tabRef ?? ""))) throw usageFailure();
   } else if (command === "element-shot") {
-    const allowed = new Set(["--node-ref", "--output", "--width", "--height", "--region-json", "--instance", "--api-key-env", "--read-timeout-ms"]);
+    const allowed = new Set(["--node-ref", "--output", "--width", "--height", "--region-json", "--frame-mapping", "--instance", "--api-key-env", "--read-timeout-ms"]);
     if ([...seenOptions].some((name) => !allowed.has(name)) || !options.output?.trim() || !/^nr1\.[A-Za-z0-9_-]{43}$/u.test(options.nodeRef ?? "")) throw usageFailure();
   } else if (command === "demo-open") {
     const allowed = new Set(["--tab-ref", "--active", "--window-id", "--instance", "--api-key-env", "--read-timeout-ms"]);
@@ -495,7 +499,7 @@ function helpOutput() {
       "browser-key-cli.mjs page-save --tab-ref <TabRef> --output <page.mhtml> [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs artifact-save --artifact-ref <ArtifactRef> --output <file> [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs page-shot --tab-ref <TabRef> --output <image> [--format png|jpeg] [--quality 0..100] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
-      "browser-key-cli.mjs element-shot --node-ref <NodeRef> --output <image.png> [--width <px>] [--height <px>] [--region-json <element-local-rectangle>] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
+      "browser-key-cli.mjs element-shot --node-ref <NodeRef> --output <image.png> [--width <px>] [--height <px>] [--region-json <element-local-rectangle>] [--frame-mapping <none|debugger>] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs demo-open <UTF-8-self-contained.html> [--tab-ref <existing demo TabRef> | --window-id <id>] [--active true|false] [--instance <relayEpoch/instanceNumber>] [--api-key-env <name>] [--read-timeout-ms <ms>]",
       "browser-key-cli.mjs stop [--read-timeout-ms <ms>]",
     ],

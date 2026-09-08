@@ -57,6 +57,13 @@ node client/browser-key-cli.mjs call --method system.describe --schema-version 1
 | 텍스트·단축키·키 해제 | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | 가상 마우스·키보드 | `virtualMouse.*` · `virtualKeyboard.*` |
 | 입력 대상 측정 | `input.calibrate` |
+| 동작 저장소 | `actions.create` · `actions.list/get` · `actions.run` |
+| DOM / Windows 녹화 | `recording.start/pause/resume/stop` → `actions.compile` |
+| 업로드, 다운로드 및 대화상자 | `files.upload` · `downloads.*` · `dialogs.*` |
+| 네트워크 및 진단 | `network.*` · `console.*` · `performance.*` |
+| 전체 페이지 / 영역 / 요소 캡처 | `page.screenshot.fullPage/region/element` |
+| 브라우저 데이터 및 검색 | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| 창 및 뷰포트 | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | 명시적 CDP 연결 | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+명령 목록을 직접 저장하거나 녹화를 컴파일한 뒤 조건을 확인하고 동작 ID로 재생할 수 있습니다. Windows 녹화는 창 변경을 보존하고 대상 창 밖의 마우스 경로를 제외합니다. App은 창 내부 상대 좌표와 두 측면 버튼을 기록합니다. 권한, 준비 조건 및 재생 범위는 [동작과 녹화](dev/skills/browser-key-automation/references/actions-and-recording.md)를 참조하세요.
+
 ## Key와 입력의 경계
 
 - Root는 모든 활성 권한을 가집니다. Regular Key는 펼칠 수 있는 권한 그룹, 만료, 다시 보기, 비활성화, 폐기를 지원합니다. JavaScript와 실제 입력 권한은 독립적입니다. Key는 결제·게시·삭제에 대한 사용자 동의를 대신하지 않습니다.
+- 명령은 제출 시 한 번만 인증합니다. 수락된 명령은 대기와 실행 중에도 제출 당시 권한을 유지하며, 이후 Key의 만료·비활성화·폐기는 새 제출에만 영향을 줍니다. 각 작업의 실행 제한 시간과 명시적 중지·해제 명령은 계속 적용됩니다.
 - 가상 입력 상태는 Key에 연결되어 탭을 넘어 유지되며 대상 창 전체 점유가 필요합니다. 일반 가상 입력 동작에는 유효한 `input.calibrate`가 필요하고 `ensure.run`은 필요할 때 갱신합니다. 실제 입력은 전경 창이 필요하며 가상 입력은 물리 커서를 움직이지 않습니다.
 - Windows는 네이티브 입력을 제공합니다. Linux는 현재 브라우저 중계와 파일 처리만 제공합니다. 최소화 창은 지원하지 않습니다. 첫 보정에는 측정 가능한 페이지가 필요하며 가려진 창의 보정 재사용에는 조건이 있습니다. 다중 창 첫 보정과 완전한 HTML5/OLE 드롭에는 미해결 사례가 있습니다.
 - 요소 이미지는 보이는 뷰포트와 지원하는 모양 마스크만 사용합니다. Chrome의 제한 페이지·사이트 권한·사용자 스크립트 설정과 `debugger.attach` 경고는 유지됩니다. 합성 이벤트와 가상 메시지는 모든 입력 제한을 우회하지 못합니다.

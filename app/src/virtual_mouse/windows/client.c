@@ -68,6 +68,16 @@ int vm_alive(VmClient *c) {
 }
 void vm_begin(VmClient *c, uint32_t timeout_ms) { c->timeout_ms = timeout_ms; c->deadline = GetTickCount64() + timeout_ms; }
 void vm_bounds(VmClient *c, int32_t *width, int32_t *height) { *width = c->width; *height = c->height; }
+int vm_window_bounds(VmClient *c, int32_t *width, int32_t *height) {
+    if (!vm_alive(c)) return VM_TARGET_LOST;
+    DPI_AWARENESS_CONTEXT previous = SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    RECT rect; BOOL ok = GetWindowRect(c->hwnd, &rect);
+    if (previous) SetThreadDpiAwarenessContext(previous);
+    if (!ok) return VM_TARGET_LOST;
+    *width = rect.right - rect.left; *height = rect.bottom - rect.top;
+    return VM_OK;
+}
+void vm_coordinate_space(VmClient *c, int window_coordinates) { if (c->shared) c->shared->window_coordinates = window_coordinates != 0; }
 static DWORD remaining(VmClient *c) {
     ULONGLONG now = GetTickCount64();
     return c->deadline > now ? (DWORD)(c->deadline - now) : 0;
@@ -195,10 +205,49 @@ int vm_context(VmClient *c, const uint8_t *keys, uintptr_t source_tag, int32_t x
     return VM_OK;
 }
 int vm_key_event(VmClient *c, uint32_t vk, int extended, int down) {
+    return vm_key_event_exact(c, vk, extended, down, 0, 0, 0, 0);
+}
+int vm_layout_available(uintptr_t layout) {
+    if (!layout) return 1;
+    HKL layouts[256];
+    int count = GetKeyboardLayoutList(256, layouts);
+    for (int i = 0; i < count; ++i) if ((uintptr_t)layouts[i] == layout) return 1;
+    return 0;
+}
+int vm_key_event_exact(VmClient *c, uint32_t vk, int extended, int down,
+                       uint32_t scan, int has_scan, uintptr_t layout, int repeat) {
     if (!vm_alive(c)) return VM_TARGET_LOST;
-    if (c->uncertain || !c->shared || vk == 0 || vk >= 256) return VM_INVALID;
+    if (c->uncertain || !c->shared || vk == 0 || vk >= 256 || scan > 255 || ((down || !has_scan) && !vm_layout_available(layout)) || (repeat && !down)) return VM_INVALID;
     c->shared->event_kind = down ? VM_KEY_DOWN : VM_KEY_UP;
     c->shared->key_vk = vk; c->shared->key_extended = extended != 0;
+    c->shared->key_scan = scan; c->shared->key_has_scan = has_scan != 0;
+    c->shared->key_layout = layout; c->shared->key_repeat = repeat != 0;
+    InterlockedExchange(&c->shared->ack, 0);
+    int result = send_control(c, c->token, VM_EVENT);
+    return result == VM_OK && c->shared->ack == VM_READY ? VM_OK : (result == VM_OK ? VM_DELIVERY_FAILED : result);
+}
+uint32_t vm_last_key_scan(VmClient *c) { return c && c->shared ? c->shared->key_scan & 0xff : 0; }
+int vm_keyboard_message(VmClient *c, uint32_t message, uint32_t value, uint32_t bits, uintptr_t layout) {
+    if (message == WM_KEYDOWN || message == WM_KEYUP || message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) {
+        if (!value || value > 255) return VM_INVALID;
+    } else if (message == WM_CHAR || message == WM_DEADCHAR || message == WM_SYSCHAR || message == WM_SYSDEADCHAR) {
+        if (value > 0xffff) return VM_INVALID;
+    } else if (message != WM_UNICHAR || value > 0x10ffff) return VM_INVALID;
+    if (!vm_alive(c)) return VM_TARGET_LOST;
+    if (c->uncertain || !c->shared ||
+        ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !vm_layout_available(layout))) return VM_INVALID;
+    c->shared->event_kind = VM_KEYBOARD_MESSAGE;
+    c->shared->keyboard_message = message; c->shared->keyboard_value = value; c->shared->keyboard_bits = bits;
+    c->shared->key_scan = (bits >> 16) & 0xff; c->shared->key_has_scan = 1; c->shared->key_layout = layout;
+    InterlockedExchange(&c->shared->ack, 0);
+    int result = send_control(c, c->token, VM_EVENT);
+    return result == VM_OK && c->shared->ack == VM_READY ? VM_OK : (result == VM_OK ? VM_DELIVERY_FAILED : result);
+}
+
+int vm_character(VmClient *c, uint16_t character) {
+    if (!vm_alive(c)) return VM_TARGET_LOST;
+    if (c->uncertain || !c->shared) return VM_INVALID;
+    c->shared->event_kind = VM_CHAR; c->shared->character = character;
     InterlockedExchange(&c->shared->ack, 0);
     int result = send_control(c, c->token, VM_EVENT);
     return result == VM_OK && c->shared->ack == VM_READY ? VM_OK : (result == VM_OK ? VM_DELIVERY_FAILED : result);
@@ -218,12 +267,14 @@ int vm_event(VmClient *c, uint32_t kind, int32_t x, int32_t y,
              uint32_t buttons, uint32_t button, int32_t dx, int32_t dy) {
     if (!vm_alive(c)) return VM_TARGET_LOST;
     if (c->uncertain) return VM_CONFLICT;
+    int release_only = kind == (VM_UP | 0x100u);
+    if (release_only) kind = VM_UP;
     if (x < -32768 || x > 32767 || y < -32768 || y > 32767 || buttons > 31 ||
         kind < VM_MOVE || kind > VM_WHEEL ||
         ((kind == VM_DOWN || kind == VM_UP) && button != 1 && button != 2 && button != 4 && button != 8 && button != 16)) return VM_INVALID;
     if (c->shared) {
         VmShared *s = c->shared;
-        s->event_kind = kind; s->x = x; s->y = y; s->buttons = buttons;
+        s->release_only = release_only; s->event_kind = kind; s->x = x; s->y = y; s->buttons = buttons;
         s->button = button; s->delta_x = dx; s->delta_y = dy;
         InterlockedExchange(&s->ack, 0);
         int result = send_control(c, c->token, VM_EVENT);

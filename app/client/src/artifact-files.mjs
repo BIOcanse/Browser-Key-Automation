@@ -34,9 +34,9 @@ export async function saveScreenshotFile({ call, tabRef, output, format, quality
   return saveCaptureFile({ call, method: "page.screenshot.capture", params, output });
 }
 
-export async function saveElementScreenshotFile({ call, nodeRef, output, width, height, region }) {
+export async function saveElementScreenshotFile({ call, nodeRef, output, width, height, region, frameMapping }) {
   const params = { nodeRef, ...(width === undefined ? {} : { width }), ...(height === undefined ? {} : { height }),
-    ...(region === undefined ? {} : { region }) };
+    ...(region === undefined ? {} : { region }), ...(frameMapping === undefined ? {} : { frameMapping }) };
   const destination = await assertNewOutput(output);
   const captured = await call("page.screenshot.element", params);
   if (typeof captured?.artifact?.artifactRef !== "string") throw new ArtifactFileError("CAPTURE_RESULT_INVALID");

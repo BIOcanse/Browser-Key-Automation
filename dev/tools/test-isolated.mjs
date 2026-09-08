@@ -52,6 +52,11 @@ try {
   if (rootProbe) {
     await run(process.env.BKA_ZIG_PATH ?? "zig", ["build", "--build-file", "app/build.zig", "--cache-dir", ".zig-cache", "--prefix", "zig-out", "-Doptimize=ReleaseSafe", "occluded-root-probe"], "build-root-probe");
   }
+  if (forwardedArguments.includes("--native-recording-probe")) {
+    await cp(path.join(workspace, "dev/tests/experiments/input-recording"), path.join(root, "dev/tests/experiments/input-recording"), { recursive: true });
+    await run(process.env.BKA_ZIG_PATH ?? "zig", ["build", "--build-file", "app/build.zig", "--cache-dir", ".zig-cache", "--prefix", "zig-out", "-Doptimize=ReleaseSafe", "recording-window-probe"], "build-recording-window-probe");
+    await run(path.join(root,"zig-out","bin","recording-window-probe.exe"),[],"recording-window-native");
+  }
   for (const relative of ["app/client/src/generated-config.mjs",
     "app/src/generated_config.zig", "extension/manifest.json", "out/extension/manifest.json",
     "out/extension/generated/transport-config.js"]) {

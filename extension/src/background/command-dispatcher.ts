@@ -1,4 +1,29 @@
 import { COMMAND_CATALOG } from "../generated/command-config.js";
+import { getWindow, setWindowState, setWindowBounds, focusWindow, getViewport, setPageZoom,
+  WindowOperationError, type WindowState, type WindowBounds } from "./window-service.js";
+import { ActionError, type ActionSnapshot } from "./actions/model.js";
+import { compileInstructions } from "./actions/compiler.js";
+import { compileSource, compilePreview, exportAction, parseActionParams } from "./actions/service.js";
+import { deleteAction, listActions, readAction, saveAction, snapshotAction } from "./actions/store.js";
+import { runAction } from "./actions/runner.js";
+import { LocalCommandRoute } from "./local-route-client.js";
+import { observeExternalCondition } from "./ensure-external.js";
+import { parseRecordingParams, startRecording, stopRecording, resumeRecording, readRecording, listRecordings, loadRecording, deleteRecording, publicRecording } from "./recording/service.js";
+import { RecordingError } from "./recording/model.js";
+import { BrowserOperationError } from "./browser-feature-model.js";
+import { parseUploadParams, uploadFiles, type UploadFile } from "./files-service.js";
+import { parseDownloadParams, runDownload } from "./downloads-service.js";
+import { parseBrowserDataParams, runBookmarks, runHistory } from "./browser-data-service.js";
+import { parseTabSearchParams, searchTabs } from "./search/keyword-service.js";
+import { parseSemanticModelParams, readSemanticConfiguration, configureSemanticModel } from "./search/semantic-model.js";
+import { parseSemanticIndexParams, runSemanticIndex } from "./search/semantic-index.js";
+import { parseCdpScreenshotParams, captureCdpScreenshot } from "./capture/cdp-service.js";
+import { parseNetworkParams, startNetwork, runNetwork } from "./network-service.js";
+import { captureScrolledScreenshot } from "./capture/scroll-service.js";
+import { parseDialogParams, startDialogs, runDialogs } from "./dialogs-service.js";
+import { parseInterceptParams, startIntercept, runIntercept } from "./network-intercept-service.js";
+import { parseConsoleParams, startConsole, runConsole } from "./console-service.js";
+import { parsePerformanceParams, startPerformance, runPerformance } from "./performance-service.js";
 import { TRANSPORT_CONFIG } from "../generated/transport-config.js";
 import {
   CURRENT_PERMISSION_IDS,
@@ -14,10 +39,12 @@ import {
   ArtifactServiceError,
   appendArtifactUpload,
   beginArtifactUpload,
+  createTextArtifact,
   commitArtifactUpload,
   isArtifactRefShape,
   readArtifact,
   releaseArtifact,
+  type ArtifactUploadMediaType,
 } from "./artifact-service.js";
 import {
   ensureUserScriptsAvailable,
@@ -55,12 +82,16 @@ import {
   scrollDomTargetSearch,
   selectDomNodeValues,
   setDomNodeValue,
+  editDomNode,
+  scrollDomNodeTo,
+  type DomEditOptions,
   tabRefForNode,
   type DomTarget,
 } from "./dom-service.js";
 import {
   EnsureWorkflowError,
   parseDomTarget,
+  parseDomFramePath,
   parseEnsureParameters,
   runEnsure,
   type EnsureAction,
@@ -89,7 +120,7 @@ import { expandMouseShortcut } from "./virtual-mouse-shortcuts.js";
 import type { MouseAction } from "../shared/virtual-input-protocol.js";
 import { DomPointerError, executeDomPointer, type PointerOffset } from "./dom-pointer-service.js";
 import { clickRealDomNode } from "./real-input-service.js";
-import { hasOnlyUnicodeScalars, parseKeyboardActions, type NativeKeyboardAction } from "./keyboard-model.js";
+import { hasOnlyUnicodeScalars, parseKeyboardActions, parseVirtualKeyboardEvents, type NativeKeyboardAction } from "./keyboard-model.js";
 import {
   pressKeyboard,
   resetKeyboard,
@@ -171,6 +202,7 @@ interface ParsedCommand {
 }
 
 interface ParsedRouteRequest {
+  readonly local?: boolean;
   readonly routeId: string;
   readonly clientRequestId: string;
   readonly apiKey: string;
@@ -178,6 +210,9 @@ interface ParsedRouteRequest {
 }
 
 type CommandErrorCode =
+  | "BROWSER_OPERATION_FAILED"
+  | "RECORDING_OPERATION_FAILED"
+  | "ACTION_OPERATION_FAILED"
   | "ADMIN_MUTATION_CONFLICT"
   | "ARTIFACT_NOT_FOUND"
   | "ARTIFACT_UPLOAD_INVALID"
@@ -204,7 +239,8 @@ type CommandErrorCode =
   | "TARGET_AMBIGUOUS"
   | "TARGET_REF_STALE"
   | "TRACE_NOT_FOUND"
-  | "UNAUTHENTICATED";
+  | "UNAUTHENTICATED"
+  | "WINDOW_OPERATION_FAILED";
 
 interface PublicCommandError {
   readonly code: CommandErrorCode;
@@ -395,6 +431,75 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
   };
 
   switch (value.method) {
+    case "semantic.model.get": case "semantic.model.configure": return parseSemanticModelParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "semantic.index.create": case "semantic.index.update": case "semantic.index.list": case "semantic.index.get":
+    case "semantic.index.build": case "semantic.index.delete": case "semantic.search": return parseSemanticIndexParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "search.tabs": return parseTabSearchParams(params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "bookmarks.get": case "bookmarks.list": case "bookmarks.search": case "bookmarks.create":
+    case "bookmarks.update": case "bookmarks.move": case "bookmarks.delete":
+    case "history.search": case "history.visits": case "history.add": case "history.deleteUrl": case "history.deleteRange": case "history.deleteAll":
+      return parseBrowserDataParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "console.start": case "console.read": case "console.stop": case "console.export":
+      return parseConsoleParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "performance.start": case "performance.sample": case "performance.read": case "performance.stop": case "performance.export":
+      return parsePerformanceParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "network.intercept.start": case "network.intercept.read": case "network.intercept.stop":
+      return parseInterceptParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "dialogs.start": case "dialogs.get": case "dialogs.respond": case "dialogs.setPolicy": case "dialogs.stop":
+      return parseDialogParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "network.start": case "network.read": case "network.get": case "network.stop": case "network.export":
+      return parseNetworkParams(value.method,params)?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    case "files.upload":
+    case "downloads.start": case "downloads.get": case "downloads.list": case "downloads.wait":
+    case "downloads.pause": case "downloads.resume": case "downloads.cancel":
+    case "page.screenshot.fullPage": case "page.screenshot.region": {
+      const valid=value.method==="files.upload"?parseUploadParams(params):value.method.startsWith("downloads.")?
+        parseDownloadParams(value.method,params):parseCdpScreenshotParams(value.method,params);
+      return valid?parsed({method:value.method,...COMMAND_CATALOG.byMethod[value.method]},params):null;
+    }
+    case "recording.start": case "recording.get": case "recording.list": case "recording.read": case "recording.pause": case "recording.resume": case "recording.stop": case "recording.delete": {
+      const entry = COMMAND_CATALOG.byMethod[value.method];
+      return parseRecordingParams(value.method,params) ? parsed({method:value.method,...entry},params) : null;
+    }
+    case "dom.edit":
+      return hasExactKeys(params, ["nodeRef", "value", "events", "inputType", "data"]) && isNodeRefShape(params.nodeRef) &&
+        boundedString(params.value, COMMAND_CATALOG.limits["command.dom.maximum_value_bytes"], true) &&
+        ["input_change", "input", "change", "none"].includes(params.events as string) &&
+        boundedString(params.inputType, COMMAND_CATALOG.limits["command.dom.maximum_value_bytes"], true) &&
+        (params.data === null || boundedString(params.data, COMMAND_CATALOG.limits["command.dom.maximum_value_bytes"], true)) ? parsed(COMMAND_CATALOG.domEdit, params) : null;
+    case "dom.scrollTo":
+      return hasExactKeys(params, ["nodeRef", "left", "top"]) && isNodeRefShape(params.nodeRef) &&
+        ["left", "top"].every((key) => typeof params[key] === "number" && Number.isFinite(params[key]) && Math.abs(params[key] as number) <= Number.MAX_SAFE_INTEGER) ? parsed(COMMAND_CATALOG.domScrollTo, params) : null;
+    case "actions.create": case "actions.update": case "actions.delete": case "actions.get":
+    case "actions.list": case "actions.compile": case "actions.run": case "actions.export": {
+      const entry = COMMAND_CATALOG.byMethod[value.method];
+      return parseActionParams(value.method, params) ? parsed({ method: value.method, ...entry }, params) : null;
+    }
+    case "windows.get":
+    case "windows.focus":
+    case "windows.setState":
+    case "windows.setBounds": {
+      if (!safeInteger(params.windowId, 1)) return null;
+      const entry = value.method === "windows.get" ? COMMAND_CATALOG.windowsGet :
+        value.method === "windows.focus" ? COMMAND_CATALOG.windowsFocus :
+        value.method === "windows.setState" ? COMMAND_CATALOG.windowsSetState : COMMAND_CATALOG.windowsSetBounds;
+      if (value.method === "windows.setState") return hasExactKeys(params, ["windowId", "state"]) &&
+        ["normal", "minimized", "maximized", "fullscreen"].includes(params.state as string) ? parsed(entry, params) : null;
+      if (value.method === "windows.setBounds") {
+        if (!hasExactKeys(params, ["windowId", "left", "top", "width", "height"]) ||
+          ["left", "top", "width", "height"].every((key) => params[key] === null)) return null;
+        const bound = COMMAND_CATALOG.limits["command.windows.maximum_dimension"];
+        return ["left", "top"].every((key) => params[key] === null || safeInteger(params[key], -bound, bound)) &&
+          ["width", "height"].every((key) => params[key] === null || safeInteger(params[key], 1, bound)) ? parsed(entry, params) : null;
+      }
+      return hasExactKeys(params, ["windowId"]) ? parsed(entry, params) : null;
+    }
+    case "page.viewport.get":
+      return hasExactKeys(params, ["tabRef"]) && isTabRefShape(params.tabRef) ? parsed(COMMAND_CATALOG.pageViewportGet, params) : null;
+    case "page.zoom.set":
+      return hasExactKeys(params, ["tabRef", "factor"]) && isTabRefShape(params.tabRef) &&
+        typeof params.factor === "number" && Number.isFinite(params.factor) && params.factor > 0 && params.factor <= 5
+        ? parsed(COMMAND_CATALOG.pageZoomSet, params) : null;
     case COMMAND_CATALOG.debuggerAttach.method:
     case COMMAND_CATALOG.debuggerDetach.method:
       return hasExactKeys(params, ["tabRef"]) && isTabRefShape(params.tabRef)
@@ -411,14 +516,14 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
         safeInteger(params.limit, 1, COMMAND_CATALOG.limits["command.debugger.maximum_events"])
         ? parsed(commandEntry(COMMAND_CATALOG.debuggerEventsGet), params) : null;
     case COMMAND_CATALOG.pageScreenshotElement.method:
-      return hasOnlyKeys(params, ["nodeRef", "width", "height", "region"]) && isNodeRefShape(params.nodeRef) &&
+      return hasOnlyKeys(params, ["nodeRef", "width", "height", "region", "frameMapping"]) && ["none", "debugger"].includes(params.frameMapping as string) && isNodeRefShape(params.nodeRef) &&
         safeInteger(params.width, 1, COMMAND_CATALOG.limits["command.page.screenshot.maximum_dimension"]) &&
         safeInteger(params.height, 1, COMMAND_CATALOG.limits["command.page.screenshot.maximum_dimension"]) &&
         params.width * params.height <= COMMAND_CATALOG.limits["command.page.screenshot.maximum_pixels"] &&
         (params.region === undefined || captureRegion(params.region))
         ? parsed(commandEntry(COMMAND_CATALOG.pageScreenshotElement), params) : null;
     case COMMAND_CATALOG.artifactUploadBegin.method:
-      return hasExactKeys(params, ["byteLength", "mediaType"]) && safeInteger(params.byteLength) && params.mediaType === "text/html"
+      return hasExactKeys(params, ["byteLength", "mediaType"]) && safeInteger(params.byteLength) && ["text/html", "application/json", "application/octet-stream"].includes(params.mediaType as string)
         ? parsed(commandEntry(COMMAND_CATALOG.artifactUploadBegin), params) : null;
     case COMMAND_CATALOG.artifactUploadAppend.method:
       return hasExactKeys(params, ["artifactRef", "offset", "dataBase64Url"]) && isArtifactRefShape(params.artifactRef) && safeInteger(params.offset) &&
@@ -434,7 +539,7 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
         (params.tabRef === null || params.windowId === null) && typeof params.active === "boolean"
         ? parsed(commandEntry(COMMAND_CATALOG.demoOpen), params) : null;
     case COMMAND_CATALOG.pageWait.method: {
-      if (!hasOnlyKeys(params, ["tabRef", "until", "timeoutMs", "url", "selector", "text"]) ||
+      if (!hasOnlyKeys(params, ["tabRef", "until", "timeoutMs", "url", "selector", "text", "framePath"]) ||
           !isTabRefShape(params.tabRef) ||
           !safeInteger(params.timeoutMs, 1, COMMAND_CATALOG.limits["command.page.wait.maximum_timeout_ms"]) ||
           typeof params.until !== "string" ||
@@ -444,6 +549,10 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
       if (nodeCondition ? !boundedString(params.selector, maximum) : params.selector !== undefined) return null;
       if (params.until === "text" ? !boundedString(params.text, maximum) : params.text !== undefined) return null;
       if (params.url !== undefined && !boundedString(params.url, maximum) || params.until === "url" && params.url === undefined) return null;
+      if (params.framePath !== undefined) {
+        const framePath = parseDomFramePath(params.framePath);
+        return framePath === null ? null : parsed(commandEntry(COMMAND_CATALOG.pageWait), { ...params, framePath });
+      }
       return parsed(commandEntry(COMMAND_CATALOG.pageWait), params);
     }
     case COMMAND_CATALOG.pageTreeFind.method: {
@@ -615,6 +724,7 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
         safeInteger(params.timeoutMs, 1, COMMAND_CATALOG.limits["command.virtualMouse.maximum_timeout_ms"])
         ? parsed(commandEntry(COMMAND_CATALOG.inputCalibrate), params) : null;
     case COMMAND_CATALOG.virtualMouseMove.method:
+    case COMMAND_CATALOG.virtualMouseMoveWindow.method:
     case COMMAND_CATALOG.virtualMouseClick.method:
     case COMMAND_CATALOG.virtualMouseDown.method:
     case COMMAND_CATALOG.virtualMouseUp.method:
@@ -622,7 +732,7 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
     case COMMAND_CATALOG.virtualMouseScroll.method: {
       if (!isTabRefShape(params.tabRef) || !safeInteger(params.timeoutMs, 1, COMMAND_CATALOG.limits["command.virtualMouse.maximum_timeout_ms"])) return null;
       const actions = expandMouseShortcut(value.method, params, COMMAND_CATALOG.limits["command.virtualMouse.maximum_actions"]);
-      const entry = [COMMAND_CATALOG.virtualMouseMove, COMMAND_CATALOG.virtualMouseClick, COMMAND_CATALOG.virtualMouseDown,
+      const entry = [COMMAND_CATALOG.virtualMouseMove, COMMAND_CATALOG.virtualMouseMoveWindow, COMMAND_CATALOG.virtualMouseClick, COMMAND_CATALOG.virtualMouseDown,
         COMMAND_CATALOG.virtualMouseUp, COMMAND_CATALOG.virtualMouseDrag, COMMAND_CATALOG.virtualMouseScroll].find((item) => item.method === value.method)!;
       return actions === null ? null : parsed(commandEntry(entry), { ...params, actions });
     }
@@ -648,6 +758,17 @@ function parsePrimitiveCommand(value: unknown): ParsedCommand | null {
       const actions = input ? parseMouseActions(params.actions, COMMAND_CATALOG.limits["command.virtualMouse.maximum_actions"]) : undefined;
       return actions === null ? null : parsed(entry, actions === undefined ? params : { ...params, actions });
     }
+    case COMMAND_CATALOG.virtualKeyboardEvents.method: {
+      if (!hasExactKeys(params,["tabRef","events","timeoutMs"]) || !isTabRefShape(params.tabRef) ||
+          !safeInteger(params.timeoutMs,1,COMMAND_CATALOG.limits["command.keyboard.maximum_short_timeout_ms"])) return null;
+      const actions=parseVirtualKeyboardEvents(params.events,COMMAND_CATALOG.limits["command.keyboard.maximum_sequence_actions"]);
+      return actions===null?null:parsed(commandEntry(COMMAND_CATALOG.virtualKeyboardEvents),{...params,actions});
+    }
+    case COMMAND_CATALOG.virtualKeyboardType.method:
+      return hasExactKeys(params,["tabRef","text","timeoutMs"]) && isTabRefShape(params.tabRef) &&
+        typeof params.text==="string" && params.text.length>0 && hasOnlyUnicodeScalars(params.text) && new TextEncoder().encode(params.text).byteLength<=COMMAND_CATALOG.limits["command.keyboard.maximum_text_bytes"] &&
+        safeInteger(params.timeoutMs,1,COMMAND_CATALOG.limits["command.keyboard.maximum_short_timeout_ms"])
+        ?parsed(commandEntry(COMMAND_CATALOG.virtualKeyboardType),{...params,actions:[{kind:"text",text:params.text}]}):null;
     case COMMAND_CATALOG.keyboardPress.method:
     case COMMAND_CATALOG.virtualKeyboardInput.method: {
       const virtual = value.method === COMMAND_CATALOG.virtualKeyboardInput.method;
@@ -767,6 +888,8 @@ const ENSURE_NODE_ACTIONS = new Set([
   "dom.scroll",
   "dom.select",
   "dom.setValue",
+  "dom.edit",
+  "dom.scrollTo",
 ]);
 const ENSURE_OPTIONAL_TARGET_ACTIONS = new Set(["keyboard.press", "keyboard.type", "keyboard.typeHuman"]);
 
@@ -818,20 +941,33 @@ function parseEnsureAction(value: unknown): EnsureAction | null {
 export function parseCommand(value: unknown): ParsedCommand | null {
   if (!isRecord(value) || value.method !== COMMAND_CATALOG.ensureRun.method) return parsePrimitiveCommand(value);
   if (!hasExactKeys(value, ["method", "schemaVersion", "params"]) ||
-      value.schemaVersion !== COMMAND_CATALOG.ensureRun.schemaVersion || !isRecord(value.params)) return null;
+      (value.schemaVersion !== COMMAND_CATALOG.ensureRun.schemaVersion && value.schemaVersion !== 1) || !isRecord(value.params)) return null;
   const params: Record<string, unknown> = {
     ...COMMAND_CATALOG.parameterDefaultsByMethod[COMMAND_CATALOG.ensureRun.method],
     ...value.params,
   };
-  const ensureRequest = parseEnsureParameters(params, parseEnsureAction);
+  if (value.schemaVersion === 1) {
+    if (Object.hasOwn(value.params, "corrections") || Object.hasOwn(value.params, "correctionAttempts")) return null;
+    delete params.corrections; delete params.correctionAttempts;
+  }
+  const ensureRequest = parseEnsureParameters(params, parseEnsureAction, value.schemaVersion === 1 ? undefined : parseEnsureCorrection);
   return ensureRequest === null ? null : {
     kind: COMMAND_CATALOG.ensureRun.method,
-    schemaVersion: COMMAND_CATALOG.ensureRun.schemaVersion,
+    schemaVersion: value.schemaVersion as number,
     requiredPermission: COMMAND_CATALOG.ensureRun.requiredPermission,
     effectKind: COMMAND_CATALOG.ensureRun.effectKind,
     params,
     ensureRequest,
   };
+}
+
+function parseEnsureCorrection(value: unknown): EnsureAction | null {
+  if (isRecord(value) && Object.hasOwn(value, "target")) return parseEnsureAction(value);
+  const primitive = parsePrimitiveCommand(value);
+  if (primitive === null || primitive.kind === "ensure.run" || primitive.kind.startsWith("actions.") || primitive.kind.startsWith("recording.")) return null;
+  const policy = COMMAND_CATALOG.ensurePolicyByMethod[primitive.kind as keyof typeof COMMAND_CATALOG.ensurePolicyByMethod];
+  return { method: primitive.kind, schemaVersion: primitive.schemaVersion, requiredPermission: primitive.requiredPermission, params: primitive.params,
+    target: null, policy: { completion: "result", repeat: policy?.repeat ?? "never" }, derivedGoal: null };
 }
 
 function parseControlTarget(params: Record<string, unknown>): ControlTarget | null {
@@ -920,12 +1056,16 @@ function booleanParam(params: Record<string, unknown>, name: string): boolean {
   return params[name] as boolean;
 }
 
+function assertSubmittedPermission(caller: PublicKeyRecord, permission: string): void {
+  if (caller.keyKind !== "root" && !caller.permissions.includes(permission as PermissionId)) throw new DispatchAuthorizationError("FORBIDDEN");
+}
+
 async function executePrimitiveCommand(
   command: ParsedCommand,
   caller: PublicKeyRecord,
   context: {
     readonly routeId: string;
-    readonly apiKey: string;
+    readonly localRoute?: LocalCommandRoute;
     readonly recordTraceEvent: (event: ExecutionTraceEventInput) => void;
     readonly checkpointTrace: () => Promise<void>;
     readonly reuseCalibration?: boolean;
@@ -934,8 +1074,97 @@ async function executePrimitiveCommand(
 ): Promise<unknown> {
   const params = command.params;
   switch (command.kind) {
+    case "semantic.model.get": return {configuration:await readSemanticConfiguration(caller.keyId)};
+    case "semantic.model.configure": return {configuration:await configureSemanticModel(caller.keyId,params)};
+    case "semantic.index.create": case "semantic.index.update": case "semantic.index.list": case "semantic.index.get":
+    case "semantic.index.build": case "semantic.index.delete": case "semantic.search": return runSemanticIndex(caller,command.kind,params,async effect=>{
+      return effect();
+    });
+    case "search.tabs": return searchTabs(caller.keyId,params,async effect=>{
+      return effect();
+    });
+    case "bookmarks.get": case "bookmarks.list": case "bookmarks.search": case "bookmarks.create":
+    case "bookmarks.update": case "bookmarks.move": case "bookmarks.delete":
+    case "history.search": case "history.visits": case "history.add": case "history.deleteUrl": case "history.deleteRange": case "history.deleteAll": {
+      const dispatch:DebuggerDispatch=async(effect)=>{
+        return command.effectKind==="none"?effect():dispatchWithGlobalControlGate(caller.keyId,effect);
+      };
+      return command.kind.startsWith("bookmarks.")?runBookmarks(caller.keyId,command.kind,params,dispatch):runHistory(caller.keyId,command.kind,params,dispatch);
+    }
+    case "console.read": case "console.stop": case "console.export":return runConsole(caller.keyId,command.kind,params);
+    case "performance.sample": case "performance.read": case "performance.stop": case "performance.export":return runPerformance(caller.keyId,command.kind,params);
+    case "network.intercept.read": case "network.intercept.stop":return runIntercept(caller.keyId,command.kind,params);
+    case "dialogs.get": case "dialogs.respond": case "dialogs.setPolicy": case "dialogs.stop":return runDialogs(caller.keyId,command.kind,params);
+    case "network.read": case "network.get": case "network.stop": case "network.export":return runNetwork(caller.keyId,command.kind,params);
+    case "network.start": case "dialogs.start": case "network.intercept.start": case "console.start": case "performance.start": {
+      const tabRef=textParam(params,"tabRef");
+      const dispatch:DebuggerDispatch=async(effect)=>{
+        return dispatchWithControlGate(caller.keyId,tabRef,effect);
+      };
+      if(command.kind==="console.start")return startConsole(caller,params,dispatch);
+      if(command.kind==="performance.start")return startPerformance(caller,params,dispatch);
+      return command.kind==="dialogs.start"?startDialogs(caller,params,dispatch):command.kind==="network.intercept.start"?startIntercept(caller,params,dispatch):startNetwork(caller,params,dispatch);
+    }
+    case "files.upload":
+    case "downloads.start": case "downloads.get": case "downloads.list": case "downloads.wait":
+    case "downloads.pause": case "downloads.resume": case "downloads.cancel":
+    case "page.screenshot.fullPage": case "page.screenshot.region": {
+      const tabRef=command.kind==="files.upload"?tabRefForNode(textParam(params,"nodeRef")):params.tabRef as string|undefined;
+      const dispatch:DebuggerDispatch=async(effect)=>{
+        if(command.kind.startsWith("downloads.")&&command.effectKind==="none")return effect();
+        return tabRef===undefined?dispatchWithGlobalControlGate(caller.keyId,effect):dispatchWithControlGate(caller.keyId,tabRef,effect);
+      };
+      if(command.kind==="files.upload")return uploadFiles(caller.keyId,textParam(params,"nodeRef"),params.files as unknown as readonly UploadFile[],dispatch);
+      if(command.kind.startsWith("downloads."))return runDownload(command.kind,params,dispatch);
+      return params.captureMethod==="scroll"?captureScrolledScreenshot(caller.keyId,params,dispatch):captureCdpScreenshot(caller.keyId,params,dispatch);
+    }
+    case "recording.start": return startRecording(caller,params,{routeId:context.routeId,...(context.localRoute===undefined?{}:{acquireNativeRoute:context.localRoute.acquire})});
+    case "recording.get": return {recording:publicRecording(await loadRecording(caller.keyId,textParam(params,"recordingId")))};
+    case "recording.list": return listRecordings(caller.keyId,params.afterRecordingId as string|null,numberParam(params,"limit"));
+    case "recording.read": return readRecording(caller.keyId,textParam(params,"recordingId"),numberParam(params,"afterSequence"),numberParam(params,"limit"));
+    case "recording.pause": return stopRecording(caller.keyId,textParam(params,"recordingId"),"pause");
+    case "recording.stop": return stopRecording(caller.keyId,textParam(params,"recordingId"),"stop");
+    case "recording.resume": return resumeRecording(caller.keyId,textParam(params,"recordingId"),{routeId:context.routeId,...(context.localRoute===undefined?{}:{acquireNativeRoute:context.localRoute.acquire})});
+    case "recording.delete": return deleteRecording(caller.keyId,textParam(params,"recordingId"));
+    case "dom.edit": {
+      const nodeRef = textParam(params, "nodeRef");
+      return dispatchWithControlGate(caller.keyId, tabRefForNode(nodeRef), () => editDomNode(nodeRef, textParam(params, "value"),
+        { events: params.events as DomEditOptions["events"], inputType: textParam(params, "inputType"), data: params.data as string | null }));
+    }
+    case "dom.scrollTo": {
+      const nodeRef = textParam(params, "nodeRef");
+      return dispatchWithControlGate(caller.keyId, tabRefForNode(nodeRef), () => scrollDomNodeTo(nodeRef, numberParam(params, "left"), numberParam(params, "top")));
+    }
+    case "actions.list": return listActions(numberParam(params, "afterActionId"), numberParam(params, "limit"), textParam(params, "query"));
+    case "actions.get": return readAction(numberParam(params, "actionId"), numberParam(params, "offset"), numberParam(params, "limit"));
+    case "actions.delete": return deleteAction(numberParam(params, "actionId"), numberParam(params, "revision"));
+    case "actions.export": return exportAction(caller.keyId, numberParam(params, "actionId"));
+    case "actions.create": case "actions.update": case "actions.compile": {
+      const compiled = await compileSource(caller.keyId, params.instructions, parseCommand);
+      if (command.kind === "actions.compile") return compilePreview(caller.keyId, compiled);
+      if (!compiled.runnable) throw new ActionError({reason:"COMPILATION_INCOMPLETE"});
+      const action = await saveAction(textParam(params, "name"), textParam(params, "description"), compiled.instructions,
+        command.kind === "actions.create" ? null : { actionId: numberParam(params, "actionId"), revision: numberParam(params, "revision") });
+      return { action, permissions: compiled.permissions, capabilities: compiled.capabilities, diagnostics: compiled.diagnostics.slice(0, COMMAND_CATALOG.limits["command.actions.maximum_page_size"]),
+        diagnosticsTruncated: compiled.diagnostics.length > COMMAND_CATALOG.limits["command.actions.maximum_page_size"] };
+    }
+    case "windows.get": return getWindow(numberParam(params, "windowId"));
+    case "windows.setState":
+    case "windows.setBounds":
+    case "windows.focus": {
+      const windowId = numberParam(params, "windowId");
+      return dispatchWithWindowControlGate(caller.keyId, windowId, () =>
+        command.kind === "windows.setState" ? setWindowState(windowId, params.state as WindowState) :
+        command.kind === "windows.setBounds" ? setWindowBounds(windowId, params as unknown as WindowBounds) : focusWindow(windowId));
+    }
+    case "page.viewport.get": return getViewport(textParam(params, "tabRef"));
+    case "page.zoom.set": {
+      const tabRef = textParam(params, "tabRef");
+      return dispatchWithControlGate(caller.keyId, tabRef, () => setPageZoom(tabRef, numberParam(params, "factor")));
+    }
     case "input.calibrate":
     case "virtualMouse.move":
+    case "virtualMouse.moveWindow":
     case "virtualMouse.click":
     case "virtualMouse.down":
     case "virtualMouse.up":
@@ -948,6 +1177,8 @@ async function executePrimitiveCommand(
     case "virtualMouse.reset":
     case "virtualKeyboard.get":
     case "virtualKeyboard.input":
+    case "virtualKeyboard.events":
+    case "virtualKeyboard.type":
     case "virtualKeyboard.reset": {
       const virtualKeyboard = command.kind.startsWith("virtualKeyboard.");
       const read = command.kind.endsWith(".get"), reset = command.kind.endsWith(".reset");
@@ -955,13 +1186,10 @@ async function executePrimitiveCommand(
       const tabRef = cleanup ? null : dragDrop ? tabRefForNode(textParam(params, "fromNodeRef")) : textParam(params, "tabRef");
       if (dragDrop && tabRefForNode(textParam(params, "toNodeRef")) !== tabRef) throw new DomServiceError("DOM_OPERATION_FAILED", "Element drag/drop requires endpoints in one tab");
       const dispatch = {
+        acquireNativeRoute: context.localRoute?.acquire,
         deadlineMs: context.inputDeadline ?? performance.now() + numberParam(params, "timeoutMs"),
-        routeId: context.routeId, key: caller, timeoutMs: Math.min(numberParam(params, "timeoutMs"),
-          caller.expiresAt === null ? Number.MAX_SAFE_INTEGER : Math.max(1, caller.expiresAt - Date.now())),
-        revalidateAuthority: async () => {
-          const auth = await authenticateApiKey(context.apiKey, command.requiredPermission);
-          if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-          if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
+        routeId: context.routeId, key: caller, timeoutMs: numberParam(params, "timeoutMs"),
+        validateControl: async () => {
           if (tabRef !== null) await assertWindowInputControl(caller.keyId, tabRef);
         },
       };
@@ -994,9 +1222,6 @@ async function executePrimitiveCommand(
     case "debugger.send": {
       const tabRef = textParam(params, "tabRef");
       const dispatch: DebuggerDispatch = async (effect) => {
-        const auth = await authenticateApiKey(context.apiKey, "debugger");
-        if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-        if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
         return dispatchWithControlGate(caller.keyId, tabRef, effect);
       };
       if (command.kind === "debugger.attach") return attachDebugger(tabRef, dispatch);
@@ -1006,9 +1231,11 @@ async function executePrimitiveCommand(
     case "debugger.events.get":
       return getDebuggerEvents(textParam(params, "tabRef"), numberParam(params, "afterSequence"), numberParam(params, "limit"));
     case "page.screenshot.element":
-      return captureElementScreenshot(caller.keyId, params as unknown as ElementScreenshotRequest);
+      return captureElementScreenshot(caller.keyId, params as unknown as ElementScreenshotRequest, {caller,dispatch:async effect=>{
+        return effect();
+      }});
     case "artifact.upload.begin":
-      return beginArtifactUpload(caller.keyId, numberParam(params, "byteLength"), "text/html");
+      return beginArtifactUpload(caller.keyId, numberParam(params, "byteLength"), textParam(params, "mediaType") as ArtifactUploadMediaType);
     case "artifact.upload.append":
       return appendArtifactUpload(caller.keyId, textParam(params, "artifactRef"), numberParam(params, "offset"), textParam(params, "dataBase64Url"));
     case "artifact.upload.commit":
@@ -1127,15 +1354,11 @@ async function executePrimitiveCommand(
       const tabRef = tabRefForNode(nodeRef);
       return dispatchWithControlGate(caller.keyId, tabRef, () => clickRealDomNode({
         routeId: context.routeId,
+        acquireNativeRoute: context.localRoute?.acquire, deadlineMs: context.inputDeadline,
         nodeRef,
         scrollIntoView: booleanParam(params, "scrollIntoView"),
         timeoutMs: numberParam(params, "timeoutMs"),
-        revalidateAuthority: async () => {
-          const auth = await authenticateApiKey(context.apiKey, "dom.click.real");
-          if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-          if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
-          await assertControlGate(caller.keyId, tabRef);
-        },
+        validateControl: () => assertControlGate(caller.keyId, tabRef),
       }));
     }
     case "dom.focus": {
@@ -1167,62 +1390,46 @@ async function executePrimitiveCommand(
       const targetRef = textParam(params, "targetRef");
       const tabRef = tabRefForKeyboardTarget(targetRef);
       return dispatchWithInputControlGate(caller.keyId, tabRef, false, (admittedWindowId) => pressKeyboard({
+        acquireNativeRoute: context.localRoute?.acquire, deadlineMs: context.inputDeadline,
         admittedWindowId,
         key: caller,
         routeId: context.routeId,
         targetRef,
         timeoutMs: numberParam(params, "timeoutMs"),
-        revalidateAuthority: async () => {
-          const auth = await authenticateApiKey(context.apiKey, "keyboard.press");
-          if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-          if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
-          await assertControlGate(caller.keyId, tabRef);
-        },
+        validateControl: () => assertControlGate(caller.keyId, tabRef),
       }, params.actions as readonly NativeKeyboardAction[]));
     }
     case "keyboard.reset":
       return resetKeyboard({
+        acquireNativeRoute: context.localRoute?.acquire, deadlineMs: context.inputDeadline,
         key: caller,
         routeId: context.routeId,
         timeoutMs: numberParam(params, "timeoutMs"),
-        revalidateAuthority: async () => {
-          const auth = await authenticateApiKey(context.apiKey, "keyboard.reset");
-          if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-          if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
-        },
       });
     case "keyboard.type": {
       const targetRef = textParam(params, "targetRef");
       const tabRef = tabRefForKeyboardTarget(targetRef);
       return dispatchWithInputControlGate(caller.keyId, tabRef, false, (admittedWindowId) => typeKeyboardText({
+        acquireNativeRoute: context.localRoute?.acquire, deadlineMs: context.inputDeadline,
         admittedWindowId,
         key: caller,
         routeId: context.routeId,
         targetRef,
         timeoutMs: numberParam(params, "timeoutMs"),
-        revalidateAuthority: async () => {
-          const auth = await authenticateApiKey(context.apiKey, "keyboard.type");
-          if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-          if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
-          await assertControlGate(caller.keyId, tabRef);
-        },
+        validateControl: () => assertControlGate(caller.keyId, tabRef),
       }, textParam(params, "text")));
     }
     case "keyboard.typeHuman": {
       const targetRef = textParam(params, "targetRef");
       const tabRef = tabRefForKeyboardTarget(targetRef);
       return dispatchWithInputControlGate(caller.keyId, tabRef, false, (admittedWindowId) => typeKeyboardTextHuman({
+        acquireNativeRoute: context.localRoute?.acquire, deadlineMs: context.inputDeadline,
         admittedWindowId,
         key: caller,
         routeId: context.routeId,
         targetRef,
         timeoutMs: numberParam(params, "timeoutMs"),
-        revalidateAuthority: async () => {
-          const auth = await authenticateApiKey(context.apiKey, "keyboard.typeHuman");
-          if (!auth.ok) throw new DispatchAuthorizationError(authErrorCode(auth));
-          if (auth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
-          await assertControlGate(caller.keyId, tabRef);
-        },
+        validateControl: () => assertControlGate(caller.keyId, tabRef),
       }, textParam(params, "text"), numberParam(params, "charactersPerMinute"),
       numberParam(params, "mistakePercent"), params.randomSeed as number | null));
     }
@@ -1270,14 +1477,17 @@ async function executePrimitiveCommand(
   }
 }
 
-async function executeCommand(
+async function executeSingleCommand(
   command: ParsedCommand,
   caller: PublicKeyRecord,
   context: {
     readonly routeId: string;
-    readonly apiKey: string;
+    readonly localRoute?: LocalCommandRoute;
+    readonly actionSnapshot?: ActionSnapshot;
+    readonly inputDeadline?: number;
     readonly recordTraceEvent: (event: ExecutionTraceEventInput) => void;
     readonly checkpointTrace: () => Promise<void>;
+    readonly awaitEffects?: boolean;
   },
 ): Promise<unknown> {
   if (command.kind !== "ensure.run") {
@@ -1296,16 +1506,17 @@ async function executeCommand(
   const request = command.ensureRequest;
   if (request === undefined) throw new Error("Validated ensure command lost its normalized request");
   const authorize = async (permission: PermissionId): Promise<void> => {
-    const workflowAuth = await authenticateApiKey(context.apiKey, "workflow.run");
-    if (!workflowAuth.ok) throw new DispatchAuthorizationError(authErrorCode(workflowAuth));
-    if (workflowAuth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
-    if (permission === "workflow.run") return;
-    const childAuth = await authenticateApiKey(context.apiKey, permission);
-    if (!childAuth.ok) throw new DispatchAuthorizationError(authErrorCode(childAuth));
-    if (childAuth.key.keyId !== caller.keyId) throw new DispatchAuthorizationError("UNAUTHENTICATED");
+    assertSubmittedPermission(caller, permission);
   };
-  return runEnsure(request, {
+  const pendingEffects = new Set<Promise<unknown>>();
+  const track = <T>(operation: Promise<T>): Promise<T> => {
+    pendingEffects.add(operation);
+    void operation.then(() => pendingEffects.delete(operation), () => pendingEffects.delete(operation));
+    return operation;
+  };
+  try { return await runEnsure(request, {
     authorize,
+    observeExternal: (condition) => observeExternalCondition(condition, authorize),
     observeTarget: observeDomTarget,
     observeLoaded: async (tabRef, state) => (await observePageCondition({
       tabRef,
@@ -1321,23 +1532,25 @@ async function executeCommand(
       const target = await resolveTabTarget(tabRef);
       await ensureUserScriptsAvailable();
       assertResolvedTabTarget(target);
-      const result = await dispatchWithControlGate(caller.keyId, tabRef, () => executeJavaScript(target, world, code, timeoutMs));
+      const result = await track(dispatchWithControlGate(caller.keyId, tabRef, () => executeJavaScript(target, world, code, timeoutMs)));
       if (result.status !== "fulfilled" || result.valueTruncated || (result.valueJson !== "true" && result.valueJson !== "false")) {
         throw new EnsureWorkflowError("DOM_OPERATION_FAILED", "A JavaScript condition must fulfill with one untruncated boolean value");
       }
       return result.valueJson === "true";
     },
-    prepareAction: async (action, _nodeRef, timeoutMs) => {
-      if (!(action.method.startsWith("virtualMouse.") || action.method === "virtualKeyboard.input")) return;
-      const inputDeadline = performance.now() + timeoutMs;
+    prepareAction: (action, _nodeRef, timeoutMs) => track((async () => {
+      if (!(action.method.startsWith("virtualMouse.") || action.method.startsWith("virtualKeyboard."))) return;
+      if (action.method === "virtualMouse.moveWindow" || Array.isArray(action.params.actions) && action.params.actions.some(item => item.kind === "moveWindow")) return;
+      const inputDeadline = Math.min(performance.now() + timeoutMs, context.inputDeadline ?? Infinity);
       await authorize("input.calibrate");
+      if (performance.now() >= inputDeadline) throw new VirtualMouseError("timeout");
       const tabRef = action.method === "virtualMouse.dragDrop" ? tabRefForNode(textParam(action.params, "fromNodeRef")) : textParam(action.params, "tabRef");
       await executePrimitiveCommand({
         kind: "input.calibrate", schemaVersion: 1, requiredPermission: "input.calibrate", effectKind: "page_effect",
         params: { tabRef, timeoutMs: Math.min(timeoutMs, numberParam(action.params, "timeoutMs")) },
       }, caller, { ...context, reuseCalibration: true, inputDeadline });
-    },
-    executeAction: (action, nodeRef, timeoutMs) => executePrimitiveCommand({
+    })()),
+    executeAction: (action, nodeRef, timeoutMs) => track(executePrimitiveCommand({
       kind: action.method,
       schemaVersion: action.schemaVersion,
       requiredPermission: action.requiredPermission,
@@ -1346,28 +1559,30 @@ async function executeCommand(
         ...action.params,
         [ENSURE_OPTIONAL_TARGET_ACTIONS.has(action.method) ? "targetRef" : "nodeRef"]: nodeRef,
       },
-    }, caller, { ...context, inputDeadline: performance.now() + timeoutMs }),
+    }, caller, { ...context, inputDeadline: Math.min(performance.now() + timeoutMs, context.inputDeadline ?? Infinity) })),
     scrollTarget: async (nodeRef) => {
       const defaults = COMMAND_CATALOG.parameterDefaultsByMethod[COMMAND_CATALOG.domScroll.method];
-      await dispatchWithControlGate(caller.keyId, tabRefForNode(nodeRef), () => scrollDomNode(
+      await track(dispatchWithControlGate(caller.keyId, tabRefForNode(nodeRef), () => scrollDomNode(
         nodeRef,
         defaults.behavior,
         defaults.block,
         defaults.inline,
-      ));
+      )));
     },
-    scrollSearch: (target, percent, cursor, scope) => dispatchWithControlGate(
+    scrollSearch: (target, percent, cursor, scope) => track(dispatchWithControlGate(
       caller.keyId,
       target.tabRef,
       () => scrollDomTargetSearch(target, percent, cursor, scope),
-    ),
+    )),
     recordEvent: context.recordTraceEvent,
     checkpointEffect: context.checkpointTrace,
     normalizeError: publicCommandError,
     now: () => performance.now(),
     setTimer: (callback, milliseconds) => setTimeout(callback, milliseconds),
     clearTimer: (handle) => clearTimeout(handle),
-  });
+  }); } finally {
+    if (context.awaitEffects) await Promise.allSettled([...pendingEffects]);
+  }
 }
 
 function mappedKeyServiceError(error: KeyServiceError): PublicCommandError {
@@ -1388,7 +1603,36 @@ function mappedKeyServiceError(error: KeyServiceError): PublicCommandError {
   }
 }
 
+async function executeCommand(command: ParsedCommand, caller: PublicKeyRecord, context: Parameters<typeof executeSingleCommand>[2]): Promise<unknown> {
+  if (command.kind !== "actions.run") return executeSingleCommand(command, caller, context);
+  const snapshot = context.actionSnapshot;
+  if (snapshot === undefined) throw new Error("An admitted action must have its submitted snapshot");
+  const result = await runAction(snapshot, command.params.inputs as Record<string, unknown>, numberParam(command.params, "timeoutMs"), {
+    parse: parseCommand,
+    execute: (child, stepIndex, remainingMs) => {
+      const parsedChild = child as ParsedCommand;
+      const params = { ...parsedChild.params };
+      if (typeof params.timeoutMs === "number") params.timeoutMs = Math.min(params.timeoutMs, remainingMs);
+      return executeSingleCommand({ ...parsedChild, params,
+        ...(parsedChild.ensureRequest === undefined ? {} : { ensureRequest: { ...parsedChild.ensureRequest, timeoutMs: Math.min(parsedChild.ensureRequest.timeoutMs, remainingMs) } }) }, caller, {
+        ...context, inputDeadline: Math.min(performance.now() + remainingMs, context.inputDeadline ?? Infinity), awaitEffects: true,
+        recordTraceEvent: (event) => context.recordTraceEvent({ ...event, actionId: snapshot.actionId, stepIndex }),
+      });
+    },
+    normalizeError: publicCommandError,
+    stepEvent: (stepIndex, status) => context.recordTraceEvent({ phase: "command", operation: "action_step", status, actionId: snapshot.actionId, stepIndex }),
+    materializeResult: (result) => createTextArtifact(caller.keyId, "application/json", JSON.stringify(result)),
+  });
+  if (encoder.encode(JSON.stringify(result)).byteLength <= COMMAND_CATALOG.limits["command.inline.maximum_result_json_bytes"] / 2) return { ...result, artifact: null };
+  const artifact = await createTextArtifact(caller.keyId, "application/json", JSON.stringify(result));
+  return { actionId: result.actionId, revision: result.revision, status: result.status, completedSteps: result.completedSteps,
+    stoppedAt: result.stoppedAt, error: result.error, elapsedMs: result.elapsedMs, artifact };
+}
+
 function publicCommandError(error: unknown): PublicCommandError {
+  if (error instanceof RecordingError || error instanceof BrowserOperationError) return {code:error.code,details:error.details};
+  if (error instanceof ActionError) return { code: error.code, details: error.details };
+  if (error instanceof WindowOperationError) return { code: error.code, details: error.details };
   if (error instanceof DispatchAuthorizationError) return { code: error.code };
   if (error instanceof EnsureWorkflowError) {
     return error.details === undefined ? { code: error.code } : { code: error.code, details: error.details };
@@ -1426,6 +1670,11 @@ function appendTraceSafely(draft: ExecutionTraceDraft | null, event: ExecutionTr
 }
 
 function successfulTraceTerminal(command: ParsedCommand, result: unknown): TraceTerminal {
+  if (command.kind === "actions.run" && isRecord(result)) return {
+    outcome: result.status === "succeeded" || result.status === "failed" ? result.status : "unknown",
+    errorCode: isRecord(result.error) && typeof result.error.code === "string" ? result.error.code : null,
+    ensureStatus: null, ensureStage: null,
+  };
   if (command.kind !== COMMAND_CATALOG.ensureRun.method || !isRecord(result)) {
     return { outcome: "succeeded", errorCode: null, ensureStatus: null, ensureStage: null };
   }
@@ -1476,7 +1725,7 @@ async function finishTraceSafely(
   }
 }
 
-async function runAdmittedCommand(request: ParsedRouteRequest, caller: PublicKeyRecord): Promise<unknown> {
+async function runAdmittedCommand(request: ParsedRouteRequest, caller: PublicKeyRecord, actionSnapshot?: ActionSnapshot): Promise<unknown> {
   let draft: ExecutionTraceDraft | null = null;
   const diagnostic = request.command.kind === "trace.read" || request.command.kind === "trace.export";
   if (!diagnostic) {
@@ -1498,12 +1747,15 @@ async function runAdmittedCommand(request: ParsedRouteRequest, caller: PublicKey
     catch { /* A bounded diagnostic checkpoint never changes command semantics. */ }
   };
   recordTraceEvent({ phase: "command", operation: "handler_entered", status: "started" });
+  const localRoute = request.local ? new LocalCommandRoute(performance.now() +
+    (typeof request.command.params.timeoutMs === "number" ? request.command.params.timeoutMs : TRANSPORT_CONFIG.localRoute.maximumDurationMs)) : null;
   try {
     const result = await executeCommand(request.command, caller, {
       routeId: request.routeId,
-      apiKey: request.apiKey,
+      ...(actionSnapshot === undefined ? {} : { actionSnapshot }),
       recordTraceEvent,
       checkpointTrace,
+      ...(localRoute === null ? {} : { localRoute, inputDeadline: localRoute.deadlineMs, awaitEffects: true }),
     });
     recordTraceEvent({ phase: "command", operation: "handler_returned", status: "succeeded" });
     const trace = await finishTraceSafely(draft, successfulTraceTerminal(request.command, result));
@@ -1517,7 +1769,7 @@ async function runAdmittedCommand(request: ParsedRouteRequest, caller: PublicKey
     });
     const trace = await finishTraceSafely(draft, failedTraceTerminal(request.command, draft, error));
     return errorResponse(request.routeId, request.clientRequestId, error, trace);
-  }
+  } finally { await localRoute?.finish(); }
 }
 
 export async function dispatchRouteRequest(value: unknown): Promise<unknown> {
@@ -1526,14 +1778,37 @@ export async function dispatchRouteRequest(value: unknown): Promise<unknown> {
     const routeId = isRecord(value) && typeof value.routeId === "string" ? value.routeId : "0";
     return errorResponse(routeId, "", { code: "SCHEMA_INVALID" });
   }
+  return dispatchParsedRequest(request);
+}
+
+// Local admin commands use the same authorization, lane, executor and trace.
+// A UI correlation id remains the local diagnostic id. Native services acquire
+// a separate App-owned route lazily in this same admitted command context.
+export async function dispatchAdminCommand(clientRequestId: string, apiKey: string, value: unknown): Promise<unknown> {
+  const command = parseCommand(value);
+  if (command === null) return errorResponse(clientRequestId, clientRequestId, { code: "SCHEMA_INVALID" });
+  return dispatchParsedRequest({ local: true, routeId: clientRequestId, clientRequestId, apiKey, command });
+}
+
+async function dispatchParsedRequest(request: ParsedRouteRequest): Promise<unknown> {
   try {
     const initialAuth = await authenticateApiKey(request.apiKey, request.command.requiredPermission);
     if (!initialAuth.ok) return errorResponse(request.routeId, request.clientRequestId, { code: authErrorCode(initialAuth) });
-    return await runInKeyLane(initialAuth.key.keyId, async () => {
-      const dispatchAuth = await authenticateApiKey(request.apiKey, request.command.requiredPermission);
-      if (!dispatchAuth.ok) return errorResponse(request.routeId, request.clientRequestId, { code: authErrorCode(dispatchAuth) });
-      return runAdmittedCommand(request, dispatchAuth.key);
-    });
+    const command = request.command;
+    if (command.kind === "recording.start") {
+      for (const requirement of COMMAND_CATALOG.recordingStart.conditionalPermissions) {
+        if (command.params[requirement.parameter] === requirement.equals) assertSubmittedPermission(initialAuth.key, requirement.permissionId);
+      }
+    }
+    const actionSnapshot = command.kind === "actions.run" ? await snapshotAction(numberParam(command.params, "actionId")) : undefined;
+    if (actionSnapshot !== undefined) {
+      const compiled = compileInstructions(actionSnapshot.instructions, parseCommand);
+      for (const permission of compiled.permissions) assertSubmittedPermission(initialAuth.key, permission);
+    }
+    if (["actions.create", "actions.update", "actions.compile"].includes(command.kind) && isRecord(command.params.instructions) && typeof command.params.instructions.recordingId === "string") {
+      assertSubmittedPermission(initialAuth.key, "recording.read");
+    }
+    return await runInKeyLane(initialAuth.key.keyId, () => runAdmittedCommand(request, initialAuth.key, actionSnapshot));
   } catch (error) {
     return errorResponse(request.routeId, request.clientRequestId, publicCommandError(error));
   }

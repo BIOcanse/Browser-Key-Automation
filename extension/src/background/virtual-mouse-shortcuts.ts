@@ -1,11 +1,12 @@
 import type { MouseAction } from "../shared/virtual-input-protocol.js";
 import { parseMouseActions } from "./virtual-mouse-model.js";
 
-export type MouseShortcutMethod = "virtualMouse.move" | "virtualMouse.click" | "virtualMouse.down" |
+export type MouseShortcutMethod = "virtualMouse.move" | "virtualMouse.moveWindow" | "virtualMouse.click" | "virtualMouse.down" |
   "virtualMouse.up" | "virtualMouse.drag" | "virtualMouse.scroll";
 
 const fields: Record<MouseShortcutMethod, readonly string[]> = {
   "virtualMouse.move": ["x", "y"],
+  "virtualMouse.moveWindow": ["x", "y"],
   "virtualMouse.click": ["at", "button"],
   "virtualMouse.down": ["button"],
   "virtualMouse.up": ["button"],
@@ -37,10 +38,10 @@ export function expandMouseShortcut(method: MouseShortcutMethod, params: Record<
   }
   const button = params.button as Extract<MouseAction, { kind: "button" }>["button"];
   switch (method) {
-    case "virtualMouse.move": {
+    case "virtualMouse.move": case "virtualMouse.moveWindow": {
       const move = point({ x: params.x, y: params.y });
       if (move === null) return null;
-      actions.push(move);
+      actions.push({ ...move, kind: method === "virtualMouse.moveWindow" ? "moveWindow" : "move" });
       break;
     }
     case "virtualMouse.click": actions.push({ kind: "button", button, action: "press" }); break;

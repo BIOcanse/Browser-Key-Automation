@@ -1,11 +1,18 @@
 export const DATABASE_NAME = "browser-key-automation";
-export const DATABASE_VERSION = 4;
+export const DATABASE_VERSION = 6;
 export const KEY_STORE = "keys";
 export const ADMIN_MUTATION_STORE = "admin_mutations";
 export const ARTIFACT_STORE = "artifacts";
 export const ARTIFACT_CHUNK_STORE = "artifact_chunks";
 export const SETTINGS_STORE = "settings";
 export const EXECUTION_TRACE_STORE = "execution_traces";
+export const ACTION_STORE = "actions";
+export const ACTION_STEP_STORE = "action_steps";
+export const RECORDING_STORE = "recordings";
+export const RECORDING_EVENT_STORE = "recording_events";
+export const SEMANTIC_MODEL_STORE = "semantic_models";
+export const SEMANTIC_INDEX_STORE = "semantic_indexes";
+export const SEMANTIC_CHUNK_STORE = "semantic_chunks";
 
 let databasePromise: Promise<IDBDatabase> | null = null;
 let activeDatabase: IDBDatabase | null = null;
@@ -57,6 +64,13 @@ function openDatabase(): Promise<IDBDatabase> {
     if (!database.objectStoreNames.contains(EXECUTION_TRACE_STORE)) {
       database.createObjectStore(EXECUTION_TRACE_STORE, { keyPath: "ownerKeyId" });
     }
+    if (!database.objectStoreNames.contains(ACTION_STORE)) database.createObjectStore(ACTION_STORE, { keyPath: "actionId", autoIncrement: true });
+    if (!database.objectStoreNames.contains(ACTION_STEP_STORE)) database.createObjectStore(ACTION_STEP_STORE, { keyPath: ["actionId", "index"] });
+    if (!database.objectStoreNames.contains(RECORDING_STORE)) database.createObjectStore(RECORDING_STORE, { keyPath: "recordingId" });
+    if (!database.objectStoreNames.contains(RECORDING_EVENT_STORE)) database.createObjectStore(RECORDING_EVENT_STORE, { keyPath: ["recordingId", "sequence"] });
+    if (!database.objectStoreNames.contains(SEMANTIC_MODEL_STORE)) database.createObjectStore(SEMANTIC_MODEL_STORE, { keyPath: "ownerKeyId" });
+    if (!database.objectStoreNames.contains(SEMANTIC_INDEX_STORE)) database.createObjectStore(SEMANTIC_INDEX_STORE, { keyPath: "indexId" });
+    if (!database.objectStoreNames.contains(SEMANTIC_CHUNK_STORE)) database.createObjectStore(SEMANTIC_CHUNK_STORE, { keyPath: ["indexId", "generation", "chunkIndex"] });
   });
   return new Promise<IDBDatabase>((resolve, reject) => {
     let settled = false;

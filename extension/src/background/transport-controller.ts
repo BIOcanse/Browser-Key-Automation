@@ -13,6 +13,9 @@ import { CapabilityUnavailableError } from "./capability-error.js";
 import { NativeInputError } from "./native-input-error.js";
 import { isVirtualInputResponse, type VirtualInputRequest } from "../shared/virtual-input-protocol.js";
 import { VirtualMouseError } from "./virtual-mouse-model.js";
+import { isNativeRecordingResponse, type NativeRecordingRequest } from "../shared/native-recording-protocol.js";
+import { RecordingError } from "./recording/model.js";
+import { isLocalRouteReceipt, type LocalRouteConnection, type LocalRouteRequest, type LocalRouteReceipt } from "../shared/local-route-protocol.js";
 
 export const TRANSPORT_MESSAGE_CHANNEL = "browser-key-automation.transport.v1";
 
@@ -78,7 +81,7 @@ export async function acceptTransportMessage(message: unknown): Promise<unknown>
     connectedCapabilities = Array.isArray(capabilities) && capabilities.every((value) => typeof value === "string")
       ? [...capabilities] : [];
     console.info("Browser Key Automation relay connected");
-  } else if (kind === "transport.disconnected" || kind === "transport.protocol-error") {
+  } else if (kind === "transport.disconnected" || kind === "transport.protocol-error" || kind === "transport.worker-error") {
     connectedGeneration = null;
     connectedCapabilities = [];
     connectedRelayEpoch = null;
@@ -94,21 +97,58 @@ export function virtualInputGeneration(): number {
   return connectedGeneration;
 }
 
-async function sendVirtualInput(request: VirtualInputRequest, generation: number, retireAt?: number | null) {
+async function sendVirtualInput(request: VirtualInputRequest, generation: number, connection?: LocalRouteConnection) {
   let response: unknown;
   try {
     response = await chrome.runtime.sendMessage({ channel: NATIVE_INPUT_MESSAGE_CHANNEL,
       connectionGeneration: generation, timeoutMs: request.timeoutMs + TRANSPORT_CONFIG.nativeInputResponseMarginMs,
-      payload: request, retireAt });
+      payload: request, ...(connection === undefined ? {} : { relayEpoch: connection.relayEpoch }) });
   } catch { throw new VirtualMouseError("transport_disconnected"); }
   if (!isVirtualInputResponse(response, request.requestId)) throw new VirtualMouseError("native_response_invalid");
   if (!response.ok) throw new VirtualMouseError(response.error.reason, response.error.progress);
   return response.result;
 }
 
-export async function requestVirtualInput(request: VirtualInputRequest, expectedGeneration: number, retireAt?: number | null) {
+export async function requestVirtualInput(request: VirtualInputRequest, expectedGeneration: number, connection?: LocalRouteConnection) {
   if (virtualInputGeneration() !== expectedGeneration) throw new VirtualMouseError("connection_changed");
-  return sendVirtualInput(request, expectedGeneration, retireAt);
+  assertRouteConnection(connection, expectedGeneration);
+  return sendVirtualInput(request, expectedGeneration, connection);
+}
+
+function assertRouteConnection(connection: LocalRouteConnection | undefined, generation: number): void {
+  if (connection !== undefined && (connection.connectionGeneration !== generation || connection.relayEpoch !== connectedRelayEpoch)) throw new VirtualMouseError("connection_changed");
+}
+
+export function localRouteConnection(): LocalRouteConnection {
+  if (connectedGeneration === null || connectedRelayEpoch === null || !connectedCapabilities.includes(TRANSPORT_CONFIG.localRouteCapability)) {
+    throw new VirtualMouseError("local_route_unavailable");
+  }
+  return { connectionGeneration: connectedGeneration, relayEpoch: connectedRelayEpoch };
+}
+
+export async function requestLocalRoute(request: LocalRouteRequest, connection: LocalRouteConnection): Promise<LocalRouteReceipt> {
+  const current = localRouteConnection();
+  if (current.connectionGeneration !== connection.connectionGeneration || current.relayEpoch !== connection.relayEpoch) throw new VirtualMouseError("connection_changed");
+  let receipt: unknown;
+  try { receipt = await chrome.runtime.sendMessage({ channel: NATIVE_INPUT_MESSAGE_CHANNEL, ...connection, payload: request }); }
+  catch { throw new VirtualMouseError("transport_disconnected"); }
+  if (!isLocalRouteReceipt(receipt, request, connection)) throw new VirtualMouseError("local_route_response_invalid");
+  return receipt;
+}
+
+export async function requestNativeRecording(request: NativeRecordingRequest, connection: LocalRouteConnection) {
+  if (connection.connectionGeneration !== connectedGeneration || connection.relayEpoch !== connectedRelayEpoch)
+    throw new RecordingError({ reason: "CONNECTION_CHANGED" });
+  if (!connectedCapabilities.includes(TRANSPORT_CONFIG.nativeRecordingCapability)) throw new RecordingError({ reason: "REAL_BACKEND_UNAVAILABLE" });
+  let response: unknown;
+  try { response = await chrome.runtime.sendMessage({ channel: NATIVE_INPUT_MESSAGE_CHANNEL, ...connection,
+    timeoutMs: request.timeoutMs + TRANSPORT_CONFIG.nativeInputResponseMarginMs, payload: request }); }
+  catch { throw new RecordingError({ reason: "TRANSPORT_DISCONNECTED" }); }
+  if (!isNativeRecordingResponse(response, request.requestId)) throw new RecordingError({ reason: "NATIVE_RESPONSE_INVALID" });
+  if (!response.ok) throw new RecordingError({ reason: response.error.reason });
+  if (response.result.resourceId !== null && response.result.resourceId !== request.operation.resourceId)
+    throw new RecordingError({ reason: "NATIVE_RESOURCE_MISMATCH" });
+  return response.result;
 }
 
 export function assertNativeInputClickAvailable(): number {
@@ -136,8 +176,10 @@ export function assertNativeInputKeyboardAvailable(): number {
 export async function requestNativeClick(
   request: NativeInputClickRequest,
   timeoutMs: number,
+  connection?: LocalRouteConnection,
 ): Promise<Extract<NativeInputClickResponse, { readonly ok: true }>> {
   const connectionGeneration = assertNativeInputClickAvailable();
+  assertRouteConnection(connection, connectionGeneration);
   let response: unknown;
   try {
     response = await chrome.runtime.sendMessage({
@@ -145,6 +187,7 @@ export async function requestNativeClick(
       connectionGeneration,
       timeoutMs,
       payload: request,
+      ...(connection === undefined ? {} : { relayEpoch: connection.relayEpoch }),
     });
   } catch {
     throw new NativeInputError({ reason: "transport_disconnected", phase: "input", clickState: "unknown" });
@@ -159,8 +202,10 @@ export async function requestNativeClick(
 export async function requestNativeKeyboard(
   request: NativeInputKeyboardRequest,
   timeoutMs: number,
+  connection?: LocalRouteConnection,
 ): Promise<Extract<NativeInputKeyboardResponse, { readonly ok: true }>> {
   const connectionGeneration = assertNativeInputKeyboardAvailable();
+  assertRouteConnection(connection, connectionGeneration);
   let response: unknown;
   try {
     response = await chrome.runtime.sendMessage({
@@ -168,6 +213,7 @@ export async function requestNativeKeyboard(
       connectionGeneration,
       timeoutMs,
       payload: request,
+      ...(connection === undefined ? {} : { relayEpoch: connection.relayEpoch }),
     });
   } catch {
     throw new NativeInputError({

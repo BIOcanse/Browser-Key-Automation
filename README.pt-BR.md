@@ -57,6 +57,13 @@ Consulte versão e permissões com `system.describe`; os parâmetros exatos est�
 | Texto / atalhos / soltar teclas | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | Mouse / teclado virtuais | `virtualMouse.*` · `virtualKeyboard.*` |
 | Medir alvo nativo | `input.calibrate` |
+| Biblioteca de ações | `actions.create` · `actions.list/get` · `actions.run` |
+| Gravação DOM / Windows | `recording.start/pause/resume/stop` → `actions.compile` |
+| Uploads, downloads e diálogos | `files.upload` · `downloads.*` · `dialogs.*` |
+| Rede e diagnóstico | `network.*` · `console.*` · `performance.*` |
+| Página inteira / região / elemento | `page.screenshot.fullPage/region/element` |
+| Dados do navegador e busca | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| Janela e área visível | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | Sessão CDP explícita | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+Salve uma sequência ou compile uma gravação, revise as condições e reproduza pelo ID da ação. A gravação do Windows preserva mudanças da janela e exclui trajetórias do mouse fora da janela de destino. O App grava coordenadas relativas à janela e os dois botões laterais. Consulte [Ações e gravação](dev/skills/browser-key-automation/references/actions-and-recording.md) para permissões, preparação e limites.
+
 ## Keys e limites de entrada
 
 - Root recebe todas as permissões ativas. Keys Regular oferecem grupos expansíveis, validade, nova visualização, desativação e revogação. JavaScript e entrada nativa são permissões independentes. Uma Key não substitui consentimento para pagar, publicar ou excluir.
+- Os comandos são autenticados uma única vez ao serem enviados. Mantêm as permissões desse momento na fila e durante a execução; a expiração, desativação ou revogação posterior da Key só afeta novos envios. Os prazos próprios e os comandos explícitos para parar ou liberar recursos continuam valendo.
 - O estado virtual pertence à Key, persiste entre abas e exige ocupar toda a janela alvo. Ações virtuais comuns usam um `input.calibrate` válido; `ensure.run` verifica e atualiza quando preciso. Entrada real exige primeiro plano; a virtual não move o cursor físico.
 - Windows fornece entrada nativa. Linux fornece atualmente roteamento do navegador e arquivos, não entrada nativa. Janelas minimizadas não são suportadas. A primeira calibração exige página mensurável; reutilização com janela coberta é condicional. Há casos pendentes de calibração inicial multijanela e arrastar/soltar HTML5/OLE nativo completo.
 - Imagens de elementos usam o viewport visível e máscaras de formas suportadas. Chrome controla páginas restritas, acesso a sites e User Scripts; `debugger.attach` mantém o aviso de depuração. Eventos sintéticos e mensagens virtuais não contornam todas as restrições.

@@ -57,6 +57,13 @@ node client/browser-key-cli.mjs call --method system.describe --schema-version 1
 | 准确文本 / 快捷键 / 释放按键 | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | 虚拟鼠标 / 键盘 | `virtualMouse.*` · `virtualKeyboard.*` |
 | 测量原生输入目标 | `input.calibrate` |
+| 动作仓库 | `actions.create` · `actions.list/get` · `actions.run` |
+| DOM / Windows 真实录制 | `recording.start/pause/resume/stop` → `actions.compile` |
+| 上传、下载与弹窗 | `files.upload` · `downloads.*` · `dialogs.*` |
+| 网络与诊断 | `network.*` · `console.*` · `performance.*` |
+| 整页 / 区域 / 元素截图 | `page.screenshot.fullPage/region/element` |
+| 浏览器资料与检索 | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| 窗口与视口 | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | 显式 CDP 会话 | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+可以直接保存指令序列，也可以录制后编译，检查条件后按动作编号重放。Windows 真实录制会保留窗口变动，排除目标窗口外的鼠标轨迹；由外部 App 按可见窗口区域记录原生像素坐标，包括后退、前进两个侧键。权限、准备条件和重放边界见[动作与录制](dev/skills/browser-key-automation/references/actions-and-recording.md)。
+
 ## Key 与输入边界
 
 - Root 获得所有有效权限；Regular Key 可以按权限组快速配置，再展开细调，支持有效期、再次查看、禁用和撤销。JavaScript 与原生输入等权限相互独立。拥有 Key 不等于获得替用户支付、发布或删除的授权。
+- 指令提交时只鉴权一次；入队后按照提交时的权限执行，Key 后续过期、禁用或撤销只影响新提交。已经接受的工作仍按自身期限及显式停止、释放指令运行。
 - 虚拟输入状态绑定 Key，跨标签页保留，使用前必须占据整个目标窗口。普通虚拟输入动作使用有效的 `input.calibrate` 校准；`ensure.run` 会检查并按需刷新。真实输入要求目标窗口在前台；虚拟输入不移动真实鼠标。
 - Windows 提供原生输入；Linux 当前提供浏览器路由和文件流程，不提供原生键鼠后端。不支持最小化窗口；首次校准要求页面可测量，遮挡时复用已有校准有条件限制。多窗口首次校准、完整原生 HTML5/OLE 拖放仍有未解决场景。
 - 元素截图读取当前可见视口并使用支持的形状遮罩，不补画隐藏内容。受限页面、站点访问、用户脚本开关由 Chrome 管理；显式 `debugger.attach` 保留浏览器调试提示。合成 DOM 事件和虚拟窗口消息不能绕过所有网站或系统输入限制。

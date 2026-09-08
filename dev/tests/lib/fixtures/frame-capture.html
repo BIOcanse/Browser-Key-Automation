@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>Exact frame capture fixture</title>
+<style>
+html,body{margin:0;background:rgb(20,80,160)}
+#clip{position:absolute;left:40px;top:30px;width:240px;height:160px;overflow:hidden}
+iframe{position:absolute;width:300px;height:200px;border:5px solid white;padding:4px;box-sizing:content-box;transform-origin:0 0}
+#red{left:380px;top:30px}
+#paint{position:absolute;left:60px;top:40px;width:120px;height:80px}
+</style>
+<script>
+addEventListener('DOMContentLoaded',()=>{
+ if(new URLSearchParams(location.search).has('child')){
+  document.body.innerHTML='<div id="paint"></div>';
+  const paint=document.querySelector('#paint');paint.dataset.color=window.name;
+  paint.style.background=window.name==='green'?'rgb(36,184,92)':'rgb(220,44,72)';
+ }else{
+  document.body.innerHTML='<div id="clip"><iframe id="green" name="green"></iframe></div><iframe id="red" name="red"></iframe>';
+  const child=new URL('/frame-capture?child=1',location.href);child.hostname=location.hostname==='localhost'?'127.0.0.1':'localhost';
+  for(const frame of document.querySelectorAll('iframe'))frame.src=child.href;
+ }
+});
+</script>

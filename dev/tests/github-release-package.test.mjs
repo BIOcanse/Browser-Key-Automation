@@ -105,7 +105,11 @@ for (const [index, file] of [extensionZip, appZip].entries()) {
   assert.match(releaseNotes, new RegExp(`${digest}  ${escapeRegExp(path.basename(file))}`, "u"));
 }
 assert.match(releaseNotes, /exactly two downloads/u);
-assert.match(releaseNotes, /Independent Windows virtual mouse and keyboard commands/u);
+assert.match(releaseNotes, /Shared action library/u);
+assert.match(releaseNotes, /DOM recording and Windows real recording/u);
+assert.match(releaseNotes, /`virtualMouse\.moveWindow`/u);
+assert.match(releaseNotes, /left\/right\/middle\/back\/forward/u);
+assert.match(releaseNotes, /One authorization check at command submission/u);
 assert.match(releaseNotes, /`ensure\.run`/u);
 assert.match(releaseNotes, /`keyboard\.reset`/u);
 assert.match(releaseNotes, /public Root trial Key/u);

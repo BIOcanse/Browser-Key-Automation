@@ -7,15 +7,17 @@ const route_table_module = @import("route_table.zig");
 const websocket = @import("websocket.zig");
 const native_input = @import("native_input.zig");
 const virtual_mouse = @import("virtual_input.zig");
+const recording = if (virtual_mouse.supported) @import("recording/windows/backend.zig") else struct {};
+comptime { if (virtual_mouse.supported) { _ = recording; } }
 
 const role_hello_extension = "{\"kind\":\"role.hello\",\"role\":\"extension\",\"protocolVersion\":1}";
 const role_hello_client = "{\"kind\":\"role.hello\",\"role\":\"client\",\"protocolVersion\":1}";
 const role_ready_extension = if (virtual_mouse.supported)
-    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.native_input_click_capability ++ "\",\"" ++ config.native_input_keyboard_capability ++ "\",\"" ++ config.virtual_mouse_capability ++ "\"]}"
+    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.native_input_click_capability ++ "\",\"" ++ config.native_input_keyboard_capability ++ "\",\"" ++ config.virtual_mouse_capability ++ "\",\"" ++ config.local_route_capability ++ "\",\"" ++ config.native_recording_capability ++ "\"]}"
 else if (builtin.os.tag == .windows)
-    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.native_input_click_capability ++ "\",\"" ++ config.native_input_keyboard_capability ++ "\"]}"
+    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.native_input_click_capability ++ "\",\"" ++ config.native_input_keyboard_capability ++ "\",\"" ++ config.local_route_capability ++ "\"]}"
 else
-    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[]}";
+    "{\"kind\":\"role.ready\",\"role\":\"extension\",\"capabilities\":[\"" ++ config.local_route_capability ++ "\"]}";
 const role_ready_client = "{\"kind\":\"role.ready\",\"role\":\"client\"}";
 const instances_list = "{\"kind\":\"instances.list\"}";
 const relay_stop = "{\"kind\":\"relay.stop\"}";
@@ -42,6 +44,9 @@ const RouteResponse = struct {
     routeId: []const u8,
     payload: std.json.Value,
 };
+
+const LocalRouteOpen = struct { kind: []const u8, requestId: []const u8, durationMs: u32 };
+const LocalRouteClose = struct { kind: []const u8, requestId: []const u8, routeId: []const u8 };
 
 const NativeClickMessage = struct {
     kind: []const u8,
@@ -194,6 +199,7 @@ fn serveExtension(
         state.registry.unregisterExtension(instance_ref);
         state.routes.failInstance(instance_ref.instance_number);
         virtual_mouse.cleanupInstance(state.io, instance_ref.instance_number);
+        if (virtual_mouse.supported) recording.cleanupInstance(state.io, instance_ref.instance_number);
     }
 
     // The extension receives no instanceNumber; hello's relayEpoch is not a route identity it owns.
@@ -221,15 +227,57 @@ fn serveExtension(
             var parsed = try std.json.parseFromSlice(RouteResponse, state.allocator, payload, .{});
             defer parsed.deinit();
             const route_id = try std.fmt.parseUnsigned(u64, parsed.value.routeId, 10);
-            try state.routes.complete(route_id, payload);
+            try state.routes.complete(route_id, instance_ref.instance_number, payload);
+        } else if (std.mem.eql(u8, kind, "route.local.open")) {
+            try serveLocalRouteOpen(state, instance_ref, payload);
+        } else if (std.mem.eql(u8, kind, "route.local.close")) {
+            try serveLocalRouteClose(state, instance_ref, payload);
         } else if (std.mem.eql(u8, kind, "native.input.click")) {
             try serveNativeClick(state, instance_ref, payload);
         } else if (std.mem.eql(u8, kind, "native.input.keyboard")) {
             try serveNativeKeyboard(state, instance_ref, payload);
         } else if (std.mem.eql(u8, kind, "native.virtualInput")) {
             try serveVirtualMouse(state, instance_ref, payload);
+        } else if (virtual_mouse.supported and std.mem.eql(u8, kind, "native.recording")) {
+            try serveRecording(state, instance_ref, payload);
         } else return error.BadExtensionMessage;
     }
+}
+
+fn serveLocalRouteOpen(state: *ServerState, instance_ref: registry_module.InstanceRef, payload: []const u8) !void {
+    var parsed = try std.json.parseFromSlice(LocalRouteOpen, state.allocator, payload, .{});
+    defer parsed.deinit();
+    const request = parsed.value;
+    if (request.requestId.len == 0 or request.requestId.len > 128) return error.BadLocalRouteRequest;
+    var buffer: [2048]u8 = undefined;
+    var response: std.Io.Writer = .fixed(&buffer);
+    try response.writeAll("{\"kind\":\"route.local.result\",\"requestId\":");
+    try std.json.Stringify.value(request.requestId, .{}, &response);
+    if (state.routes.openLocal(instance_ref.instance_number, request.durationMs)) |route_id| {
+        try response.print(",\"ok\":true,\"result\":{{\"routeId\":\"{d}\"}}}}", .{route_id});
+    } else |err| {
+        try response.writeAll(",\"ok\":false,\"error\":{\"reason\":");
+        try std.json.Stringify.value(@errorName(err), .{}, &response);
+        try response.writeAll("}}");
+    }
+    try state.registry.writeToConnected(instance_ref, .binary, buffer[0..response.end]);
+}
+
+fn serveLocalRouteClose(state: *ServerState, instance_ref: registry_module.InstanceRef, payload: []const u8) !void {
+    var parsed = try std.json.parseFromSlice(LocalRouteClose, state.allocator, payload, .{});
+    defer parsed.deinit();
+    const request = parsed.value;
+    if (request.requestId.len == 0 or request.requestId.len > 128) return error.BadLocalRouteRequest;
+    const route_id = std.fmt.parseUnsigned(u64, request.routeId, 10) catch return error.BadLocalRouteRequest;
+    const closed = state.routes.closeLocal(instance_ref.instance_number, route_id);
+    var buffer: [2048]u8 = undefined;
+    var response: std.Io.Writer = .fixed(&buffer);
+    try response.writeAll("{\"kind\":\"route.local.result\",\"requestId\":");
+    try std.json.Stringify.value(request.requestId, .{}, &response);
+    try response.writeAll(",\"ok\":true,\"result\":{\"closed\":");
+    try std.json.Stringify.value(closed, .{}, &response);
+    try response.writeAll("}}");
+    try state.registry.writeToConnected(instance_ref, .binary, buffer[0..response.end]);
 }
 
 fn serveVirtualMouse(state: *ServerState, instance_ref: registry_module.InstanceRef, payload: []const u8) !void {
@@ -238,15 +286,16 @@ fn serveVirtualMouse(state: *ServerState, instance_ref: registry_module.Instance
     const request = parsed.value;
     const route = if (request.routeId) |id| std.fmt.parseUnsigned(u64, id, 10) catch 0 else 0;
     // Only cleanup may arrive without a pending client request. No create/input bypass.
-    const authorized = request.operation.kind == .cleanup or request.operation.kind == .releaseWindow or
-        request.operation.kind == .get or request.operation.kind == .reset or request.operation.kind == .keyboardReset or
-        (route != 0 and state.routes.isPendingForInstance(route, instance_ref.instance_number));
+    const independent = request.operation.kind == .cleanup or request.operation.kind == .releaseWindow or
+        request.operation.kind == .get or request.operation.kind == .reset or request.operation.kind == .keyboardReset;
+    const timeout = if (independent) request.timeoutMs else state.routes.remainingTimeoutForInstance(route, instance_ref.instance_number, request.timeoutMs);
     var progress: virtual_mouse.Result = .{};
     const old_app_cleanup = request.operation.kind == .cleanup and request.relayEpoch != null and
         !std.mem.eql(u8, request.relayEpoch.?, &state.registry.relay_epoch);
-    const result = if (old_app_cleanup) @as(anyerror!virtual_mouse.Result, .{}) else if (authorized)
-        virtual_mouse.execute(state.io, instance_ref.instance_number, request.timeoutMs, request.operation, &progress)
-        else error.StaleRoute;
+    const result = if (old_app_cleanup) @as(anyerror!virtual_mouse.Result, .{}) else if (timeout) |timeout_ms|
+        virtual_mouse.execute(state.io, instance_ref.instance_number, timeout_ms, request.operation, &progress)
+    else
+        error.StaleRoute;
     var buffer: [config.maximum_message_bytes]u8 = undefined;
     var response: std.Io.Writer = .fixed(&buffer);
     try response.writeAll("{\"kind\":\"native.virtualInput.result\",\"requestId\":");
@@ -265,20 +314,51 @@ fn serveVirtualMouse(state: *ServerState, instance_ref: registry_module.Instance
     try state.registry.writeToConnected(instance_ref, .binary, buffer[0..response.end]);
 }
 
+fn serveRecording(state: *ServerState, instance_ref: registry_module.InstanceRef, payload: []const u8) !void {
+    if (!virtual_mouse.supported) return error.BadExtensionMessage;
+    const Message = struct { kind: []const u8, requestId: []const u8, routeId: ?[]const u8 = null,
+        timeoutMs: u32, operation: recording.Operation };
+    var parsed = try std.json.parseFromSlice(Message, state.allocator, payload, .{});
+    defer parsed.deinit();
+    const request = parsed.value;
+    if (request.requestId.len == 0 or request.requestId.len > 128) return error.BadExtensionMessage;
+    const route = if (request.routeId) |id| std.fmt.parseUnsigned(u64, id, 10) catch 0 else 0;
+    const timeout = if (request.operation.kind == .open)
+        state.routes.remainingTimeoutForInstance(route, instance_ref.instance_number, request.timeoutMs)
+    else request.timeoutMs;
+    var events: [config.recording_maximum_batch_events]recording.Event = undefined;
+    const result = if (timeout) |budget| recording.execute(state.io, instance_ref.instance_number, budget, request.operation, &events)
+        else error.StaleRoute;
+    var buffer: [config.maximum_message_bytes]u8 = undefined;
+    var response: std.Io.Writer = .fixed(&buffer);
+    try response.writeAll("{\"kind\":\"native.recording.result\",\"requestId\":");
+    try std.json.Stringify.value(request.requestId, .{}, &response);
+    if (result) |value| {
+        try response.writeAll(",\"ok\":true,\"result\":");
+        try std.json.Stringify.value(value, .{}, &response);
+    } else |err| {
+        try response.writeAll(",\"ok\":false,\"error\":{\"reason\":");
+        try std.json.Stringify.value(@errorName(err), .{}, &response);
+        try response.writeByte('}');
+    }
+    try response.writeByte('}');
+    try state.registry.writeToConnected(instance_ref, .binary, buffer[0..response.end]);
+}
+
 fn serveNativeClick(state: *ServerState, instance_ref: registry_module.InstanceRef, payload: []const u8) !void {
     var parsed = try std.json.parseFromSlice(NativeClickMessage, state.allocator, payload, .{});
     defer parsed.deinit();
     const request = &parsed.value;
     const route_id = std.fmt.parseUnsigned(u64, request.routeId, 10) catch 0;
-    const outcome: native_input.ClickOutcome = if (route_id == 0 or
-        !state.routes.isPendingForInstance(route_id, instance_ref.instance_number))
+    const timeout = state.routes.remainingTimeoutForInstance(route_id, instance_ref.instance_number, request.timeoutMs);
+    const outcome: native_input.ClickOutcome = if (timeout == null)
         .{ .failure = .{ .reason = "stale_route", .phase = .prepare, .click_state = .not_sent } }
     else
         native_input.executeClick(state.io, .{
             .marker = request.marker,
             .point = request.point,
             .viewport = request.viewport,
-            .timeout_ms = request.timeoutMs,
+            .timeout_ms = timeout.?,
         });
 
     var response_buffer: [2048]u8 = undefined;
@@ -303,8 +383,8 @@ fn serveNativeKeyboard(state: *ServerState, instance_ref: registry_module.Instan
     defer parsed.deinit();
     const request = &parsed.value;
     const route_id = std.fmt.parseUnsigned(u64, request.routeId, 10) catch 0;
-    const outcome: native_input.KeyboardOutcome = if (route_id == 0 or
-        !state.routes.isPendingForInstance(route_id, instance_ref.instance_number))
+    const timeout = state.routes.remainingTimeoutForInstance(route_id, instance_ref.instance_number, request.timeoutMs);
+    const outcome: native_input.KeyboardOutcome = if (timeout == null)
         .{ .failure = .{
             .reason = "stale_route",
             .phase = .prepare,
@@ -312,11 +392,10 @@ fn serveNativeKeyboard(state: *ServerState, instance_ref: registry_module.Instan
             .completed_actions = 0,
         } }
     else
-        virtual_mouse.executeRealKeyboard(state.io, instance_ref.instance_number,
-            std.fmt.parseUnsigned(u64, request.inputId, 10) catch 0, request.windowId, request.viewport, request.documentId, .{
+        virtual_mouse.executeRealKeyboard(state.io, instance_ref.instance_number, std.fmt.parseUnsigned(u64, request.inputId, 10) catch 0, request.windowId, request.viewport, request.documentId, .{
             .marker = request.marker,
             .operation = request.operation,
-            .timeout_ms = request.timeoutMs,
+            .timeout_ms = timeout.?,
         });
 
     var response_buffer: [4096]u8 = undefined;

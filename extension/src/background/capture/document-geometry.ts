@@ -7,10 +7,12 @@ export type DocumentGeometryResult =
 // Self-contained because Chromium serializes this function into the existing
 // isolated world. It reads geometry only: no style mutation or page repaint.
 export function collectDocumentGeometry(
-  nodeRef: string,
+  this: unknown,
+  nodeRef: string | null,
   maximumNodes: number,
   maximumDepth: number,
   maximumBytes: number,
+  allowChildDocument = false,
 ): DocumentGeometryResult {
   interface Rect { x: number; y: number; width: number; height: number }
   interface Matrix { a: number; b: number; c: number; d: number; e: number; f: number; is2D?: boolean }
@@ -49,14 +51,16 @@ export function collectDocumentGeometry(
     __BKA_DOM_NODE_REGISTRY_V1__?: { readonly nodes: Map<string, { readonly element: ElementLike; readonly expiresAt: number }> };
   }
   const page = globalThis as unknown as ViewLike;
-  const entry = page.__BKA_DOM_NODE_REGISTRY_V1__?.nodes.get(nodeRef);
+  // null is only used by internal Runtime.callFunctionOn bound to a proven frame-owner object.
+  const entry = nodeRef === null ? {element: this as ElementLike, expiresAt: Infinity} : page.__BKA_DOM_NODE_REGISTRY_V1__?.nodes.get(nodeRef);
   const failure = (reason: "empty" | "limit" | "stale" | "unsupported", feature: string): DocumentGeometryResult => ({ ok: false, reason, feature });
   if (!entry || entry.expiresAt <= page.performance.now() || !entry.element.isConnected || entry.element.ownerDocument !== page.document) return failure("stale", "node-ref");
   // Cross-document screen transforms need a separately proven frame mapping;
   // never return child-frame coordinates as if they were top-level coordinates.
-  if (page.top !== globalThis) return failure("unsupported", "frame-coordinate-mapping");
+  if (page.top !== globalThis && !allowChildDocument) return failure("unsupported", "frame-coordinate-mapping");
   const viewport = page.visualViewport;
   const scale = viewport?.scale ?? 1;
+  if (allowChildDocument && scale !== 1) return failure("unsupported", "frame-pinch-zoom");
   const viewportRect = { x: viewport?.offsetLeft ?? 0, y: viewport?.offsetTop ?? 0, width: page.innerWidth / scale, height: page.innerHeight / scale };
   const contentViewport = { ...viewportRect, width: viewport?.width ?? viewportRect.width, height: viewport?.height ?? viewportRect.height };
   if (![viewportRect.x, viewportRect.y, viewportRect.width, viewportRect.height].every(Number.isFinite) || viewportRect.width <= 0 || viewportRect.height <= 0) return failure("empty", "viewport");

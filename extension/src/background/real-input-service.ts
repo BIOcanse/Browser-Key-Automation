@@ -9,13 +9,16 @@ import {
 } from "./dom-service.js";
 import { NativeInputError } from "./native-input-error.js";
 import { assertNativeInputClickAvailable, requestNativeClick } from "./transport-controller.js";
+import type { AcquireNativeRoute } from "./local-route-client.js";
 
 export interface RealClickRequest {
   readonly routeId: string;
   readonly nodeRef: string;
   readonly scrollIntoView: boolean;
   readonly timeoutMs: number;
-  readonly revalidateAuthority: () => Promise<void>;
+  readonly deadlineMs?: number | undefined;
+  readonly acquireNativeRoute?: AcquireNativeRoute | undefined;
+  readonly validateControl: () => Promise<void>;
 }
 
 function randomToken(prefix: string): string {
@@ -42,7 +45,9 @@ function remainingMs(deadline: number): number {
 export async function clickRealDomNode(
   request: RealClickRequest,
 ): Promise<{ readonly nodeRef: string; readonly status: "input_sent" }> {
-  const deadline = performance.now() + request.timeoutMs;
+  const deadline = Math.min(performance.now() + request.timeoutMs, request.deadlineMs ?? Infinity);
+  const route = await request.acquireNativeRoute?.(deadline);
+  remainingMs(deadline);
   // The old App/platform path must fail before tab activation, focus, scroll or title mutation.
   assertNativeInputClickAvailable();
   const target = resolveNodeRefTarget(request.nodeRef);
@@ -68,7 +73,7 @@ export async function clickRealDomNode(
     const prepared = await prepareRealClickNode(request.nodeRef, request.scrollIntoView, marker);
     restoreTitle = prepared.originalTitle;
     remainingMs(deadline);
-    await request.revalidateAuthority();
+    await request.validateControl();
     const currentTarget = resolveNodeRefTarget(request.nodeRef);
     if (!sameTarget(target, currentTarget)) {
       throw new NativeInputError({ reason: "target_changed", phase: "prepare", clickState: "not_sent" });
@@ -83,13 +88,13 @@ export async function clickRealDomNode(
     const nativeRequest: NativeInputClickRequest = {
       kind: "native.input.click",
       requestId,
-      routeId: request.routeId,
+      routeId: route?.routeId ?? request.routeId,
       timeoutMs: nativeTimeoutMs,
       marker,
       point: verified.point,
       viewport: verified.viewport,
     };
-    const response = await requestNativeClick(nativeRequest, timeoutMs);
+    const response = await requestNativeClick(nativeRequest, timeoutMs, route?.connection);
     if (response.result.status !== "input_sent") {
       throw new NativeInputError({ reason: "native_response_invalid", phase: "input", clickState: "unknown" });
     }

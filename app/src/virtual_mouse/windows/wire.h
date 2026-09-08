@@ -3,13 +3,13 @@
 #include <windows.h>
 #include <stdint.h>
 
-#define VM_MAGIC 0x564D3032u
-#define VM_CONTROL_NAME L"BKA.VirtualInput.Control.v2"
+#define VM_MAGIC 0x564D3034u
+#define VM_CONTROL_NAME L"BKA.VirtualInput.Control.v4"
 #define VM_OWNER_PROPERTY L"BKA.VirtualInput.Owner.v2"
 #define VM_OWNER_TIME_PROPERTY L"BKA.VirtualInput.OwnerTime.v2"
 #define VM_READY 0x564D4F4Bu
 enum { VM_ATTACH = 1, VM_EVENT = 2, VM_DETACH = 3 };
-enum { VM_MOVE = 1, VM_DOWN = 2, VM_UP = 3, VM_WHEEL = 4, VM_KEY_DOWN = 5, VM_KEY_UP = 6 };
+enum { VM_MOVE = 1, VM_DOWN = 2, VM_UP = 3, VM_WHEEL = 4, VM_KEY_DOWN = 5, VM_KEY_UP = 6, VM_CHAR = 7, VM_KEYBOARD_MESSAGE = 8 };
 enum { VM_OK = 0, VM_INVALID = 1, VM_TARGET_LOST = 2, VM_CONFLICT = 3,
        VM_HOOK_FAILED = 4, VM_TIMEOUT = 5, VM_DELIVERY_FAILED = 6 };
 
@@ -23,7 +23,11 @@ typedef struct VmShared {
     uintptr_t source_tag;
     uint8_t keys[256];
     uint32_t key_vk, key_extended;
+    uint32_t key_scan, key_has_scan, key_repeat, character;
+    uint32_t keyboard_message, keyboard_value, keyboard_bits;
+    uintptr_t key_layout;
     uint32_t event_kind, buttons, button;
+    uint32_t window_coordinates, release_only;
     int32_t x, y, delta_x, delta_y;
     volatile LONG ack;
     uint32_t captured;
@@ -38,9 +42,16 @@ int vm_alive(VmClient *client);
 int vm_is_intercepting(VmClient *client);
 void vm_begin(VmClient *client, uint32_t timeout_ms);
 void vm_bounds(VmClient *client, int32_t *width, int32_t *height);
+int vm_window_bounds(VmClient *client, int32_t *width, int32_t *height);
+void vm_coordinate_space(VmClient *client, int window_coordinates);
 void vm_close(VmClient *client);
 int vm_context(VmClient *client, const uint8_t *keys, uintptr_t source_tag, int32_t x, int32_t y, uint32_t buttons);
 int vm_key_event(VmClient *client, uint32_t vk, int extended, int down);
+int vm_key_event_exact(VmClient *client, uint32_t vk, int extended, int down,
+                       uint32_t scan, int has_scan, uintptr_t layout, int repeat);
+int vm_layout_available(uintptr_t layout);
+int vm_character(VmClient *client, uint16_t character);
+int vm_keyboard_message(VmClient *client, uint32_t message, uint32_t value, uint32_t bits, uintptr_t layout);
 int vm_detach(VmClient *client);
 
 static WPARAM vm_button_flags(uint32_t buttons) {

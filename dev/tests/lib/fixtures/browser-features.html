@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>Browser feature acceptance</title>
+<style>html,body{margin:0;background:rgb(20,80,160)}main{height:1800px}footer{height:200px;background:rgb(30,180,60)}input{margin:20px}</style>
+<main><input id="upload" type="file" multiple><button id="alert" onclick="alert('alert fixture')">Alert</button>
+<button id="confirm" onclick="window.dialogResult=confirm('confirm fixture')">Confirm</button>
+<button id="prompt" onclick="window.dialogResult=prompt('prompt fixture','initial')">Prompt</button></main><footer></footer>
+<script>
+window.uploadEvents=[];window.uploadResult=null;
+const upload=document.querySelector('#upload');
+upload.addEventListener('input',event=>uploadEvents.push({type:event.type,trusted:event.isTrusted}));
+upload.addEventListener('change',async event=>{
+ uploadEvents.push({type:event.type,trusted:event.isTrusted});
+ const files=await Promise.all([...upload.files].map(async file=>({name:file.name,type:file.type,bytes:[...new Uint8Array(await file.arrayBuffer())]})));
+ const form=new FormData();for(const file of upload.files)form.append('files',file);
+ const server=await (await fetch('/features-upload',{method:'POST',body:form})).json();
+ window.uploadResult={files,server};
+});
+</script>

@@ -11,6 +11,7 @@
 { "tabRef": "<tab>", "until": "complete", "timeoutMs": 30000 }
 { "tabRef": "<tab>", "until": "visible", "selector": "#result" }
 { "tabRef": "<tab>", "until": "text", "selector": "#status", "text": "Done" }
+{ "tabRef": "<tab>", "framePath": [{ "urlPattern": "https://example.com/child", "urlMatch": "exact", "match": "unique" }], "until": "complete" }
 ```
 
 | until | Satisfied when |
@@ -24,7 +25,9 @@
 | `enabled` | First match is neither natively disabled nor `aria-disabled="true"`. |
 | `text` | First match's textContent contains the specified text, case-sensitively. |
 
-Node conditions require `selector`; text also requires `text`. Optional `url` restricts every mode to an exact committed URL. Pending navigation cannot be satisfied by the old complete Document. Waiting follows the current main Document of the same live TabRef; document changes do not reset the original deadline. Close/replace/runtime invalidation is an error, never a reason to select another tab.
+Node conditions require `selector`; text also requires `text`. Optional `url` restricts every mode to an exact committed URL. Omitted `framePath` selects the main document as described above. A child path uses the same bounded URL segments as DOM locators; `unique` rejects ambiguous siblings, and `first` is an explicit choice. Child URL/readiness/selector checks apply to the selected child document, not the top page or unrelated frames. A missing child waits within the same deadline, without falling back to the main document.
+
+Pending main-page navigation cannot be satisfied by the old complete Document. Waiting follows the selected current document of the same live TabRef; document changes do not reset the original deadline. DOM and URL observations must belong to the same exact document. Close/replace/runtime invalidation is an error, never a reason to select another tab.
 
 Current build: default 10,000 ms; explicit range 1–60,000 ms; 100 ms between observations. These are declared build Freedom Points. The first observation is immediate. Actual timing depends on Chrome/OS scheduling; background page timers can be delayed.
 

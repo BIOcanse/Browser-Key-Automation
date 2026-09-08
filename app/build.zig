@@ -6,6 +6,13 @@ fn addVirtualMouseClient(b: *std.Build, module: *std.Build.Module) void {
     module.addIncludePath(b.path("src/virtual_mouse/windows"));
 }
 
+fn addRecordingClient(b: *std.Build, module: *std.Build.Module) void {
+    module.link_libc = true;
+    module.addCSourceFile(.{ .file = b.path("src/recording/windows/client.c"), .flags = &.{"-std=c11"} });
+    module.addIncludePath(b.path("src"));
+    module.linkSystemLibrary("bcrypt", .{});
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -20,7 +27,10 @@ pub fn build(b: *std.Build) void {
     });
     if (target.result.os.tag == .windows) {
         relay_module.linkSystemLibrary("user32", .{});
-        if (target.result.cpu.arch == .x86_64) addVirtualMouseClient(b, relay_module);
+        if (target.result.cpu.arch == .x86_64) {
+            addVirtualMouseClient(b, relay_module);
+            addRecordingClient(b, relay_module);
+        }
     }
     const relay = b.addExecutable(.{
         .name = "browser-key-relay",
@@ -68,6 +78,26 @@ pub fn build(b: *std.Build) void {
         const root_probe_step = b.step("occluded-root-probe", "Build the isolated calibrated root-window experiment");
         root_probe_step.dependOn(&b.addInstallArtifact(root_probe, .{}).step);
         root_probe_step.dependOn(&b.addInstallArtifact(hook, .{}).step);
+
+        // Disposable observer route probe: no production relay or input hooks.
+        const recorder_hook_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+        recorder_hook_module.addCSourceFile(.{ .file = b.path("../dev/tests/experiments/input-recording/observer.c"), .flags = &.{ "-std=c11", "-Werror=unknown-attributes" } });
+        recorder_hook_module.linkSystemLibrary("user32", .{});
+        const recorder_hook = b.addLibrary(.{ .name = "recording-observer-probe", .linkage = .dynamic, .root_module = recorder_hook_module });
+        const recorder_probe_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+        recorder_probe_module.addCSourceFile(.{ .file = b.path("../dev/tests/experiments/input-recording/probe.c"), .flags = &.{"-std=c11"} });
+        recorder_probe_module.linkSystemLibrary("user32", .{});
+        const recorder_probe = b.addExecutable(.{ .name = "recording-route-probe", .root_module = recorder_probe_module });
+        const recorder_probe_step = b.step("recording-route-probe", "Build the disposable input-recording observer and fixture");
+        recorder_probe_step.dependOn(&b.addInstallArtifact(recorder_hook, .{}).step);
+        recorder_probe_step.dependOn(&b.addInstallArtifact(recorder_probe, .{}).step);
+
+        const window_recording_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+        window_recording_module.addCSourceFile(.{ .file = b.path("../dev/tests/experiments/input-recording/window.c"), .flags = &.{ "-std=c11", "-Wall", "-Wextra" } });
+        window_recording_module.addIncludePath(b.path("src/recording/windows"));
+        window_recording_module.linkSystemLibrary("user32", .{});
+        const window_recording = b.addExecutable(.{ .name = "recording-window-probe", .root_module = window_recording_module });
+        b.step("recording-window-probe", "Check external recording on a private inactive desktop").dependOn(&b.addInstallArtifact(window_recording, .{}).step);
     }
 
     const run_relay = b.addRunArtifact(relay);
@@ -82,7 +112,10 @@ pub fn build(b: *std.Build) void {
     });
     if (target.result.os.tag == .windows) {
         relay_test_module.linkSystemLibrary("user32", .{});
-        if (target.result.cpu.arch == .x86_64) addVirtualMouseClient(b, relay_test_module);
+        if (target.result.cpu.arch == .x86_64) {
+            addVirtualMouseClient(b, relay_test_module);
+            addRecordingClient(b, relay_test_module);
+        }
     }
     const relay_tests = b.addTest(.{ .root_module = relay_test_module });
     const run_relay_tests = b.addRunArtifact(relay_tests);

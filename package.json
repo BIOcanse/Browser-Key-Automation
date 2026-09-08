@@ -1,6 +1,6 @@
 {
   "name": "browser-key-automation",
-  "version": "0.0.0.5",
+  "version": "0.0.0.6",
   "private": true,
   "type": "module",
   "engines": {
@@ -12,7 +12,7 @@
     "generate:transport": "node dev/tools/generate-transport-config.mjs",
     "generate:commands": "node dev/tools/generate-command-config.mjs",
     "generate": "npm run generate:ui && npm run generate:transport && npm run generate:commands",
-    "check:extension": "npm run generate && tsc -p extension/tsconfig.background.json --noEmit && tsc -p extension/tsconfig.admin.json --noEmit && tsc -p extension/tsconfig.transport.json --noEmit",
+    "check:extension": "npm run generate && tsc -p extension/tsconfig.background.json --noEmit && tsc -p extension/tsconfig.admin.json --noEmit && tsc -p extension/tsconfig.transport.json --noEmit && tsc -p extension/tsconfig.content.json --noEmit",
     "build:extension": "node dev/tools/build-extension.mjs",
     "render:icons": "node dev/tools/render-extension-icons.mjs",
     "render:chrome-web-store-assets": "node dev/tools/render-chrome-web-store-assets.mjs",
@@ -41,7 +41,7 @@
     "test:chrome-web-store-package": "node dev/tools/package-chrome-web-store.mjs && node --test dev/tests/chrome-web-store-package.test.mjs",
     "test:extension-relay-smoke": "node dev/tools/test-isolated.mjs extension-relay",
     "test:key-core": "node --test dev/tests/key-core.test.mjs",
-    "test:runtime-core": "node --test dev/tests/transport-context.test.mjs dev/tests/offscreen-diagnostic.test.mjs dev/tests/onboarding.test.mjs dev/tests/tab-service-races.test.mjs dev/tests/occupation-service.test.mjs dev/tests/browser-service.test.mjs dev/tests/page-tree-session.test.mjs dev/tests/page-tree-projection.test.mjs dev/tests/page-tree-find.test.mjs dev/tests/page-wait.test.mjs dev/tests/command-defaults.test.mjs dev/tests/dom-actions.test.mjs dev/tests/native-cleanup.test.mjs dev/tests/dom-pointer.test.mjs dev/tests/keyboard-model.test.mjs dev/tests/virtual-mouse-model.test.mjs dev/tests/ensure-service.test.mjs dev/tests/execution-trace.test.mjs dev/tests/artifact-files.test.mjs dev/tests/demo-files.test.mjs dev/tests/artifact-upload.test.mjs dev/tests/demo-service.test.mjs dev/tests/storage-services.test.mjs dev/tests/public-trial-key.test.mjs dev/tests/capture-service.test.mjs dev/tests/element-capture.test.mjs dev/tests/debugger-service.test.mjs",
+    "test:runtime-core": "node --test dev/tests/transport-context.test.mjs dev/tests/offscreen-diagnostic.test.mjs dev/tests/local-route-transport.test.mjs dev/tests/local-route-client.test.mjs dev/tests/onboarding.test.mjs dev/tests/tab-service-races.test.mjs dev/tests/occupation-service.test.mjs dev/tests/browser-service.test.mjs dev/tests/page-tree-session.test.mjs dev/tests/page-tree-projection.test.mjs dev/tests/page-tree-find.test.mjs dev/tests/page-wait.test.mjs dev/tests/command-defaults.test.mjs dev/tests/dom-actions.test.mjs dev/tests/native-cleanup.test.mjs dev/tests/dom-pointer.test.mjs dev/tests/keyboard-model.test.mjs dev/tests/virtual-mouse-model.test.mjs dev/tests/ensure-service.test.mjs dev/tests/execution-trace.test.mjs dev/tests/artifact-files.test.mjs dev/tests/demo-files.test.mjs dev/tests/artifact-upload.test.mjs dev/tests/demo-service.test.mjs dev/tests/storage-services.test.mjs dev/tests/public-trial-key.test.mjs dev/tests/capture-service.test.mjs dev/tests/element-capture.test.mjs dev/tests/debugger-service.test.mjs dev/tests/actions.test.mjs dev/tests/admin-commands.test.mjs dev/tests/recording.test.mjs dev/tests/browser-features.test.mjs dev/tests/scroll-capture.test.mjs dev/tests/telemetry-capture.test.mjs dev/tests/telemetry-lifecycle.test.mjs dev/tests/browser-data.test.mjs dev/tests/tab-search.test.mjs dev/tests/legacy-capture-lifecycle.test.mjs dev/tests/semantic-model.test.mjs dev/tests/semantic-index.test.mjs dev/tests/frame-mapping.test.mjs",
     "test:relay": "zig build --build-file app/build.zig --cache-dir .zig-cache test",
     "test:virtual-mouse": "node --test dev/tests/virtual-mouse-model.test.mjs && zig build --build-file app/build.zig --cache-dir .zig-cache --prefix zig-out virtual-mouse-probe && node dev/tests/virtual-mouse-native-smoke.mjs",
     "test:virtual-mouse:browser": "node dev/tools/test-isolated.mjs extension-relay --virtual-mouse-only",

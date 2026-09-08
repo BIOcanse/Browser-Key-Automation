@@ -17,11 +17,13 @@ pub const Button = enum(u8) {
 pub const ButtonAction = enum { press, down, up };
 pub const State = struct {
     point: Point,
+    coordinates: enum { css_viewport, window } = .css_viewport,
     buttons: u8 = 0,
     known: bool = true,
 };
 pub const Action = union(enum) {
     move: Point,
+    moveWindow: Point,
     button: struct { button: Button, action: ButtonAction },
     wheel: struct { delta_x: i16, delta_y: i16 },
 };
@@ -49,6 +51,7 @@ pub fn plan(state: State, action: Action) PlanError!Plan {
     var result: Plan = .{};
     switch (action) {
         .move => |point| result.append(.{ .kind = .move, .state = .{ .point = point, .buttons = state.buttons } }),
+        .moveWindow => |point| result.append(.{ .kind = .move, .state = .{ .point = point, .coordinates = .window, .buttons = state.buttons } }),
         .button => |button| {
             const held = (state.buttons & button.button.mask()) != 0;
             switch (button.action) {
@@ -104,6 +107,27 @@ test "planning never mutates the owner's mouse" {
     try std.testing.expectEqual(@as(i32, 10), state.point.x);
     try std.testing.expectEqual(@as(usize, 1), movement.count);
     try std.testing.expectEqual(@as(i32, 30), movement.events[0].state.point.x);
+}
+
+test "window movement and both side buttons share one pointer and held state" {
+    const moved = try plan(.{ .point = .{ .x = 0, .y = 0 } }, .{ .moveWindow = .{ .x = 140, .y = 88 } });
+    var state = moved.events[0].state;
+    for ([_]Button{ .back, .forward }) |button| {
+        const down = try plan(state, .{ .button = .{ .button = button, .action = .down } });
+        state = down.events[0].state;
+    }
+    try std.testing.expectEqual(@as(u8, 24), state.buttons);
+    const wheel = try plan(state, .{ .wheel = .{ .delta_x = 120, .delta_y = -120 } });
+    try std.testing.expectEqual(.window, wheel.events[0].state.coordinates);
+    try std.testing.expectEqual(@as(i32, 140), wheel.events[0].state.point.x);
+    const reset = resetPlan(state);
+    try std.testing.expectEqual(@as(usize, 2), reset.count);
+    try std.testing.expectEqual(.back, reset.events[0].button.?);
+    try std.testing.expectEqual(.forward, reset.events[1].button.?);
+    try std.testing.expectEqual(@as(u8, 0), reset.events[1].state.buttons);
+    const css = try plan(state, .{ .move = .{ .x = 10, .y = 20 } });
+    try std.testing.expectEqual(.css_viewport, css.events[0].state.coordinates);
+    try std.testing.expectEqual(@as(u8, 24), css.events[0].state.buttons);
 }
 
 test "press is exactly down and up without motion" {

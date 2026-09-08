@@ -39,6 +39,9 @@ interface ChromeWindow {
 interface ChromeMessageSender {
   readonly id?: string;
   readonly url?: string;
+  readonly tab?: ChromeTab;
+  readonly frameId?: number;
+  readonly documentId?: string;
 }
 
 interface ChromeInjectionTarget {
@@ -66,6 +69,30 @@ interface ChromeWebNavigationFrame {
 interface ChromeDebuggerTarget {
   readonly tabId: number;
   readonly sessionId?: string;
+}
+
+interface ChromeDownloadItem {
+  readonly id: number; readonly url: string; readonly finalUrl: string; readonly filename: string; readonly mime: string;
+  readonly state: "in_progress" | "interrupted" | "complete"; readonly paused: boolean; readonly canResume: boolean;
+  readonly danger: string; readonly error?: string; readonly bytesReceived: number; readonly totalBytes: number;
+  readonly fileSize: number; readonly exists: boolean; readonly startTime: string; readonly endTime?: string;
+}
+
+interface ChromeBookmarkNode {
+  readonly id: string; readonly title: string; readonly parentId?: string; readonly index?: number; readonly url?: string;
+  readonly dateAdded?: number; readonly dateGroupModified?: number; readonly dateLastUsed?: number;
+  readonly folderType?: "bookmarks-bar" | "other" | "mobile" | "managed"; readonly syncing: boolean;
+  readonly unmodifiable?: "managed"; readonly children?: readonly ChromeBookmarkNode[];
+}
+
+interface ChromeHistoryItem {
+  readonly id: string; readonly url?: string; readonly title?: string; readonly lastVisitTime?: number;
+  readonly visitCount?: number; readonly typedCount?: number;
+}
+
+interface ChromeHistoryVisit {
+  readonly id: string; readonly visitId: string; readonly referringVisitId: string; readonly transition: string;
+  readonly isLocal: boolean; readonly visitTime?: number;
 }
 
 type ChromeUserScriptInjectionResult<T = unknown> =
@@ -96,6 +123,33 @@ interface ChromeRuntimePort {
 }
 
 declare const chrome: {
+  readonly bookmarks?: {
+    get(id: string): Promise<ChromeBookmarkNode[]>;
+    getTree(): Promise<ChromeBookmarkNode[]>;
+    getChildren(id: string): Promise<ChromeBookmarkNode[]>;
+    search(query: string): Promise<ChromeBookmarkNode[]>;
+    create(details: {readonly parentId?: string; readonly index?: number; readonly title: string; readonly url?: string}): Promise<ChromeBookmarkNode>;
+    update(id: string, changes: {readonly title?: string; readonly url?: string}): Promise<ChromeBookmarkNode>;
+    move(id: string, destination: {readonly parentId?: string; readonly index?: number}): Promise<ChromeBookmarkNode>;
+    remove(id: string): Promise<void>; removeTree(id: string): Promise<void>;
+  };
+  readonly history?: {
+    search(query: {readonly text: string; readonly startTime: number; readonly endTime: number; readonly maxResults: number}): Promise<ChromeHistoryItem[]>;
+    getVisits(details: {readonly url: string}): Promise<ChromeHistoryVisit[]>;
+    addUrl(details: {readonly url: string}): Promise<void>;
+    deleteUrl(details: {readonly url: string}): Promise<void>;
+    deleteRange(range: {readonly startTime: number; readonly endTime: number}): Promise<void>;
+    deleteAll(): Promise<void>;
+  };
+  readonly downloads?: {
+    download(options: {readonly url: string; readonly filename: string; readonly saveAs: boolean; readonly conflictAction: "uniquify" | "overwrite"}): Promise<number>;
+    search(query: {readonly id?: number; readonly query?: readonly string[]; readonly limit?: number; readonly orderBy?: readonly string[]; readonly startedBefore?: string}): Promise<ChromeDownloadItem[]>;
+    pause(id: number): Promise<void>; resume(id: number): Promise<void>; cancel(id: number): Promise<void>;
+    readonly onChanged: {
+      addListener(callback: (delta: {readonly id: number}) => void): void;
+      removeListener(callback: (delta: {readonly id: number}) => void): void;
+    };
+  };
   readonly debugger?: {
     attach(target: { readonly tabId: number }, requiredVersion: string): Promise<void>;
     detach(target: { readonly tabId: number }): Promise<void>;
@@ -155,6 +209,12 @@ declare const chrome: {
     };
   };
   readonly scripting: {
+    executeScript(injection: {
+      readonly target: ChromeInjectionTarget;
+      readonly files: readonly string[];
+      readonly world?: "ISOLATED" | "MAIN";
+      readonly injectImmediately?: boolean;
+    }): Promise<ChromeScriptingInjectionResult[]>;
     executeScript<T, Args extends readonly unknown[]>(injection: {
       readonly target: ChromeInjectionTarget;
       readonly func: (...args: Args) => T | Promise<T>;
@@ -187,6 +247,8 @@ declare const chrome: {
     update(tabId: number, updateProperties: { readonly url?: string; readonly active?: boolean }): Promise<ChromeTab>;
     reload(tabId: number, reloadProperties: { readonly bypassCache: boolean }): Promise<void>;
     remove(tabId: number): Promise<void>;
+    getZoom(tabId: number): Promise<number>;
+    setZoom(tabId: number, zoomFactor: number): Promise<void>;
     captureVisibleTab(
       windowId: number,
       options: { readonly format: "jpeg" | "png"; readonly quality: number },
@@ -200,12 +262,24 @@ declare const chrome: {
     readonly onActivated: {
       addListener(callback: (info: { readonly tabId: number; readonly windowId: number }) => void): void;
     };
+    readonly onZoomChange?: { addListener(callback: (info: { readonly tabId: number; readonly oldZoomFactor: number; readonly newZoomFactor: number }) => void): void };
+    readonly onCreated: { addListener(callback: (tab: ChromeTab) => void): void };
+    readonly onDetached: { addListener(callback: (tabId: number, info: { readonly oldWindowId: number; readonly oldPosition: number }) => void): void };
+    readonly onAttached: { addListener(callback: (tabId: number, info: { readonly newWindowId: number; readonly newPosition: number }) => void): void };
   };
   readonly windows: {
     get(windowId: number): Promise<ChromeWindow>;
     getLastFocused(): Promise<ChromeWindow>;
-    update(windowId: number, updateInfo: { readonly focused?: boolean }): Promise<ChromeWindow>;
+    update(windowId: number, updateInfo: {
+      readonly focused?: boolean;
+      readonly state?: "normal" | "minimized" | "maximized" | "fullscreen";
+      readonly left?: number;
+      readonly top?: number;
+      readonly width?: number;
+      readonly height?: number;
+    }): Promise<ChromeWindow>;
     readonly onRemoved: { addListener(callback: (windowId: number) => void): void };
+    readonly onBoundsChanged?: { addListener(callback: (window: ChromeWindow) => void): void };
   };
   readonly pageCapture: {
     saveAsMHTML(details: { readonly tabId: number }): Promise<Blob | undefined>;
@@ -213,7 +287,9 @@ declare const chrome: {
   readonly webNavigation: {
     getAllFrames(details: { readonly tabId: number }): Promise<ChromeWebNavigationFrame[]>;
     readonly onCommitted: {
-      addListener(callback: (details: { readonly tabId: number; readonly frameId: number; readonly documentId: string }) => void): void;
+      addListener(callback: (details: { readonly tabId: number; readonly frameId: number; readonly documentId: string; readonly url?: string; readonly transitionType?: string; readonly transitionQualifiers?: readonly string[] }) => void): void;
     };
+    readonly onHistoryStateUpdated?: { addListener(callback: (details: { readonly tabId: number; readonly frameId: number; readonly documentId: string; readonly url: string; readonly transitionType?: string; readonly transitionQualifiers?: readonly string[] }) => void): void };
+    readonly onReferenceFragmentUpdated?: { addListener(callback: (details: { readonly tabId: number; readonly frameId: number; readonly documentId: string; readonly url: string; readonly transitionType?: string; readonly transitionQualifiers?: readonly string[] }) => void): void };
   };
 };

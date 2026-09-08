@@ -57,6 +57,13 @@ Use `system.describe` to discover the active build and your permissions. Read ex
 | Exact text / shortcuts / release held keys | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | Virtual cursor / keyboard | `virtualMouse.*` · `virtualKeyboard.*` |
 | Measure the native target | `input.calibrate` |
+| Action library | `actions.create` · `actions.list/get` · `actions.run` |
+| DOM / Windows recording | `recording.start/pause/resume/stop` → `actions.compile` |
+| Uploads, downloads and dialogs | `files.upload` · `downloads.*` · `dialogs.*` |
+| Network and diagnostics | `network.*` · `console.*` · `performance.*` |
+| Full-page / region / element screenshots | `page.screenshot.fullPage/region/element` |
+| Browser data and search | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| Window and viewport | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | Explicit CDP session | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+Save a sequence or compile a recording, review its conditions, then replay it by action ID. Windows native recording includes window changes and excludes pointer trajectories outside the target window. The App records visible window-relative native pixels, including both side buttons. Read [Actions and recording](dev/skills/browser-key-automation/references/actions-and-recording.md) for permissions, preparation and supported replay boundaries.
+
 ## Keys and input boundaries
 
 - Root receives all active permissions; Regular Keys use expandable permission groups, expiry, reveal, disable and revoke controls. JavaScript and native input remain parallel permissions. A powerful Key is browser access, not permission to pay, publish or delete on someone's behalf.
+- Commands are authenticated once on submission. Accepted commands retain their submitted permissions while queued and running; later Key expiry, disabling or revocation affects new submissions only. Command deadlines and explicit stop/release controls still apply.
 - Virtual input is owned by the Key across tabs and requires occupation of the whole target window. Ordinary virtual-input actions use a valid `input.calibrate` result; `ensure.run` checks and refreshes calibration when needed. Physical input requires the target window in the foreground; virtual input does not move the physical cursor.
 - Windows provides native input; Linux currently provides browser routing and file workflows, not native mouse or keyboard backends. Minimized windows are unsupported. First calibration needs a measurable page; covered-window reuse is conditional. Multiwindow first calibration and full native HTML5/OLE drag/drop still have unresolved cases.
 - Element capture uses visible viewport content and supported shape masks, not a reconstruction of hidden pixels. Chrome controls restricted pages, site access and the User Scripts switch. Explicit `debugger.attach` retains Chrome's debugging UI. Synthetic DOM events and virtual window messages cannot bypass every website or OS input restriction.

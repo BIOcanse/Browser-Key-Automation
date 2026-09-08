@@ -17,6 +17,8 @@ export interface ExecutionTraceEventInput {
   readonly nodeRef?: string | null;
   readonly conditionKind?: string | null;
   readonly attempt?: number | null;
+  readonly actionId?: number;
+  readonly stepIndex?: number;
 }
 
 export interface ExecutionTraceEvent {
@@ -28,6 +30,8 @@ export interface ExecutionTraceEvent {
   readonly nodeRef: string | null;
   readonly conditionKind: string | null;
   readonly attempt: number | null;
+  readonly actionId?: number;
+  readonly stepIndex?: number;
 }
 
 export interface ExecutionTraceRecord {
@@ -321,6 +325,8 @@ export function appendExecutionTraceEvent(draft: ExecutionTraceDraft, event: Exe
     nodeRef: event.nodeRef ?? null,
     conditionKind: event.conditionKind ?? null,
     attempt: event.attempt ?? null,
+    ...(event.actionId === undefined ? {} : { actionId: event.actionId }),
+    ...(event.stepIndex === undefined ? {} : { stepIndex: event.stepIndex }),
   });
 }
 

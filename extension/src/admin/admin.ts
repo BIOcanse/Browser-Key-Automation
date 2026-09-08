@@ -1,54 +1,23 @@
+import { AdminPortClient, AdminClientError, AdminRequestUncertainError, randomToken } from "./port-client.js";
 import "./setup.js";
 import { createPermissionPicker } from "./permission-picker.js";
 import { PUBLIC_TRIAL_KEY_ID } from "../shared/trial-key.js";
 import { formatDate, formatNumber, formatRelativeDays, onLocaleChanged, t } from "../ui/page-ui.js";
 import {
-  ADMIN_PORT_NAME,
   CURRENT_PERMISSION_IDS,
   parseAdminRequest,
   type AdminError,
-  type AdminMethod,
-  type AdminMethodMap,
-  type AdminRequest,
-  type AdminResponse,
   type CreateKeyParams,
   type CreateKeyResult,
   type KeyKind,
   type PublicKeyRecord,
 } from "../shared/admin-protocol.js";
 
-const MAX_PENDING_REQUESTS = 32;
-const REQUEST_TIMEOUT_MS = 10_000;
 const PENDING_CREATE_STORAGE_KEY = "browser-key-automation.pending-create.v1";
 const RECOVERY_VALIDATION_REQUEST_ID = "ui1.AAAAAAAAAAAAAAAAAAAAAA";
 const API_KEY_PATTERN = /^bk1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$/u;
 
-interface PendingRequest {
-  readonly resolve: (value: unknown) => void;
-  readonly reject: (reason: unknown) => void;
-  readonly timeoutId: number;
-}
-
 type ViewStatus = "active" | "disabled" | "expired" | "revoked";
-
-class AdminClientError extends Error {
-  readonly adminError: AdminError;
-
-  constructor(error: AdminError) {
-    super(`${error.code}: ${error.message}`);
-    this.name = "AdminClientError";
-    this.adminError = error;
-  }
-}
-
-class AdminRequestUncertainError extends Error {
-  readonly messageKey: "requestTimeout" | "deliveryFailed" | "connectionLost";
-  constructor(messageKey: "requestTimeout" | "deliveryFailed" | "connectionLost", options?: ErrorOptions) {
-    super(messageKey, options);
-    this.name = "AdminRequestUncertainError";
-    this.messageKey = messageKey;
-  }
-}
 
 function requiredElement<ElementType extends Element>(selector: string): ElementType {
   const element = document.querySelector<ElementType>(selector);
@@ -56,109 +25,8 @@ function requiredElement<ElementType extends Element>(selector: string): Element
   return element;
 }
 
-function randomToken(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  let binary = "";
-  let index = 0;
-  while (index < bytes.length) {
-    binary += String.fromCharCode(bytes[index] ?? 0);
-    index += 1;
-  }
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
-}
-
-function createRequestId(): string {
-  return `ui1.${randomToken()}`;
-}
-
 function createMutationId(): string {
   return `am1.${Date.now().toString().padStart(13, "0")}.${randomToken()}`;
-}
-
-function isAdminResponse(value: unknown): value is AdminResponse {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const record = value as Record<string, unknown>;
-  if (typeof record.requestId !== "string" || typeof record.ok !== "boolean") return false;
-  return record.ok ? "result" in record : typeof record.error === "object" && record.error !== null;
-}
-
-class AdminPortClient {
-  #port: ChromeRuntimePort | null = null;
-  readonly #pending = new Map<string, PendingRequest>();
-
-  constructor() {
-    this.#connect();
-  }
-
-  request<Method extends AdminMethod>(
-    method: Method,
-    params: AdminMethodMap[Method]["params"],
-  ): Promise<AdminMethodMap[Method]["result"]> {
-    if (this.#pending.size >= MAX_PENDING_REQUESTS) return Promise.reject(new Error("requestBusy"));
-    let port: ChromeRuntimePort;
-    try {
-      port = this.#connect();
-    } catch (error) {
-      return Promise.reject(new Error("connectFailed", { cause: error }));
-    }
-    const requestId = createRequestId();
-    const request = { requestId, method, params } as AdminRequest;
-    return new Promise<AdminMethodMap[Method]["result"]>((resolve, reject) => {
-      const timeoutId = window.setTimeout(() => {
-        this.#pending.delete(requestId);
-        reject(new AdminRequestUncertainError("requestTimeout"));
-      }, REQUEST_TIMEOUT_MS);
-      this.#pending.set(requestId, {
-        resolve: (value) => resolve(value as AdminMethodMap[Method]["result"]),
-        reject,
-        timeoutId,
-      });
-      try {
-        port.postMessage(request);
-      } catch (error) {
-        this.#handleDisconnect(
-          port,
-          new AdminRequestUncertainError("deliveryFailed", { cause: error }),
-        );
-      }
-    });
-  }
-
-  #connect(): ChromeRuntimePort {
-    if (this.#port !== null) return this.#port;
-    const port = chrome.runtime.connect({ name: ADMIN_PORT_NAME });
-    this.#port = port;
-    port.onMessage.addListener((message) => this.#handleMessage(port, message));
-    port.onDisconnect.addListener(() => this.#handleDisconnect(port));
-    setConnectionState("connected");
-    return port;
-  }
-
-  #handleMessage(port: ChromeRuntimePort, message: unknown): void {
-    if (this.#port !== port) return;
-    if (!isAdminResponse(message)) return;
-    const pending = this.#pending.get(message.requestId);
-    if (pending === undefined) return;
-    window.clearTimeout(pending.timeoutId);
-    this.#pending.delete(message.requestId);
-    if (message.ok) pending.resolve(message.result);
-    else pending.reject(new AdminClientError(message.error));
-  }
-
-  #handleDisconnect(
-    port: ChromeRuntimePort,
-    error = new AdminRequestUncertainError("connectionLost"),
-  ): void {
-    if (this.#port !== port) return;
-    this.#port = null;
-    for (const pending of this.#pending.values()) {
-      window.clearTimeout(pending.timeoutId);
-      pending.reject(error);
-    }
-    this.#pending.clear();
-    setConnectionState("disconnected");
-  }
 }
 
 const connectionNode = requiredElement<HTMLElement>("[data-connection]");
@@ -205,7 +73,7 @@ const revokeDialog = requiredElement<HTMLDialogElement>("[data-revoke-dialog]");
 const revokeSummary = requiredElement<HTMLElement>("[data-revoke-summary]");
 const confirmRevokeButton = requiredElement<HTMLButtonElement>("[data-confirm-revoke]");
 
-const client = new AdminPortClient();
+const client = new AdminPortClient(setConnectionState);
 const records = new Map<string, PublicKeyRecord>();
 const revealedKeys = new Map<string, string>();
 const createPermissions = createPermissionPicker(createPermissionsNode, CURRENT_PERMISSION_IDS);
@@ -868,6 +736,10 @@ confirmRevokeButton.addEventListener("click", () => {
 });
 
 requiredElement<HTMLButtonElement>("[data-cancel-revoke]").addEventListener("click", () => closeDialog(revokeDialog));
+requiredElement<HTMLAnchorElement>("[data-open-actions]").addEventListener("click", event => {
+  event.preventDefault();
+  window.open(chrome.runtime.getURL("admin/actions.html"), "bka-actions", "popup");
+});
 searchInput.addEventListener("input", renderRows);
 statusFilter.addEventListener("change", renderRows);
 refreshButton.addEventListener("click", () => void refreshKeys());

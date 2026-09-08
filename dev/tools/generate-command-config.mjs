@@ -58,6 +58,12 @@ function defaultPointValue(pointId) {
 function validateParameterDefault(field, value) {
   const integer = Number.isSafeInteger(value);
   const enumValues = {
+    screenshot_capture_method: ["cdp", "scroll"],
+    performance_time_domain: ["timeTicks", "threadTicks"],
+    network_export_format: ["har", "json"],
+    download_conflict_action: ["uniquify", "overwrite"],
+    recording_mode: ["dom", "real"],
+    recording_scope: ["tab", "window"],
     debugger_response: ["inline", "artifact"],
     drag_mode: ["pointer", "html5"],
     hover_phase: ["enter", "leave"],
@@ -70,12 +76,21 @@ function validateParameterDefault(field, value) {
     page_wait_until: ["committed", "domcontentloaded", "complete"],
   };
   const valid = field.valueType === "boolean" ? typeof value === "boolean" :
+    field.valueType === "string" ? typeof value === "string" :
+    field.valueType === "string_or_null" ? value === null || typeof value === "string" :
+    field.valueType === "dialog_policy_or_null" ? value === null :
+    field.valueType === "signed_integer_or_null" ? value === null || integer :
+    field.valueType === "string_array" ? Array.isArray(value) && value.every((item) => typeof item === "string") :
+    field.valueType === "action_binding_array" ? Array.isArray(value) && value.length === 0 :
+    field.valueType === "correction_action_array" ? Array.isArray(value) && value.length === 0 :
     field.valueType === "json_object" ? value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0 :
     field.valueType === "positive_integer" ? integer && value > 0 :
     field.valueType === "safe_integer" ? integer && value >= 0 :
     field.valueType === "safe_integer_or_null" ? value === null || integer && value >= 0 :
+    field.valueType === "number_or_null" ? value === null || typeof value === "number" && Number.isFinite(value) :
     field.valueType === "tab_ref_or_null" ? value === null :
     field.valueType === "trace_ref_or_null" ? value === null :
+    field.valueType === "recording_ref_or_null" ? value === null :
     field.valueType === "ensure_condition_or_null" ? value === null :
     field.valueType === "pointer_offset_or_null" ? value === null :
     field.valueType === "mouse_point_or_null" ? value === null :
@@ -203,7 +218,15 @@ for (const command of activeCommands) {
     effectKind: command.effectKind,
     controlPolicy: command.controlPolicy,
     ensurePolicy: command.ensurePolicy,
+    ...(command.conditionalPermissions === undefined ? {} : { conditionalPermissions: command.conditionalPermissions }),
   };
+  for (const requirement of command.conditionalPermissions ?? []) {
+    if (!activePermissions.includes(requirement.permissionId) || typeof requirement.equals !== "string" ||
+      !schemaById.get(command.paramsSchema).fields.some((field) => field.fieldName === requirement.parameter)) {
+      throw new Error(`Invalid conditional permission: ${command.method}`);
+    }
+    usedPermissions.add(requirement.permissionId);
+  }
   schemaVersionByMethod[command.method] = command.schemaVersion;
   ensurePolicyByMethod[command.method] = command.ensurePolicy;
   const defaults = {};
@@ -399,6 +422,14 @@ export const PUBLIC_TRIAL_KEY = ${JSON.stringify(publicTrialKey)} as const;
 export const COMMAND_CATALOG = ${JSON.stringify(
   {
     ...catalog,
+    byMethod: Object.fromEntries(commandRegistry.commandDeclarations.filter((entry) => entry.status === "active").map((entry) => [entry.method, {
+      schemaVersion: entry.schemaVersion,
+      requiredPermission: entry.permissionExpression.allOf[0],
+      effectKind: entry.effectKind,
+      capabilityRequirements: entry.capabilityRequirements,
+      conditionalPermissions: entry.conditionalPermissions ?? [],
+      parameterFields: commandRegistry.schemaDeclarations.find((schema) => schema.schemaId === entry.paramsSchema).fields,
+    }])),
     schemaVersionByMethod,
     parameterDefaultsByMethod,
     ensurePolicyByMethod,

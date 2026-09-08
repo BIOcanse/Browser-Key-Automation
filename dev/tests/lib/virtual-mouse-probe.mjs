@@ -34,6 +34,60 @@ export async function runVirtualMouseProbe({ forward, sampleRoot, baseUrl, windo
   try {
     tabRef = (await call("tabs.create", { url: fixtureUrl, active: true, windowId })).tab.tabRef;
     await call("page.wait", { tabRef });
+    if (process.argv.includes("--window-coordinates-only")) {
+      await call("control.acquire", { scope: "window", windowId });
+      const at = { x: 260, y: 300 };
+      const moved = await call("virtualMouse.moveWindow", { tabRef, ...at });
+      assert.equal(moved.coordinates, "window");
+      assert.deepEqual(moved.mouse.point, at);
+      const first = await observe(value => value.events.some(event => event.type === "mousemove"));
+      const initialPoint = first.events.findLast(event => event.type === "mousemove");
+      await pageEvaluate(workerClient, async fixtureUrl => {
+        const tab = (await chrome.tabs.query({})).find(tab => tab.url === fixtureUrl);
+        await chrome.scripting.executeScript({target:{tabId:tab.id},world:"MAIN",func:()=>{
+          history.replaceState({windowMouseStage:0},"");history.pushState({windowMouseStage:1},"");
+        }});
+      }, fixtureUrl);
+      const historyStage = () => pageEvaluate(workerClient, async fixtureUrl => {
+        const tab = (await chrome.tabs.query({})).find(tab => tab.url === fixtureUrl);
+        return (await chrome.scripting.executeScript({target:{tabId:tab.id},world:"MAIN",func:()=>history.state?.windowMouseStage}))[0].result;
+      }, fixtureUrl);
+      for (const [button, mask, stage] of [["back",8,0],["forward",16,1]]) {
+        const down = await call("virtualMouse.down", {tabRef,button});
+        assert.equal(down.mouse.buttons,mask);assert.equal(down.coordinates,"window");
+        const up = await call("virtualMouse.up", {tabRef,button});assert.equal(up.mouse.buttons,0);
+        const deadline = Date.now()+2500;
+        while(await historyStage()!==stage&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,25));
+        assert.equal(await historyStage(),stage,`${button} must perform the corresponding browser history action`);
+      }
+      const old = (await call("windows.get", {windowId})).bounds;
+      await call("windows.setBounds", {windowId,left:old.left+60,top:old.top+45,width:old.width-40,height:old.height-30});
+      const resized = await call("virtualMouse.moveWindow", {tabRef,...at});assert.equal(resized.coordinates,"window");
+      const after = await observe(value => value.events.filter(event => event.type === "mousemove").length>1);
+      const finalPoint=after.events.findLast(event=>event.type==="mousemove");
+      assert.deepEqual([finalPoint.x,finalPoint.y],[initialPoint.x,initialPoint.y]);
+      const scroll=await call("virtualMouse.scroll",{tabRef,deltaY:-120,deltaX:120});assert.equal(scroll.coordinates,"window");
+      const invalid=await call("virtualMouse.moveWindow",{tabRef,x:32767,y:32767},"NATIVE_INPUT_FAILED");
+      assert.equal(invalid.details.progress.completedActions,0);
+      await call("virtualMouse.moveWindow",{tabRef,x:450,y:15}); // title bar, not page space
+      const toolbar=await call("virtualMouse.moveWindow",{tabRef,x:450,y:65});assert.equal(toolbar.coordinates,"window");
+      await call("windows.setBounds",{windowId,...old});
+      const saved = await call("actions.create", {name:"Window side buttons",description:"Replay both side buttons at a native window point",instructions:[{
+        method:"virtualMouse.input",schemaVersion:1,params:{tabRef:null,actions:[{kind:"moveWindow",...at},
+          {kind:"button",button:"back",action:"press"},{kind:"button",button:"forward",action:"press"}]},
+        bindings:[{path:["tabRef"],source:{kind:"tab",alias:"window",selector:{urlPattern:fixtureUrl,urlMatch:"exact",title:null,windowId:null}}}],delayMs:0,
+      }]});
+      assert.equal((await call("actions.run",{actionId:saved.action.actionId})).status,"succeeded");
+      assert.equal(await historyStage(),1);
+      await call("actions.delete",{actionId:saved.action.actionId,revision:saved.action.revision});
+      await call("virtualMouse.moveWindow",{tabRef,x:900,y:600});
+      await call("virtualMouse.down",{tabRef,button:"middle"});
+      await call("windows.setBounds",{windowId,width:700,height:450});
+      assert.equal((await call("virtualMouse.reset",{})).mouse.buttons,0,"resize must not strand a delivered button");
+      await call("windows.setBounds",{windowId,...old});
+      observations.push({observation:"Window pixels work before CSS calibration; side buttons change history; move/resize preserves relative page position; wheel and non-client motion use the same pointer."});
+      return {sampleRoot,observations:observations.length,windowCoordinates:"passed",sideButtons:"passed"};
+    }
     assert.equal((await call("virtualMouse.get", {})).initialized, false);
     await call("virtualMouse.move", { tabRef, x: 1, y: 1 }, "CONTROL_OCCUPIED");
     await call("control.acquire", { scope: "window", windowId });
@@ -175,6 +229,42 @@ export async function runVirtualMouseProbe({ forward, sampleRoot, baseUrl, windo
     assert.deepEqual((await call("virtualKeyboard.get", {})).keyboard.heldKeys, []);
     observations.push({ observation: realInputAcceptance ? "虚拟 Ctrl 跨标签页生效；虚拟 Shift 配合真实 B 输入大写；真实 Shift-down 由虚拟 up 配对释放。" :
       "虚拟 Ctrl 跨标签页生效；虚拟 Shift 配合 B 输入大写及拖放后由虚拟 up 释放。此门不发系统键盘事件。", snapshot: await inspect() });
+    await call("dom.focus", { nodeRef: await query("#keys") });
+    const raw=(action,virtualKey=65,scanCode=30,extended=false,layout=null)=>({action,virtualKey,scanCode,extended,layout});
+    const rawStart=await inspect();
+    assert.equal((await call("virtualKeyboard.events",{tabRef,events:[raw("repeat")]},"NATIVE_INPUT_FAILED")).details.reason,"KeyNotHeld");
+    const repeated=await call("virtualKeyboard.events",{tabRef,events:[raw("down"),raw("repeat"),raw("repeat"),raw("up")]});
+    assert.equal(repeated.completedActions,4);
+    const repeatedPage=await observe(value=>value.keyValue===rawStart.keyValue+"aaa");
+    assert.deepEqual(repeatedPage.events.slice(rawStart.events.length).filter(event=>event.type==="keydown"&&event.code==="KeyA").map(event=>event.repeat),[false,true,true]);
+    const message=(id,value,lParam)=>({action:"message",message:id,value,lParam,layout:null});
+    const messages=await call("virtualKeyboard.events",{tabRef,events:[message(0x100,65,"001e0001"),message(0x102,97,"001e0001"),message(0x100,65,"401e0001"),message(0x102,97,"401e0001"),message(0x101,65,"c01e0001"),message(0x102,0xd83d,"00000001"),message(0x102,0xde42,"00000001")]});
+    assert.equal(messages.completedActions,7);
+    const messagePage=await observe(value=>value.keyValue===rawStart.keyValue+"aaaaa🙂");
+    assert.deepEqual(messagePage.events.slice(repeatedPage.events.length).filter(event=>event.type==="keydown"&&event.code==="KeyA").map(event=>event.repeat),[false,true]);
+    assert.deepEqual((await call("virtualKeyboard.get",{})).keyboard.heldKeys,[]);
+    const rawControl={virtualKey:17,scanCode:29,extended:false,layout:null};
+    await call("virtualKeyboard.events",{tabRef,events:[{...rawControl,action:"down"}]});
+    assert.ok((await call("virtualKeyboard.get",{})).keyboard.heldKeys.includes("ControlLeft"));
+    assert.equal((await call("virtualKeyboard.type",{tabRef,text:"blocked"},"NATIVE_INPUT_FAILED")).details.reason,"TextModifierHeld");
+    await call("virtualKeyboard.events",{tabRef,events:[{...rawControl,action:"up",layout:"ffffffffffffffff"}]});
+    assert.equal((await call("virtualKeyboard.get",{})).keyboard.heldKeys.includes("ControlLeft"),false);
+    const typed=await call("virtualKeyboard.type",{tabRef,text:"中文🙂"});assert.equal(typed.submittedScalars,3);
+    await observe(value=>value.keyValue===rawStart.keyValue+"aaaaa🙂中文🙂");
+    const numpadStart=(await inspect()).events.length;
+    await call("virtualKeyboard.events",{tabRef,events:[raw("down",13,28,true)]});
+    assert.ok((await call("virtualKeyboard.get",{})).keyboard.heldKeys.includes("NumpadEnter"));
+    await call("virtualKeyboard.events",{tabRef,events:[raw("up",13,28,true)]});
+    await observe(value=>value.events.slice(numpadStart).some(event=>event.type==="keydown"&&event.code==="NumpadEnter"));
+    const unavailable=await call("virtualKeyboard.events",{tabRef,events:[raw("down",65,30,false,"0000000000000001")]},"NATIVE_INPUT_FAILED");
+    assert.equal(unavailable.details.reason,"KeyboardLayoutUnavailable");assert.equal(unavailable.details.progress.completedActions,0);
+    const waitStart=(await inspect()).events.length;
+    const waited=await call("virtualMouse.input",{tabRef,actions:[{kind:"move",...hoverAt},{kind:"button",button:"left",action:"down"},{kind:"wait",waitMs:80},{kind:"button",button:"left",action:"up"}]});
+    assert.equal(waited.completedActions,4);
+    const waitPage=await observe(value=>value.events.slice(waitStart).some(event=>event.type==="mouseup"));
+    const down=waitPage.events.slice(waitStart).find(event=>event.type==="mousedown"),up=waitPage.events.slice(waitStart).find(event=>event.type==="mouseup");
+    assert.ok(up.at-down.at>=65,`Explicit 80 ms wait observed ${up.at-down.at} ms`);
+    observations.push({observation:"原始键事件保留扫描码、NumpadEnter 和 repeat；Unicode 虚拟提交输入中文/emoji，鼠标 wait 保留按住间隔；全程没有物理 SendInput。",snapshot:await inspect()});
     await key("down", "Ctrl");
     const retained = await call("virtualMouse.get", {});
     const oldDocument = (await inspect()).documentToken;
@@ -249,10 +339,22 @@ export async function runVirtualMouseProbe({ forward, sampleRoot, baseUrl, windo
       extra = (await call("tabs.list", {})).items.find((tab) => tab.url === fixtureUrl + "-window").tabRef;
       await call("page.wait", { tabRef: extra });
       await call("control.acquire", { scope: "window", windowId: extraWindow });
-      observations.push({ initialWindowCalibration: await pageEvaluate(workerClient, async ({ windowId, tabId }) => ({
-        window: await chrome.windows.get(windowId), tab: await chrome.tabs.get(tabId),
-        page: (await chrome.scripting.executeScript({ target: { tabId }, func: () => ({ width: innerWidth, height: innerHeight, dpi: devicePixelRatio, visibility: document.visibilityState }) }))[0].result,
-      }), { windowId: extraWindow, tabId: newWindow.tabId }) });
+      // windows.update resolves before Chromium's renderer necessarily receives
+      // its new viewport. Observe this fixture's requested setup before the one-shot calibration.
+      let calibrationLayout;
+      const layoutDeadline=Date.now()+5000;
+      while(Date.now()<layoutDeadline){
+        calibrationLayout=await pageEvaluate(workerClient,async({windowId,tabId})=>({
+          window:await chrome.windows.get(windowId),tab:await chrome.tabs.get(tabId),
+          page:(await chrome.scripting.executeScript({target:{tabId},func:()=>({width:innerWidth,height:innerHeight,dpi:devicePixelRatio,visibility:document.visibilityState})}))[0].result,
+        }),{windowId:extraWindow,tabId:newWindow.tabId});
+        if(calibrationLayout.page.visibility==='visible'&&calibrationLayout.page.width===calibrationLayout.tab.width&&calibrationLayout.page.height===calibrationLayout.tab.height)break;
+        await new Promise(resolve=>setTimeout(resolve,50));
+      }
+      observations.push({initialWindowCalibration:calibrationLayout});
+      assert.equal(calibrationLayout.page.visibility,'visible','The owned fixture must finish presentation before initial calibration');
+      assert.equal(calibrationLayout.page.width,calibrationLayout.tab.width);
+      assert.equal(calibrationLayout.page.height,calibrationLayout.tab.height);
       await call("input.calibrate", { tabRef: extra });
       // Initial measurement needs an available content region; then deliver to
       // this calibrated background window while the first fixture is foreground.

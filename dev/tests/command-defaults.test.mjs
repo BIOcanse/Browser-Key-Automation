@@ -70,6 +70,10 @@ test("command boundary expands declared omissions once and preserves explicit va
   assert.deepEqual(parse("page.wait", { tabRef }).params, { tabRef, until: "complete", timeoutMs: 10000 });
   assert.equal(parse("page.wait", { tabRef, timeoutMs: 250 }).params.timeoutMs, 250);
   assert.equal(parse("page.wait", { tabRef, until: "text", selector: "#x", text: "ready" }).params.until, "text");
+  assert.deepEqual(parse("page.wait", { tabRef, framePath: [{urlPattern:'https://frame.test/*'}] }).params.framePath,
+    [{urlPattern:'https://frame.test/*',match:'unique'}]);
+  for (const framePath of [null,{},[{}],[{urlPattern:'https://frame.test',extra:true}],[{urlPattern:'https://frame.test',urlMatch:'guess'}]])
+    assert.equal(parse("page.wait", {tabRef,framePath}),null);
   for (const params of [{ tabRef, timeoutMs: null }, { tabRef, timeoutMs: 0 }, { tabRef, timeoutMs: 60001 },
     { tabRef, until: "ready" }, { tabRef, until: "text" }, { tabRef, until: "url" }, { tabRef, selector: "#x" },
     { tabRef, text: "orphan" }, { tabRef, extra: true }]) assert.equal(parse("page.wait", params), null);
@@ -133,9 +137,11 @@ test("command boundary expands declared omissions once and preserves explicit va
   assert.deepEqual(parse("page.screenshot.capture", { tabRef }).params, { tabRef, format: "png", quality: 80 });
   assert.equal(parse("page.screenshot.capture", { tabRef, format: "jpeg", quality: 0 }).params.quality, 0);
   assert.equal(parse("page.screenshot.capture", { tabRef, format: null }), null);
-  assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 1024, height: 768 });
+  assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 1024, height: 768, frameMapping: "none" });
   assert.deepEqual(parse("page.screenshot.element", { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 } }).params,
-    { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 } });
+    { nodeRef, width: 640, height: 480, region: { x: 1, y: 2, width: 3, height: 4 }, frameMapping: "none" });
+  assert.equal(parse("page.screenshot.element", { nodeRef, frameMapping: "debugger" }).params.frameMapping, "debugger");
+  assert.equal(parse("page.screenshot.element", { nodeRef, frameMapping: "automatic" }), null);
   for (const params of [{ nodeRef, width: 0 }, { nodeRef, width: null }, { nodeRef, width: 8193 },
     { nodeRef, width: 8192, height: 8192 }, { nodeRef, region: null }, { nodeRef, region: { x: 0, y: 0, width: 0, height: 1 } },
     { nodeRef, region: { x: -1, y: 0, width: 1, height: 1 } }, { nodeRef, format: "jpeg" }]) assert.equal(parse("page.screenshot.element", params), null);
@@ -292,7 +298,7 @@ test("Freedom mutation reaches actual extension parsing and both CLI endpoint co
     assert.equal(parse("virtualMouse.drag", { tabRef, to: { x: 1, y: 2 } }).params.actions[0].button, "right");
     assert.equal(parse("page.screenshot.capture", { tabRef }).params.format, "jpeg");
     assert.equal(parse("page.screenshot.capture", { tabRef }).params.quality, 42);
-    assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 640, height: 480 });
+    assert.deepEqual(parse("page.screenshot.element", { nodeRef }).params, { nodeRef, width: 640, height: 480, frameMapping: "none" });
     assert.equal(parse("debugger.send", { tabRef, method: "Runtime.enable" }).params.response, "artifact");
     assert.equal(parse("debugger.events.get", { tabRef }).params.limit, 50);
     assert.equal(parse("demo.open", { artifactRef: `ar1.${"A".repeat(43)}` }).params.active, false);

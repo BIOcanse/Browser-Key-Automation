@@ -40,7 +40,7 @@
       eventLog.push({ type, target: event.target.id || event.target.tagName, x: event.clientX, y: event.clientY,
         buttons: event.buttons, button: event.button, detail: event.detail, deltaX: event.deltaX, deltaY: event.deltaY,
         ctrlKey: event.ctrlKey, shiftKey: event.shiftKey, altKey: event.altKey, key: event.key, code: event.code,
-        trusted: event.isTrusted, bubbles: event.bubbles, related: event.relatedTarget?.id || null });
+        trusted: event.isTrusted, bubbles: event.bubbles, repeat: event.repeat, at: performance.now(), related: event.relatedTarget?.id || null });
     }, true);
   }
   hover.addEventListener('pointerenter', () => { document.querySelector('#hover-status').textContent = 'hovered'; });

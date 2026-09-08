@@ -19,6 +19,24 @@
       "description": "Provide only the coarse MV3 wake-up leg of the reconnect scheduler; alarms never prove a ten-second wall-clock retry SLA."
     },
     {
+      "capabilityId": "platform.extension.bookmarks",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "bookmarks"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "isolated_bookmarks_read_manage",
+      "consumers": [
+        "extension/src/background/browser-data-service.ts"
+      ],
+      "description": "Chrome bookmarks API, separately authorized reads and mutations. No browser-profile replica."
+    },
+    {
       "capabilityId": "platform.extension.debugger",
       "kind": "platform",
       "status": "active",
@@ -37,6 +55,24 @@
       "description": "Optional explicit chrome.debugger transport. Chrome owns debugging UI; ordinary DOM/capture never attaches."
     },
     {
+      "capabilityId": "platform.extension.downloads",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "downloads"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "isolated_download_bytes_lifecycle_and_cancellation",
+      "consumers": [
+        "extension/src/background/downloads-service.ts"
+      ],
+      "description": "Explicit Chrome downloads observation and operations. No downloaded-byte read or implicit overwrite."
+    },
+    {
       "capabilityId": "platform.extension.element_capture",
       "kind": "platform",
       "status": "active",
@@ -53,6 +89,24 @@
         "extension/src/background/capture/mask-image.ts"
       ],
       "description": "Read NodeRef subtree geometry and mask real visible-tab pixels using OffscreenCanvas; fixed-size transparent PNG without page repaint."
+    },
+    {
+      "capabilityId": "platform.extension.history",
+      "kind": "platform",
+      "status": "active",
+      "manifestFeatures": [],
+      "manifestPermissions": [
+        "history"
+      ],
+      "manifestHostPermissions": [],
+      "cspScriptTokens": [],
+      "cspWorkerTokens": [],
+      "connectSourcePointIds": [],
+      "runtimeProbe": "isolated_history_read_manage",
+      "consumers": [
+        "extension/src/background/browser-data-service.ts"
+      ],
+      "description": "Chrome history API, separately authorized reads and mutations. No browser-profile replica."
     },
     {
       "capabilityId": "platform.extension.indexeddb_strict",

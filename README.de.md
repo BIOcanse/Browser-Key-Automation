@@ -57,6 +57,13 @@ node client/browser-key-cli.mjs call --method system.describe --schema-version 1
 | Text / Tastenkürzel / Tasten lösen | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | Virtuelle Maus / Tastatur | `virtualMouse.*` · `virtualKeyboard.*` |
 | Eingabeziel vermessen | `input.calibrate` |
+| Aktionsbibliothek | `actions.create` · `actions.list/get` · `actions.run` |
+| DOM- / Windows-Aufzeichnung | `recording.start/pause/resume/stop` → `actions.compile` |
+| Uploads, Downloads und Dialoge | `files.upload` · `downloads.*` · `dialogs.*` |
+| Netzwerk und Diagnose | `network.*` · `console.*` · `performance.*` |
+| Ganze Seite / Bereich / Element | `page.screenshot.fullPage/region/element` |
+| Browserdaten und Suche | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| Fenster und Viewport | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | Explizite CDP-Sitzung | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+Befehlsfolgen lassen sich direkt speichern oder aus einer Aufzeichnung kompilieren, prüfen und per Aktions-ID wiedergeben. Die Windows-Aufzeichnung erfasst Fensteränderungen und lässt Mauspfade außerhalb des Zielfensters weg. Die App erfasst relative Fensterkoordinaten und beide Seitentasten. Berechtigungen, Vorbereitung und Wiedergabegrenzen stehen unter [Aktionen und Aufzeichnung](dev/skills/browser-key-automation/references/actions-and-recording.md).
+
 ## Keys und Eingabegrenzen
 
 - Root erhält alle aktiven Rechte. Regular Keys bieten aufklappbare Berechtigungsgruppen, Ablaufdatum, erneute Anzeige, Deaktivierung und Widerruf. JavaScript und native Eingabe sind unabhängige Rechte. Ein Key ersetzt keine Zustimmung zu Zahlungen, Veröffentlichungen oder Löschungen.
+- Befehle werden einmal beim Einreichen authentifiziert. In der Warteschlange und während der Ausführung gelten die dabei erteilten Rechte; ein späterer Ablauf, eine Deaktivierung oder ein Widerruf des Keys betrifft nur neue Befehle. Eigene Zeitlimits sowie ausdrückliches Stoppen und Freigeben bleiben wirksam.
 - Virtueller Eingabezustand gehört dem Key, bleibt tabübergreifend erhalten und verlangt die Belegung des gesamten Zielfensters. Normale virtuelle Eingabeaktionen benötigen eine gültige `input.calibrate`-Messung; `ensure.run` prüft und erneuert sie bei Bedarf. Echte Eingabe verlangt das Vordergrundfenster; virtuelle Eingabe bewegt den physischen Cursor nicht.
 - Windows bietet native Eingabe. Linux bietet derzeit Browser-Routing und Dateien, keine nativen Eingabebackends. Minimierte Fenster sind nicht unterstützt. Die erste Kalibrierung braucht eine messbare Seite; Wiederverwendung bei Verdeckung ist bedingt. Mehrfenster-Erstkalibrierung und vollständiges natives HTML5/OLE-Drag-and-drop haben offene Fälle.
 - Elementbilder verwenden sichtbare Viewport-Pixel und unterstützte Formmasken. Chrome kontrolliert geschützte Seiten, Websitezugriff und User Scripts; `debugger.attach` behält die Debugging-Anzeige. Synthetische Ereignisse und virtuelle Fensternachrichten umgehen nicht jede Eingabebeschränkung.

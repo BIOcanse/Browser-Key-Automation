@@ -9,8 +9,15 @@ extern fn vm_is_intercepting(client: *Client) c_int;
 extern fn vm_close(client: *Client) void;
 extern fn vm_begin(client: *Client, timeout_ms: u32) void;
 extern fn vm_bounds(client: *Client, width: *i32, height: *i32) void;
+extern fn vm_window_bounds(client: *Client, width: *i32, height: *i32) c_int;
+extern fn vm_coordinate_space(client: *Client, window_coordinates: c_int) void;
 extern fn vm_context(client: *Client, keys: *const [256]u8, source_tag: usize, x: i32, y: i32, buttons: u32) c_int;
 extern fn vm_key_event(client: *Client, vk: u32, extended: c_int, down: c_int) c_int;
+extern fn vm_key_event_exact(client: *Client, vk: u32, extended: c_int, down: c_int, scan: u32, has_scan: c_int, layout: usize, repeated: c_int) c_int;
+extern fn vm_layout_available(layout: usize) c_int;
+extern fn vm_last_key_scan(client: *Client) u32;
+extern fn vm_character(client: *Client, character: u16) c_int;
+extern fn vm_keyboard_message(client: *Client, message: u32, value: u32, bits: u32, layout: usize) c_int;
 extern fn vm_detach(client: *Client) c_int;
 
 pub const Error = error{ InvalidInput, TargetLost, TargetConflict, HookFailed, InputTimeout, DeliveryFailed };
@@ -25,6 +32,7 @@ fn checked(code: c_int) Error!void {
         else => error.DeliveryFailed,
     };
 }
+pub fn layoutAvailable(layout: usize) bool { return vm_layout_available(layout) != 0; }
 
 pub const Mouse = struct {
     pub const Bounds = struct { width: i32, height: i32 };
@@ -41,12 +49,26 @@ pub const Mouse = struct {
     pub fn begin(self: Mouse, timeout_ms: u32) void { vm_begin(self.client, timeout_ms); }
     pub fn context(self: Mouse, keys: *const [256]u8, source_tag: usize, pointer: core.State) Error!void {
         try checked(vm_context(self.client, keys, source_tag, pointer.point.x, pointer.point.y, pointer.buttons));
+        vm_coordinate_space(self.client, @intFromBool(pointer.coordinates == .window));
     }
     pub fn key(self: Mouse, vk: u16, extended: bool, down: bool) Error!void { try checked(vm_key_event(self.client, vk, @intFromBool(extended), @intFromBool(down))); }
+    pub fn keyExact(self: Mouse, vk: u16, extended: bool, down: bool, scan: ?u16, layout: usize, repeated: bool) Error!void {
+        try checked(vm_key_event_exact(self.client, vk, @intFromBool(extended), @intFromBool(down), scan orelse 0, @intFromBool(scan != null), layout, @intFromBool(repeated)));
+    }
+    pub fn lastKeyScan(self: Mouse) u16 { return @intCast(vm_last_key_scan(self.client)); }
+    pub fn character(self: Mouse, value: u16) Error!void { try checked(vm_character(self.client, value)); }
+    pub fn keyboardMessage(self: Mouse, message: u32, value: u32, bits: u32, layout: usize) Error!void {
+        try checked(vm_keyboard_message(self.client, message, value, bits, layout));
+    }
     pub fn detach(self: Mouse) Error!void { try checked(vm_detach(self.client)); }
     pub fn bounds(self: Mouse) Bounds {
         var size: Bounds = undefined;
         vm_bounds(self.client, &size.width, &size.height);
+        return size;
+    }
+    pub fn windowBounds(self: Mouse) Error!Bounds {
+        var size: Bounds = undefined;
+        try checked(vm_window_bounds(self.client, &size.width, &size.height));
         return size;
     }
     pub fn intercept(self: Mouse, enabled: bool) Error!void {
@@ -59,6 +81,9 @@ pub const Mouse = struct {
         const kind: u32 = switch (event.kind) { .move => 1, .down => 2, .up => 3, .wheel => 4 };
         try checked(vm_event(self.client, kind, event.state.point.x, event.state.point.y,
             event.state.buttons, if (event.button) |button| button.mask() else 0, event.delta_x, event.delta_y));
+    }
+    pub fn release(self: Mouse, event: core.Event) Error!void {
+        try checked(vm_event(self.client, 3 | 0x100, event.state.point.x, event.state.point.y, event.state.buttons, if (event.button) |button| button.mask() else 0, 0, 0));
     }
     pub fn close(self: Mouse) void {
         vm_close(self.client);

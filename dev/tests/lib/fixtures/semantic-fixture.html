@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>Semantic fixture</title><body><script>
+const passages=[
+ 'The mechanic replaced worn brake pads and checked the engine oil at the garage.',
+ 'Fresh bread was baked in the kitchen using flour, water and yeast.',
+ 'The telescope reveals distant stars and galaxies in the night sky.'
+];
+document.body.textContent=passages[Number(new URL(location.href).searchParams.get('doc'))]??'Unknown fixture';
+</script>

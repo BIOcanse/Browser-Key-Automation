@@ -8,7 +8,10 @@ import {
   type NativeInputKeyboardResponse,
 } from "./shared/native-input-protocol.js";
 import { isVirtualInputResponse, virtualInputFailure, type VirtualInputResponse, type VirtualInputRequest } from "./shared/virtual-input-protocol.js";
+import { isNativeRecordingResponse, nativeRecordingFailure, type NativeRecordingResponse, type NativeRecordingRequest } from "./shared/native-recording-protocol.js";
 import { TRANSPORT_CONFIG } from "./generated/transport-config.js";
+import { isLocalRouteRequest, isLocalRouteResponse, localRouteFailure,
+  type LocalRouteConnection, type LocalRouteRequest, type LocalRouteResponse, type LocalRouteReceipt } from "./shared/local-route-protocol.js";
 
 const TRANSPORT_MESSAGE_CHANNEL = "browser-key-automation.transport.v1";
 const offscreenDocument = (
@@ -39,14 +42,31 @@ let transportWorker: Worker | undefined;
 let activeGeneration: number | null = null;
 let activeRelayEpoch: string | null = null;
 let activeCapabilities: readonly string[] = [];
+const pendingLocal = new Map<string, {
+  readonly request: LocalRouteRequest;
+  readonly connection: LocalRouteConnection;
+  readonly timer: number;
+  respond: ((receipt: LocalRouteReceipt) => void) | null;
+}>();
+
+function settleLocal(response: LocalRouteResponse, connection: LocalRouteConnection, confirmed: boolean, retire = confirmed): void {
+  const pending = pendingLocal.get(response.requestId);
+  if (!pending || pending.connection.connectionGeneration !== connection.connectionGeneration || pending.connection.relayEpoch !== connection.relayEpoch) return;
+  if (retire) pendingLocal.delete(response.requestId);
+  clearTimeout(pending.timer);
+  const respond = pending.respond; pending.respond = null;
+  respond?.({ ...connection, confirmed, response });
+}
+function failPendingLocal(reason: string): void {
+  for (const pending of [...pendingLocal.values()]) settleLocal(localRouteFailure(pending.request.requestId, reason), pending.connection, false, true);
+}
 const pendingNative = new Map<string, {
-  readonly requestKind: "native.input.click" | "native.input.keyboard" | "native.virtualInput";
+  readonly requestKind: "native.input.click" | "native.input.keyboard" | "native.virtualInput" | "native.recording";
   readonly generation: number;
-  readonly retireAt?: number | null;
   readonly relayEpoch?: string;
   readonly cleanupInputId?: string;
   readonly timer: number;
-  readonly respond: (response: NativeInputClickResponse | NativeInputKeyboardResponse | VirtualInputResponse) => void;
+  readonly respond: (response: NativeInputClickResponse | NativeInputKeyboardResponse | VirtualInputResponse | NativeRecordingResponse) => void;
 }>();
 const inputRetirements = new Map<string, { readonly inputId: string; readonly at: number; readonly relayEpoch: string; inFlight: boolean }>();
 function retirementKey(relayEpoch: string, inputId: string): string { return `${relayEpoch}:${inputId}`; }
@@ -104,7 +124,7 @@ function keyboardFailure(
   };
 }
 
-function settleNative(response: NativeInputClickResponse | NativeInputKeyboardResponse | VirtualInputResponse): boolean {
+function settleNative(response: NativeInputClickResponse | NativeInputKeyboardResponse | VirtualInputResponse | NativeRecordingResponse): boolean {
   const pending = pendingNative.get(response.requestId);
   if (pending === undefined) return false;
   pendingNative.delete(response.requestId);
@@ -112,21 +132,13 @@ function settleNative(response: NativeInputClickResponse | NativeInputKeyboardRe
   if (response.kind === "native.virtualInput.result" && response.ok && pending.cleanupInputId !== undefined) {
     if (pending.relayEpoch !== undefined) inputRetirements.delete(retirementKey(pending.relayEpoch, pending.cleanupInputId));
   }
-  if (response.kind === "native.virtualInput.result" && response.ok && response.result.input !== null && pending.retireAt !== undefined) {
-    if (pending.relayEpoch !== undefined) {
-      const inputId = String(response.result.input.id), key = retirementKey(pending.relayEpoch, inputId);
-      if (pending.retireAt === null) inputRetirements.delete(key);
-      else inputRetirements.set(key, { inputId, at: pending.retireAt, relayEpoch: pending.relayEpoch, inFlight: false });
-    }
-    startRetirementTimer();
-  }
   pending.respond(response);
   return true;
 }
 
 function failPendingNative(reason: string): void {
   for (const [requestId, pending] of [...pendingNative.entries()]) {
-    settleNative(pending.requestKind === "native.virtualInput" ? virtualInputFailure(requestId, reason) : pending.requestKind === "native.input.click"
+    settleNative(pending.requestKind === "native.recording" ? nativeRecordingFailure(requestId, reason) : pending.requestKind === "native.virtualInput" ? virtualInputFailure(requestId, reason) : pending.requestKind === "native.input.click"
       ? nativeFailure(requestId, reason, "unknown")
       : keyboardFailure(requestId, reason, "unknown"));
   }
@@ -164,6 +176,22 @@ try {
   transportWorker = worker;
   diagnostic.workerCreated = true;
   worker.addEventListener("message", (event: MessageEvent<unknown>) => {
+    if (isRecord(event.data) && event.data.kind === "transport.inbound" && isRecord(event.data.payload) && event.data.payload.kind === "native.recording.result") {
+      const response = event.data.payload;
+      const pending = typeof response.requestId === "string" ? pendingNative.get(response.requestId) : undefined;
+      if (pending?.requestKind === "native.recording" && pending.generation === event.data.connectionGeneration && pending.relayEpoch === event.data.relayEpoch)
+        settleNative(isNativeRecordingResponse(response) ? response : nativeRecordingFailure(response.requestId as string, "native_response_invalid"));
+      return;
+    }
+    if (isRecord(event.data) && event.data.kind === "transport.inbound" && isRecord(event.data.payload) && event.data.payload.kind === "route.local.result") {
+      const response = event.data.payload;
+      const pending = typeof response.requestId === "string" ? pendingLocal.get(response.requestId) : undefined;
+      if (pending && pending.connection.connectionGeneration === event.data.connectionGeneration && pending.connection.relayEpoch === event.data.relayEpoch) {
+        const valid = isLocalRouteResponse(response, pending.request);
+        settleLocal(valid ? response : localRouteFailure(pending.request.requestId, "local_route_response_invalid"), pending.connection, valid);
+      }
+      return; // Unknown/late control receipts must never enter the command dispatcher.
+    }
     if (isRecord(event.data) && event.data.kind === "transport.inbound" && isRecord(event.data.payload) &&
         ["native.virtualInput.result", "native.input.result", "native.keyboard.result"].includes(String(event.data.payload.kind))) {
       const response = event.data.payload;
@@ -195,11 +223,14 @@ try {
         activeRelayEpoch = null;
         activeCapabilities = [];
         failPendingNative("transport_disconnected");
+        failPendingLocal("transport_disconnected");
       }
     }
     publishToBackground(event.data);
   });
   worker.addEventListener("error", () => {
+    activeGeneration = null; activeRelayEpoch = null; activeCapabilities = [];
+    failPendingNative("transport_worker_failed"); failPendingLocal("transport_worker_failed");
     lastWorkerState = { kind: "transport.worker-error" };
     diagnostic.lastWorkerState = lastWorkerState;
     offscreenDocument.title = "BKA transport.worker-error";
@@ -215,24 +246,48 @@ try {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!isRecord(message) || message.channel !== NATIVE_INPUT_MESSAGE_CHANNEL || sender.id !== chrome.runtime.id) return;
   const request = message.payload;
+  if (isRecord(request) && (request.kind === "route.local.open" || request.kind === "route.local.close")) {
+    const connection: LocalRouteConnection = {
+      connectionGeneration: typeof message.connectionGeneration === "number" ? message.connectionGeneration : -1,
+      relayEpoch: typeof message.relayEpoch === "string" ? message.relayEpoch : "",
+    };
+    const requestId = typeof request.requestId === "string" ? request.requestId : "invalid";
+    const reject = (reason: string): void => sendResponse({ ...connection, confirmed: false, response: localRouteFailure(requestId, reason) });
+    if (!isLocalRouteRequest(request) || (request.kind === "route.local.open" && request.durationMs > TRANSPORT_CONFIG.localRoute.maximumDurationMs)) {
+      reject("local_route_request_invalid"); return;
+    }
+    if (transportWorker === undefined || connection.connectionGeneration !== activeGeneration || connection.relayEpoch !== activeRelayEpoch ||
+        !activeCapabilities.includes(TRANSPORT_CONFIG.localRouteCapability)) { reject("local_route_unavailable"); return; }
+    if (pendingLocal.has(requestId)) { reject("duplicate_request"); return; }
+    if (pendingLocal.size >= TRANSPORT_CONFIG.maximumPendingRoutes) { reject("local_route_capacity"); return; }
+    const timer = setTimeout(() => settleLocal(localRouteFailure(requestId, "local_route_response_timeout"), connection, false), TRANSPORT_CONFIG.localRoute.responseTimeoutMs);
+    pendingLocal.set(requestId, { request, connection, timer, respond: sendResponse });
+    try { transportWorker.postMessage({ kind: "transport.outbound", connectionGeneration: connection.connectionGeneration, payload: request }); }
+    catch { settleLocal(localRouteFailure(requestId, "transport_disconnected"), connection, false); }
+    return true;
+  }
   if (isRecord(request) && request.kind === "transport.state") {
     sendResponse({ connectionGeneration: activeGeneration, relayEpoch: activeRelayEpoch, capabilities: activeCapabilities });
     return;
   }
   const generation = message.connectionGeneration;
   const timeoutMs = message.timeoutMs;
-  if (!isRecord(request) || (request.kind !== "native.input.click" && request.kind !== "native.input.keyboard" && request.kind !== "native.virtualInput") ||
+  if (!isRecord(request) || (request.kind !== "native.input.click" && request.kind !== "native.input.keyboard" && request.kind !== "native.virtualInput" && request.kind !== "native.recording") ||
       typeof request.requestId !== "string" ||
       !Number.isSafeInteger(generation) || generation !== activeGeneration || !Number.isSafeInteger(timeoutMs) ||
+      (message.relayEpoch !== undefined && message.relayEpoch !== activeRelayEpoch) ||
       (timeoutMs as number) < 1 || transportWorker === undefined) {
     const requestId = isRecord(request) && typeof request.requestId === "string" ? request.requestId : "invalid";
-    sendResponse(isRecord(request) && request.kind === "native.virtualInput" ? virtualInputFailure(requestId, "transport_disconnected") : isRecord(request) && request.kind === "native.input.keyboard"
+    sendResponse(isRecord(request) && request.kind === "native.recording" ? nativeRecordingFailure(requestId, "transport_disconnected") : isRecord(request) && request.kind === "native.virtualInput" ? virtualInputFailure(requestId, "transport_disconnected") : isRecord(request) && request.kind === "native.input.keyboard"
       ? keyboardFailure(requestId, "transport_disconnected", "not_sent")
       : nativeFailure(requestId, "transport_disconnected", "not_sent"));
     return;
   }
+  if (request.kind === "native.recording" && !activeCapabilities.includes(TRANSPORT_CONFIG.nativeRecordingCapability)) {
+    sendResponse(nativeRecordingFailure(request.requestId, "REAL_BACKEND_UNAVAILABLE")); return;
+  }
   if (pendingNative.has(request.requestId)) {
-    sendResponse(request.kind === "native.virtualInput" ? virtualInputFailure(request.requestId, "duplicate_request") : request.kind === "native.input.keyboard"
+    sendResponse(request.kind === "native.recording" ? nativeRecordingFailure(request.requestId, "duplicate_request") : request.kind === "native.virtualInput" ? virtualInputFailure(request.requestId, "duplicate_request") : request.kind === "native.input.keyboard"
       ? keyboardFailure(request.requestId, "duplicate_request", "not_sent")
       : nativeFailure(request.requestId, "duplicate_request", "not_sent"));
     return;
@@ -247,7 +302,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     startRetirementTimer();
   }
   const timer = setTimeout(() => {
-    settleNative(requestKind === "native.virtualInput" ? virtualInputFailure(requestId, "native_response_timeout") : requestKind === "native.input.keyboard"
+    settleNative(requestKind === "native.recording" ? nativeRecordingFailure(requestId, "native_response_timeout") : requestKind === "native.virtualInput" ? virtualInputFailure(requestId, "native_response_timeout") : requestKind === "native.input.keyboard"
       ? keyboardFailure(requestId, "native_response_timeout", "unknown")
       : nativeFailure(requestId, "native_response_timeout", "unknown"));
   }, timeoutMs as number);
@@ -256,8 +311,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     generation: generation as number,
     ...(relayEpoch === null ? {} : { relayEpoch }),
     ...(cleanupInputId === undefined ? {} : { cleanupInputId }),
-    ...(requestKind === "native.virtualInput" && (message.retireAt === null || Number.isSafeInteger(message.retireAt))
-      ? { retireAt: message.retireAt as number | null } : {}),
     timer,
     respond: (response) => {
       if (cleanupInputId !== undefined && relayEpoch !== null) {
@@ -270,7 +323,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   transportWorker.postMessage({
     kind: "transport.outbound",
     connectionGeneration: generation,
-    payload: request as unknown as NativeInputClickRequest | NativeInputKeyboardRequest | VirtualInputRequest,
+    payload: request as unknown as NativeInputClickRequest | NativeInputKeyboardRequest | VirtualInputRequest | NativeRecordingRequest,
   });
   return true;
 });

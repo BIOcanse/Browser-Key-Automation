@@ -339,7 +339,8 @@ function invalidUpload(reason: string): ArtifactServiceError {
   return new ArtifactServiceError("ARTIFACT_UPLOAD_INVALID", "The upload cannot perform this transition", reason);
 }
 
-export async function beginArtifactUpload(ownerKeyId: string, byteLength: number, mediaType: "text/html") {
+export type ArtifactUploadMediaType = "text/html" | "application/json" | "application/octet-stream";
+export async function beginArtifactUpload(ownerKeyId: string, byteLength: number, mediaType: ArtifactUploadMediaType) {
   if (!Number.isSafeInteger(byteLength) || byteLength < 0 || byteLength > COMMAND_CATALOG.limits["build.artifact.hard_maximum_bytes"]) {
     throw new ArtifactServiceError("LIMIT_EXCEEDED", "Upload exceeds the Artifact hard size limit");
   }
@@ -365,6 +366,23 @@ export async function beginArtifactUpload(ownerKeyId: string, byteLength: number
     attempt += 1;
   }
   throw new Error("Unable to allocate an upload ArtifactRef within the bounded attempt limit");
+}
+
+export async function readArtifactBytes(ownerKeyId: string, artifactRef: string, maximumBytes: number): Promise<{ readonly mediaType: string; readonly bytes: Uint8Array<ArrayBuffer> }> {
+  const metadata = await getArtifactMetadata(ownerKeyId, artifactRef);
+  if (metadata.byteLength > maximumBytes) throw new ArtifactServiceError("LIMIT_EXCEEDED", "Artifact exceeds the consumer byte limit");
+  const bytes = new Uint8Array(metadata.byteLength);
+  let offset = 0;
+  while (offset < bytes.length) {
+    const chunk = await readArtifact(ownerKeyId, artifactRef, offset, COMMAND_CATALOG.limits["command.artifact.read.maximum_raw_bytes"]);
+    if (chunk.sha256 !== metadata.sha256 || chunk.byteLength !== metadata.byteLength || chunk.offset !== offset) throw invalidUpload("CONTENT_CHANGED");
+    const binary = atob(chunk.dataBase64Url.replaceAll("-", "+").replaceAll("_", "/"));
+    if (binary.length === 0 || offset + binary.length > bytes.length) throw invalidUpload("INCOMPLETE");
+    for (let index = 0; index < binary.length; index += 1) bytes[offset + index] = binary.charCodeAt(index);
+    offset += binary.length;
+  }
+  if (await digestHex(bytes.buffer) !== metadata.sha256) throw invalidUpload("HASH_MISMATCH");
+  return { mediaType: metadata.mediaType, bytes };
 }
 
 async function uploadRecord(transaction: IDBTransaction, ownerKeyId: string, artifactRef: string): Promise<ArtifactRecord> {

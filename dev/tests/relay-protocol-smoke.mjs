@@ -66,6 +66,32 @@ try {
   assert.equal(firstList.instances[0].instanceNumber, "1");
   assert.equal(firstList.instances[0].relayEpoch, firstList.relayEpoch);
 
+  firstExtension.sendJson({ kind: "route.local.open", requestId: "local-invalid", durationMs: 0 });
+  assert.equal((await firstExtension.readJson()).error.reason, "InvalidRouteDuration");
+  firstExtension.sendJson({ kind: "route.local.open", requestId: "local-open", durationMs: 10000 });
+  const local = await firstExtension.readJson();
+  assert.equal(local.kind, "route.local.result");
+  assert.equal(local.ok, true);
+  const localRouteId = local.result.routeId;
+  firstExtension.sendJson({ kind: "native.virtualInput", requestId: "local-create", routeId: localRouteId,
+    timeoutMs: 1000, operation: { kind: "create" } });
+  const localCreated = await firstExtension.readJson();
+  if (process.platform === "win32") assert.equal(localCreated.ok, true, JSON.stringify(localCreated));
+  for (const closed of [true, false]) {
+    firstExtension.sendJson({ kind: "route.local.close", requestId: "local-close", routeId: localRouteId });
+    assert.deepEqual((await firstExtension.readJson()).result, { closed });
+  }
+  firstExtension.sendJson({ kind: "native.virtualInput", requestId: "local-closed-create", routeId: localRouteId,
+    timeoutMs: 1000, operation: { kind: "create" } });
+  assert.equal((await firstExtension.readJson()).error.reason, "StaleRoute");
+  firstExtension.sendJson({ kind: "route.local.open", requestId: "local-expiring", durationMs: 10 });
+  const expiring = await firstExtension.readJson();
+  assert.equal(expiring.ok, true);
+  await new Promise(resolve => setTimeout(resolve, 50));
+  firstExtension.sendJson({ kind: "native.virtualInput", requestId: "local-expired-create", routeId: expiring.result.routeId,
+    timeoutMs: 1000, operation: { kind: "create" } });
+  assert.equal((await firstExtension.readJson()).error.reason, "StaleRoute");
+
   const pendingRequest = {
     kind: "forward", clientRequestId: "disconnect-pending", targetInstance: firstList.instances[0],
     auth: { apiKey: "synthetic-key" }, command: { method: "system.describe", schemaVersion: 1, params: {} },
@@ -73,6 +99,8 @@ try {
   client.sendJson(pendingRequest);
   const routed = await firstExtension.readJson();
   assert.equal(routed.kind, "route.request", "request reached the retiring instance");
+  firstExtension.sendJson({ kind: "route.local.close", requestId: "local-close-forwarded", routeId: routed.routeId });
+  assert.deepEqual((await firstExtension.readJson()).result, { closed: false });
   firstExtension.sendJson({ kind: "native.virtualInput", requestId: "allocate-input", routeId: routed.routeId,
     timeoutMs: 1000, operation: { kind: "create" } });
   const allocated = await firstExtension.readJson();
@@ -146,6 +174,7 @@ try {
       instanceNumbers: ["1", "2"],
       relayStoppedByCommand: true,
       pendingRouteFailedAndLateWriteRejected: true,
+      localRouteNativeAdmissionExpiryAndClose: true,
     }),
   );
 } finally {
@@ -165,7 +194,7 @@ async function connectExtension() {
   assert.deepEqual(await socket.readJson(), {
     kind: "role.ready",
     role: "extension",
-    capabilities: process.platform === "win32" ? ["native.input.click.v1", "native.input.keyboard.v1", "native.virtualMouse.v1"] : [],
+    capabilities: process.platform === "win32" ? ["native.input.click.v1", "native.input.keyboard.v1", "native.virtualMouse.v1", "route.local.v1"] : ["route.local.v1"],
   });
   return socket;
 }

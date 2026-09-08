@@ -11,12 +11,14 @@ import { initializeTabService } from "./background/tab-service.js";
 import { initializeDebuggerService } from "./background/debugger-service.js";
 import { initializeVirtualInputService } from "./background/virtual-input-service.js";
 import { initializePublicTrialKey } from "./background/key-service.js";
+import { acceptRecordingEvents, initializeRecordingService } from "./background/recording/service.js";
 
 const manifest = chrome.runtime.getManifest();
 initializeTabService();
 initializeOccupationService();
 initializeDebuggerService();
 initializeVirtualInputService();
+initializeRecordingService();
 attachAdminEntry();
 
 chrome.runtime.onConnect.addListener((port) => {
@@ -29,6 +31,9 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (typeof message === "object" && message !== null && (message as {kind?:unknown}).kind === "recording.events") {
+    void acceptRecordingEvents(message,sender).then(sendResponse,()=>sendResponse({ok:false}));return true;
+  }
   if (!isTrustedTransportMessage(message, sender)) return;
   void acceptTransportMessage(message).then(sendResponse, () => sendResponse(undefined));
   return true;

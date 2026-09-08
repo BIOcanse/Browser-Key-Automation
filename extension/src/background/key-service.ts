@@ -29,12 +29,6 @@ import {
 } from "./key-model.js";
 
 const MAX_IDENTIFIER_GENERATION_ATTEMPTS = 8;
-const keyChangeListeners = new Set<(key: PublicKeyRecord) => Promise<void>>();
-export function onKeyChanged(listener: (key: PublicKeyRecord) => Promise<void>): void { keyChangeListeners.add(listener); }
-async function notifyKeyChanged(key: PublicKeyRecord): Promise<PublicKeyRecord> {
-  await Promise.all([...keyChangeListeners].map((listener) => listener(key)));
-  return key;
-}
 const encoder = new TextEncoder();
 const DUMMY_VERIFIER: SecretVerifier = {
   version: "sha256-v1",
@@ -529,7 +523,7 @@ async function commitKeyUpdate(params: UpdateKeyParams, caller: PublicKeyRecord 
       committedAt: Date.now(),
     });
     return publicRecord;
-  }).then(notifyKeyChanged);
+  });
 }
 
 export async function revokeKey(params: RevokeKeyParams): Promise<PublicKeyRecord> {
@@ -575,7 +569,7 @@ export async function revokeKey(params: RevokeKeyParams): Promise<PublicKeyRecor
       committedAt: revokedAt,
     });
     return publicRecord;
-  }).then(notifyKeyChanged);
+  });
 }
 
 async function getKeyById(keyId: string): Promise<KeyRecord | undefined> {

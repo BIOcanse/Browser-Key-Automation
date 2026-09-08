@@ -1,3 +1,5 @@
+import type { NativeKeyboardAction } from "../shared/native-input-protocol.js";
+export type { NativeKeyboardAction, NativeKeyboardKey } from "../shared/native-input-protocol.js";
 export interface CanonicalKey {
   readonly name: string;
   readonly virtualKey: number;
@@ -15,16 +17,6 @@ export interface KeyboardWaitActionInput {
 }
 
 export type KeyboardActionInput = string | KeyboardKeyActionInput | KeyboardWaitActionInput;
-
-export interface NativeKeyboardKey {
-  readonly virtualKey: number;
-  readonly extended: boolean;
-}
-
-export type NativeKeyboardAction =
-  | { readonly kind: "press"; readonly keys: readonly NativeKeyboardKey[]; readonly holdMs: number }
-  | { readonly kind: "down" | "up"; readonly keys: readonly NativeKeyboardKey[] }
-  | { readonly kind: "wait"; readonly waitMs: number };
 
 export interface HumanMistake {
   readonly index: number;
@@ -52,6 +44,7 @@ const declarations: KeyDeclaration[] = [
   { name: "Backspace", virtualKey: 0x08, aliases: ["bs"] },
   { name: "Tab", virtualKey: 0x09 },
   { name: "Enter", virtualKey: 0x0d, aliases: ["return"] },
+  { name: "NumpadEnter", virtualKey: 0x0d, extended: true },
   { name: "Pause", virtualKey: 0x13 },
   { name: "CapsLock", virtualKey: 0x14, aliases: ["caps"] },
   { name: "Escape", virtualKey: 0x1b, aliases: ["esc"] },
@@ -151,7 +144,8 @@ export function resolveKeyboardKey(value: string): CanonicalKey | null {
   return byAlias.get(normalizedName(value)) ?? null;
 }
 
-export function canonicalKeyNameForVirtualKey(virtualKey: number): string | null {
+export function canonicalKeyNameForVirtualKey(virtualKey: number, extended = false): string | null {
+  if (virtualKey === 0x0d && extended) return "NumpadEnter";
   return byVirtualKey.get(virtualKey)?.name ?? null;
 }
 
@@ -189,6 +183,37 @@ function parseChord(value: string, maximumChordKeys: number): readonly Canonical
 function exactKeys(value: Record<string, unknown>, names: readonly string[]): boolean {
   const keys = Object.keys(value).sort();
   return keys.length === names.length && keys.every((key, index) => key === [...names].sort()[index]);
+}
+
+export function parseVirtualKeyboardEvents(value: unknown, maximum: number): readonly NativeKeyboardAction[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > maximum) return null;
+  const output: NativeKeyboardAction[] = [];
+  for (const input of value) {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
+    const item = input as Record<string, unknown>;
+    if(item.action==="message") {
+      if(!exactKeys(item,["action","message","value","lParam","layout"]) ||
+          ![0x100,0x101,0x102,0x103,0x104,0x105,0x106,0x107,0x109].includes(item.message as number) ||
+          !Number.isSafeInteger(item.value) || typeof item.lParam!=="string" || !/^[0-9a-fA-F]{8}$/u.test(item.lParam) ||
+          !(item.layout===null||typeof item.layout==="string"&&/^[0-9a-fA-F]{16}$/u.test(item.layout)&&!/^0+$/u.test(item.layout)))return null;
+      const message=item.message as number,value=item.value as number,bits=Number.parseInt(item.lParam,16),isKey=[0x100,0x101,0x104,0x105].includes(message);
+      if(value<(isKey?1:0)||value>(isKey?255:message===0x109?0x10ffff:0xffff))return null;
+      if(isKey&&value===0x10&&((bits&0x1000000)!==0||![0x2a,0x36].includes((bits>>>16)&0xff)))return null;
+      output.push({kind:"message",message:{message,value,bits,layout:item.layout as string|null}});
+      continue;
+    }
+    if (!exactKeys(item, ["action", "virtualKey", "scanCode", "extended", "layout"]) ||
+        !["down", "up", "repeat"].includes(item.action as string) ||
+        !Number.isSafeInteger(item.virtualKey) || (item.virtualKey as number) < 1 || (item.virtualKey as number) > 255 ||
+        !Number.isSafeInteger(item.scanCode) || (item.scanCode as number) < 0 || (item.scanCode as number) > 255 ||
+        typeof item.extended !== "boolean" || !(item.layout === null || typeof item.layout === "string" && /^[0-9a-fA-F]{16}$/u.test(item.layout) && !/^0+$/u.test(item.layout))) return null;
+    let virtualKey=item.virtualKey as number;
+    if(virtualKey===0x10){if(item.extended||![0x2a,0x36].includes(item.scanCode as number))return null;virtualKey=item.scanCode===0x36?0xa1:0xa0;}
+    else if(virtualKey===0x11)virtualKey=item.extended?0xa3:0xa2;
+    else if(virtualKey===0x12)virtualKey=item.extended?0xa5:0xa4;
+    output.push({kind:item.action as "down"|"up"|"repeat",keys:[{virtualKey,scanCode:item.scanCode as number,extended:item.extended,layout:item.layout as string|null}]});
+  }
+  return output;
 }
 
 export function parseKeyboardActions(

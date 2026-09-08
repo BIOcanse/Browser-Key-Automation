@@ -18,6 +18,8 @@ import { runDebuggerElementProbe } from "./lib/debugger-element-probe.mjs";
 import { runAdvancedEnsureProbe } from "./lib/ensure-advanced-probe.mjs";
 import { runDomPointerProbe } from "./lib/dom-pointer-probe.mjs";
 import { runVirtualMouseProbe } from "./lib/virtual-mouse-probe.mjs";
+import { runRecordingProbe } from "./lib/recording-probe.mjs";
+import { runBrowserFeaturesProbe } from "./lib/browser-features-probe.mjs";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const { assertIsolatedFixture } = await import("./lib/isolation.mjs");
@@ -35,10 +37,19 @@ const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mil
 const realInputAcceptance = process.argv.includes("--real-input");
 const debuggerElementOnly = process.argv.includes("--debugger-element-only");
 const domPointerOnly = process.argv.includes("--dom-pointer-only");
+const recordingOnly = process.argv.includes("--recording-only");
+const adminActionsOnly = process.argv.includes("--admin-actions-only");
+const nativeRecordingProbe = process.argv.includes("--native-recording-probe");
+assert.ok(!nativeRecordingProbe || recordingOnly,"--native-recording-probe requires --recording-only");
+const browserFeaturesOnly = process.argv.includes("--browser-features-only");
+const semanticModel = process.argv.includes("--semantic-model") ? {endpoint:process.env.BKA_TEST_EMBEDDINGS_ENDPOINT??"http://127.0.0.1:1234/v1/embeddings",model:process.env.BKA_TEST_EMBEDDINGS_MODEL??"bka-semantic-20260907"} : null;
+const frameMappingProbe = process.argv.includes("--frame-mapping-probe");
+assert.ok(!frameMappingProbe || browserFeaturesOnly,"--frame-mapping-probe requires --browser-features-only");
+assert.ok(!semanticModel || browserFeaturesOnly,"--semantic-model requires --browser-features-only and an already running local model");
 const nativeBoundaryMode = process.argv.find((value) => value.startsWith("--native-boundary="))?.split("=")[1];
 const virtualMouseOnly = process.argv.includes("--virtual-mouse-only") || nativeBoundaryMode !== undefined;
 const pageSaveInvestigation = process.argv.includes("--page-save-investigation");
-const focusedProbeOnly = debuggerElementOnly || domPointerOnly || virtualMouseOnly || pageSaveInvestigation;
+const focusedProbeOnly = debuggerElementOnly || domPointerOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly || adminActionsOnly;
 
 function payloadWithoutTrace(payload, expectedState) {
   assert.equal(payload.trace?.state, expectedState, JSON.stringify(payload));
@@ -83,9 +94,20 @@ for (let index = 0; index < largeResourceBytes.length; index += 1) {
 }
 
 await mkdir(profileDir, { recursive: true });
+if(browserFeaturesOnly){
+  const downloadDirectory=path.join(workspaceRoot,"out","test-artifacts","browser-features","downloads");
+  await mkdir(downloadDirectory,{recursive:true});await mkdir(path.join(profileDir,"Default"),{recursive:true});
+  await writeFile(path.join(profileDir,"Default","Preferences"),JSON.stringify({download:{default_directory:downloadDirectory,prompt_for_download:false,directory_upgrade:true}}));
+}
 const usabilityGates = { pending: null, defer: null, image: null };
 const elementCaptureHtml = await readFile(new URL("./lib/fixtures/element-capture.html", import.meta.url));
 const domPointerHtml = await readFile(new URL("./lib/fixtures/dom-pointer.html", import.meta.url));
+const recordingHtml = await readFile(new URL("./lib/fixtures/recording.html", import.meta.url));
+const recordingFrameHtml = await readFile(new URL("./lib/fixtures/recording-frame.html", import.meta.url));
+const browserFeaturesHtml = await readFile(new URL("./lib/fixtures/browser-features.html", import.meta.url));
+const searchFixtureHtml = await readFile(new URL("./lib/fixtures/search-fixture.html", import.meta.url));
+const frameCaptureHtml = await readFile(new URL("./lib/fixtures/frame-capture.html", import.meta.url));
+const semanticFixtureHtml = await readFile(new URL("./lib/fixtures/semantic-fixture.html", import.meta.url));
 const advancedFrameServer = http.createServer((request, response) => {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -102,6 +124,28 @@ const advancedFrameServer = http.createServer((request, response) => {
 const advancedFramePort = await listenServer(advancedFrameServer);
 const advancedFrameBaseUrl = `http://127.0.0.1:${advancedFramePort}/`;
 const testPageServer = http.createServer((request, response) => {
+  if(request.url==="/browser-features"){response.writeHead(200,{"content-type":"text/html; charset=utf-8"});response.end(browserFeaturesHtml);return;}
+  if(request.url==="/search-fixture"){response.writeHead(200,{"content-type":"text/html; charset=utf-8"});response.end(searchFixtureHtml);return;}
+  if(request.url?.startsWith("/frame-capture")){response.writeHead(200,{"content-type":"text/html; charset=utf-8"});response.end(frameCaptureHtml);return;}
+  if(request.url?.startsWith("/semantic-fixture?")){response.writeHead(200,{"content-type":"text/html; charset=utf-8"});response.end(semanticFixtureHtml);return;}
+  if(request.url==="/search-fixture-frame"){response.writeHead(200,{"content-type":"text/html; charset=utf-8"});response.end('<!doctype html><meta charset="utf-8"><p>跨域 frame 专属词</p>');return;}
+  if(request.url==="/features-upload"){
+    const chunks=[];request.on("data",chunk=>chunks.push(chunk));request.on("end",()=>{response.writeHead(200,{"content-type":"application/json"});response.end(JSON.stringify({base64:Buffer.concat(chunks).toString("base64")}));});return;
+  }
+  if(request.url==="/features-download"){response.writeHead(200,{"content-type":"application/octet-stream"});response.end(Buffer.from([0,1,2,3,200,255]));return;}
+  if(request.url==="/features-redirect"){response.writeHead(302,{location:"/features-download"});response.end();return;}
+  if(request.url==="/features-echo"){const chunks=[];request.on("data",chunk=>chunks.push(chunk));request.on("end",()=>{response.writeHead(200,{"content-type":"application/json"});response.end(JSON.stringify({method:request.method,body:Buffer.concat(chunks).toString('utf8')}));});return;}
+  if(request.url==="/features-slow"){
+    const size=8*1024*1024;let sent=0;response.writeHead(200,{"content-type":"application/octet-stream","content-length":size});
+    const timer=setInterval(()=>{const bytes=Buffer.alloc(Math.min(65536,size-sent),42);response.write(bytes);sent+=bytes.length;if(sent===size){clearInterval(timer);response.end();}},125);
+    response.on("close",()=>clearInterval(timer));return;
+  }
+  if (request.url === "/recording-frame" || request.url?.startsWith("/recording-frame?")) {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end(recordingFrameHtml); return;
+  }
+  if (request.url === "/recording" || request.url?.startsWith("/recording?")) {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end(recordingHtml); return;
+  }
   if (request.url === "/dom-pointer") {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end(domPointerHtml); return;
   }
@@ -200,7 +244,7 @@ const chromium = spawn(
     `--load-extension=${extensionDir}`,
     "--enable-extensions",
     "--enable-unsafe-extension-debugging",
-    ...(realInputAcceptance || virtualMouseOnly ? ["--window-size=1100,800", "--window-position=40,40"] : ["--headless=new"]),
+    ...(realInputAcceptance || virtualMouseOnly || nativeRecordingProbe || adminActionsOnly ? ["--window-size=1100,800", "--window-position=40,40"] : ["--headless=new"]),
     "--no-first-run",
     "--no-sandbox",
     "--no-default-browser-check",
@@ -437,7 +481,7 @@ try {
   assert.equal(coreTabStatus, "complete", "HTTP core probe did not finish loading");
 
   let pointerSequence = 0;
-  const domPointer = debuggerElementOnly || virtualMouseOnly || pageSaveInvestigation ? null : await runDomPointerProbe({
+  const domPointer = debuggerElementOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly ? null : await runDomPointerProbe({
     forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `pointer-${++pointerSequence}`, method, params),
     scopedForward: async (permissions) => {
       const scoped = await pageEvaluate(pageClient, async ({ permissions, mutationId }) => {
@@ -467,7 +511,7 @@ try {
     debugPort, browserClient, windowId: coreTab.windowId, ordinaryTabRef: coreTab.tabRef,
   });
   let captureSequence = 0;
-  const debuggerElement = domPointerOnly || virtualMouseOnly || pageSaveInvestigation ? null : await runDebuggerElementProbe({
+  const debuggerElement = domPointerOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly ? null : await runDebuggerElementProbe({
     forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `capture-${++captureSequence}`, method, params),
     scopedForward: async (permissions) => {
       const scoped = await pageEvaluate(pageClient, async ({ permissions, mutationId }) => {
@@ -482,6 +526,37 @@ try {
     baseUrl: testPageUrl, windowId: coreTab.windowId, workerClient,
   });
   if (focusedProbeOnly) {
+    if (adminActionsOnly) {
+      const result = await (await import('./lib/admin-actions-probe.mjs')).runAdminActionsProbe({
+        forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `admin-actions-${++pointerSequence}`, method, params),
+        browserClient, workerClient, keyId: createdKey.key.keyId, extensionId,
+        connectPage: async targetId => CdpClient.connect((await waitForTarget(debugPort, target => target.id === targetId)).webSocketDebuggerUrl),
+        baseUrl: testPageUrl, sampleRoot: path.join(workspaceRoot, 'out', 'test-artifacts', 'admin-actions'),
+      });
+      console.log(JSON.stringify({ adminActions: result }));
+    }
+    if(browserFeaturesOnly){
+      const result=await runBrowserFeaturesProbe({forward:(method,params)=>forwardCommand(nativeClient,targetInstance,createdKey.apiKey,`features-${++pointerSequence}`,method,params),
+        browserClient,workerClient,connectPage:async(targetId)=>CdpClient.connect((await waitForTarget(debugPort,(target)=>target.id===targetId)).webSocketDebuggerUrl),
+        baseUrl:testPageUrl,sampleRoot:path.join(workspaceRoot,"out","test-artifacts","browser-features"),semanticModel,frameMappingProbe});
+      console.log(JSON.stringify({browserFeatures:result}));
+    }
+    if (recordingOnly) {
+      if(nativeRecordingProbe){
+        const result=await (await import('./lib/recording-native-probe.mjs')).runNativeRecordingProbe({
+          forward:(method,params)=>forwardCommand(nativeClient,targetInstance,createdKey.apiKey,`native-recording-${++pointerSequence}`,method,params),
+          browserClient,workerClient,browserPid:chromium.pid,connectPage:async(targetId)=>CdpClient.connect((await waitForTarget(debugPort,(target)=>target.id===targetId)).webSocketDebuggerUrl),
+          baseUrl:testPageUrl,sampleRoot:path.join(workspaceRoot,'out','test-artifacts','native-recording'),
+        });
+        console.log(JSON.stringify({nativeRecording:result}));
+      }
+      const result=await runRecordingProbe({
+        forward:(method,params)=>forwardCommand(nativeClient,targetInstance,createdKey.apiKey,`recording-${++pointerSequence}`,method,params),
+        browserClient,workerClient,connectPage:async(targetId)=>CdpClient.connect((await waitForTarget(debugPort,(target)=>target.id===targetId)).webSocketDebuggerUrl),
+        baseUrl:testPageUrl,sampleRoot:path.join(workspaceRoot,"out","test-artifacts","recording"),
+      });
+      console.log(JSON.stringify({recording:result}));
+    }
     if (pageSaveInvestigation) {
       const result = await runPageSaveInvestigation({
         browserVersion: await browserClient.send("Browser.getVersion"),

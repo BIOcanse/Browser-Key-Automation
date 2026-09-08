@@ -57,6 +57,13 @@ node client/browser-key-cli.mjs call --method system.describe --schema-version 1
 | Texte / raccourcis / relâcher les touches | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | Souris / clavier virtuels | `virtualMouse.*` · `virtualKeyboard.*` |
 | Mesurer la cible native | `input.calibrate` |
+| Bibliothèque d’actions | `actions.create` · `actions.list/get` · `actions.run` |
+| Enregistrement DOM / Windows | `recording.start/pause/resume/stop` → `actions.compile` |
+| Envois, téléchargements et dialogues | `files.upload` · `downloads.*` · `dialogs.*` |
+| Réseau et diagnostic | `network.*` · `console.*` · `performance.*` |
+| Page entière / zone / élément | `page.screenshot.fullPage/region/element` |
+| Données du navigateur et recherche | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| Fenêtre et zone visible | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | Session CDP explicite | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+Enregistrez une suite de commandes ou compilez un enregistrement, vérifiez ses conditions, puis rejouez-la par identifiant d’action. L’enregistrement Windows conserve les changements de fenêtre et exclut les trajectoires de souris hors de la fenêtre cible. L’App enregistre les coordonnées relatives à la fenêtre et les deux boutons latéraux. Voir [Actions et enregistrement](dev/skills/browser-key-automation/references/actions-and-recording.md) pour les droits, la préparation et les limites.
+
 ## Keys et limites des entrées
 
 - Root reçoit toutes les permissions actives. Les Keys Regular proposent groupes dépliables, expiration, réaffichage, désactivation et révocation. JavaScript et entrées natives restent indépendants. Une Key ne remplace pas l’accord pour payer, publier ou supprimer.
+- Les commandes sont authentifiées une seule fois à leur soumission. Elles conservent ces permissions en file d’attente et pendant l’exécution ; l’expiration, la désactivation ou la révocation ultérieure de la Key ne concerne que les nouvelles soumissions. Leurs propres délais et les commandes explicites d’arrêt ou de libération restent applicables.
 - L’état virtuel appartient à la Key, traverse les onglets et exige l’occupation de toute la fenêtre cible. Les actions virtuelles ordinaires utilisent un `input.calibrate` valide ; `ensure.run` le vérifie et le renouvelle si nécessaire. L’entrée réelle exige le premier plan ; l’entrée virtuelle ne déplace pas le curseur physique.
 - Windows fournit les entrées natives. Linux fournit actuellement le routage navigateur et les fichiers, pas les entrées natives. Les fenêtres minimisées ne sont pas prises en charge. Le premier calibrage exige une page mesurable ; la réutilisation sous occultation est conditionnelle. Le premier calibrage multifenêtre et le glisser-déposer HTML5/OLE complet ont encore des cas non résolus.
 - Les images d’éléments utilisent le viewport visible et les masques de formes pris en charge. Chrome contrôle pages restreintes, accès aux sites et User Scripts ; `debugger.attach` conserve l’affichage de débogage. Les événements synthétiques et messages virtuels ne contournent pas toutes les restrictions.

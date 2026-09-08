@@ -82,13 +82,19 @@
       "minimumInteger": null,
       "maximumInteger": null,
       "contributesToSecurityTimeHorizon": false,
-      "allowedStrings": ["bk1.QktBLVBVQkxJQy1UUklBTA.QktBLXB1YmxpYy10cmlhbC1yb290LWtleS12MSEhISE"],
+      "allowedStrings": [
+        "bk1.QktBLVBVQkxJQy1UUklBTA.QktBLXB1YmxpYy10cmlhbC1yb290LWtleS12MSEhISE"
+      ],
       "owner": "build_profile",
       "updateClass": "rebuild",
       "editableInSettings": false,
       "status": "active",
-      "consumers": ["extension/src/shared/trial-key.ts"],
-      "emitTargets": ["typescript"],
+      "consumers": [
+        "extension/src/shared/trial-key.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
       "safetyContract": "Public trial-only Root credential, seeded once into an empty Key store on a fresh install. Ordinary Key lifecycle remains authoritative; updates and restarts never recreate it. Personal-browser users must replace and revoke it."
     },
     {
@@ -172,6 +178,328 @@
       "safetyContract": "Bounded explicit CLI read timeout."
     },
     {
+      "pointId": "command.actions.default_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 25,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.default_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 300000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/runner.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_binding_depth",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_bindings",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/compiler.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8388608,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 67108864,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/compiler.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_count",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/store.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_delay_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 3600000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/runner.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_json_nodes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/compiler.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_result_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 16777216,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/runner.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_steps",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/compiler.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_text_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 4096,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 65536,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/runner.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
+      "pointId": "command.actions.maximum_total_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 134217728,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1073741824,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/actions/store.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded action storage, compilation, result materialization and sequential execution. Never truncate execution content."
+    },
+    {
       "pointId": "command.artifact.read.maximum_raw_bytes",
       "family": "build",
       "kind": "integer",
@@ -218,6 +546,305 @@
         "typescript"
       ],
       "safetyContract": "Raw upload chunk size leaves room for base64url, Key and route envelopes; returned by begin, never guessed by callers."
+    },
+    {
+      "pointId": "command.browserData.maximum_history_results",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 10000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/browser-data-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.browserData.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/browser-data-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.browserData.maximum_text_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8192,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1048576,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/browser-data-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.cleanup_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_buffer_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8388608,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_captures",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_pending_releases",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_record_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1048576,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.maximum_records",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.operation_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.console.retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 900000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 86400000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/console-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
     },
     {
       "pointId": "command.debugger.default_event_limit",
@@ -362,6 +989,29 @@
       "safetyContract": "Per-connection event count and maximum requested page size."
     },
     {
+      "pointId": "command.debugger.maximum_frame_sessions",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/debugger-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
       "pointId": "command.debugger.maximum_params_bytes",
       "family": "build",
       "kind": "integer",
@@ -407,6 +1057,144 @@
         "typescript"
       ],
       "safetyContract": "Default selects a new or explicitly addressed demo tab, never requests OS foreground; false remains available."
+    },
+    {
+      "pointId": "command.dialogs.cleanup_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/dialogs-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.dialogs.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/dialogs-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.dialogs.maximum_text_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8192,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 65536,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/dialogs-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.dialogs.maximum_watches",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/dialogs-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.dialogs.operation_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/dialogs-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.dialogs.retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 900000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 86400000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/dialogs-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
     },
     {
       "pointId": "command.dom.click.real.default_scroll_into_view",
@@ -847,6 +1635,75 @@
       "safetyContract": "Default horizontal alignment."
     },
     {
+      "pointId": "command.downloads.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/downloads-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.downloads.maximum_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1800000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/downloads-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.ensure.default_correction_attempts",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded precondition corrections; more than one attempt requires every correction to declare safe repetition."
+    },
+    {
       "pointId": "command.ensure.default_scroll_into_view",
       "family": "build",
       "kind": "boolean",
@@ -964,6 +1821,52 @@
         "typescript"
       ],
       "safetyContract": "Bounds total structured condition work per request."
+    },
+    {
+      "pointId": "command.ensure.maximum_correction_attempts",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 3,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded precondition corrections; more than one attempt requires every correction to declare safe repetition."
+    },
+    {
+      "pointId": "command.ensure.maximum_corrections",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/ensure-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded precondition corrections; more than one attempt requires every correction to declare safe repetition."
     },
     {
       "pointId": "command.ensure.maximum_frame_candidates",
@@ -1198,6 +2101,52 @@
       "safetyContract": "Continuous truth window required by stable and ready conditions."
     },
     {
+      "pointId": "command.files.maximum_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8388608,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/files-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.files.maximum_count",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 16,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/files-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
       "pointId": "command.frames.list.maximum_items",
       "family": "build",
       "kind": "integer",
@@ -1249,6 +2198,351 @@
         "typescript"
       ],
       "safetyContract": "Leaves protocol-envelope headroom below the 65536-byte WebSocket message ceiling; every variable inline list stops before adding an item that would cross it."
+    },
+    {
+      "pointId": "command.intercept.cleanup_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_body_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 2097152,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 67108864,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_body_total_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 16777216,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_events",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_headers",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_match_steps",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 65536,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1048576,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_pending",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_request_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 30000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_rule_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 131072,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1048576,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_rules",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.maximum_sessions",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.operation_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.intercept.retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 900000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 86400000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-intercept-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
     },
     {
       "pointId": "command.js.maximum_source_bytes",
@@ -1643,6 +2937,305 @@
       "safetyContract": "Bounds one requested keys.list page before public Key records are projected and byte-budgeted."
     },
     {
+      "pointId": "command.network.body_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.cleanup_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_body_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 2097152,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 67108864,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_body_total_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 16777216,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_captures",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_event_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1048576,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_metadata_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8388608,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_pending_bodies",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 4,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 32,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.maximum_requests",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.operation_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.network.retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 900000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 86400000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/network-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
       "pointId": "command.page.dom.maximum_html_json_bytes",
       "family": "build",
       "kind": "integer",
@@ -1809,6 +3402,52 @@
       "safetyContract": "Default element PNG pixel width; contain fit and centered transparent padding."
     },
     {
+      "pointId": "command.page.screenshot.frame_cleanup_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/frame-mapping.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.frame_mapping_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 30000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 300000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/frame-mapping.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
       "pointId": "command.page.screenshot.maximum_dimension",
       "family": "build",
       "kind": "integer",
@@ -1833,6 +3472,98 @@
       "safetyContract": "Per-side output allocation bound, also checked against total pixels."
     },
     {
+      "pointId": "command.page.screenshot.maximum_error_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/scroll-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_frame_contexts",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/frame-mapping.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_frame_mappings",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/frame-mapping.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_frame_objects",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 512,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/frame-mapping.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
       "pointId": "command.page.screenshot.maximum_geometry_bytes",
       "family": "build",
       "kind": "integer",
@@ -1848,7 +3579,9 @@
       "editableInSettings": false,
       "status": "active",
       "consumers": [
-        "extension/src/background/capture/element-service.ts"
+        "extension/src/background/capture/element-service.ts",
+        "extension/src/background/capture/frame-geometry.ts",
+        "extension/src/background/capture/frame-mapping.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1871,7 +3604,10 @@
       "editableInSettings": false,
       "status": "active",
       "consumers": [
-        "extension/src/background/capture/element-service.ts"
+        "extension/src/background/capture/element-service.ts",
+        "extension/src/background/capture/frame-geometry.ts",
+        "extension/src/background/capture/frame-identity.ts",
+        "extension/src/background/capture/frame-mapping.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1894,7 +3630,10 @@
       "editableInSettings": false,
       "status": "active",
       "consumers": [
-        "extension/src/background/capture/element-service.ts"
+        "extension/src/background/capture/element-service.ts",
+        "extension/src/background/capture/frame-geometry.ts",
+        "extension/src/background/capture/frame-identity.ts",
+        "extension/src/background/capture/frame-mapping.ts"
       ],
       "emitTargets": [
         "typescript"
@@ -1924,6 +3663,98 @@
         "typescript"
       ],
       "safetyContract": "Source and destination raster pixel bound before allocating masks/output."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_scroll_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 30000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 300000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/scroll-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.maximum_scroll_tiles",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/scroll-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.scroll_settle_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 500,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 10000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/scroll-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.page.screenshot.settle_observation_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 250,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 2000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/capture/cdp-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
     },
     {
       "pointId": "command.page.text.maximum_json_bytes",
@@ -2206,6 +4037,581 @@
       "safetyContract": "Interval between sequential read-only observations; first observation is immediate."
     },
     {
+      "pointId": "command.performance.cleanup_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.maximum_buffer_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8388608,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.maximum_captures",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.maximum_record_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32768,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1048576,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.maximum_records",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 100000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.operation_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 60000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.performance.retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 900000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 86400000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/performance-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.recording.default_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.default_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 25,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.default_retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 604800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 7776000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.flush_interval_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 10000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/dom.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_batch_events",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/dom.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 16777216,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 134217728,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/store.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_count",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/store.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_documents",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 43200000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 43200000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_event_text_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8192,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 65536,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/dom.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_events",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 50000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/store.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_page_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_pending_events",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/dom.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_retention_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 7776000000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 7776000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_scan_nodes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/dom.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
+      "pointId": "command.recording.maximum_shadow_roots",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 256,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 4096,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/recording/dom.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Explicit bounded recording duration, retention, storage, document scope and event buffering. Overflow/disconnection is reported as an incomplete recording."
+    },
+    {
       "pointId": "command.resource.fetch.maximum_headers",
       "family": "build",
       "kind": "integer",
@@ -2250,6 +4656,563 @@
         "typescript"
       ],
       "safetyContract": "Bounds one explicit GET through response-body completion. Timeout aborts network reading, never retries the request or claims remote effects were rolled back."
+    },
+    {
+      "pointId": "command.search.maximum_duration_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 30000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 300000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/sources.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_frames_per_tab",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/sources.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_metadata_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8192,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 65536,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/sources.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_query_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/keyword-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_results",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/keyword-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_source_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 262144,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8388608,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/sources.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_tabs",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 32,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 256,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/keyword-service.ts",
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.maximum_total_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 4194304,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 33554432,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/sources.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.search.snippet_context_characters",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 120,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/keyword-service.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.build_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 120000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1800000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.chunk_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_batch_size",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 16,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts",
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_chunks",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 2048,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 16384,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_dimensions",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 4096,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 16384,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_index_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 33554432,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 268435456,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_indexes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 64,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_indexes_per_key",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 8,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 128,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_input_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 4096,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 32768,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts",
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_metadata_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts",
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_prefix_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 128,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1024,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_query_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 1024,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 8192,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_response_bytes",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 2097152,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 16777216,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.maximum_results",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 100,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 1000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
+    },
+    {
+      "pointId": "command.semantic.request_timeout_ms",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 30000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 300000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/search/semantic-model.ts",
+        "extension/src/background/search/semantic-index.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds explicit browser feature state, transfer, retention and time. Hitting a bound never silently replays or refetches an effect."
     },
     {
       "pointId": "command.tabs.list.maximum_items",
@@ -2621,6 +5584,31 @@
       "safetyContract": "Bound native request delivery."
     },
     {
+      "pointId": "command.virtualMouse.maximum_wait_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 60000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 0,
+      "maximumInteger": 120000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/virtual-input-service.ts",
+        "app/src/virtual_input.zig"
+      ],
+      "emitTargets": [
+        "typescript",
+        "zig"
+      ],
+      "safetyContract": "Explicit mouse wait meta-action bounded by the same request deadline. No keyboard permission or input state change."
+    },
+    {
       "pointId": "command.virtualMouse.retirement_poll_ms",
       "family": "build",
       "kind": "integer",
@@ -2643,6 +5631,29 @@
         "zig"
       ],
       "safetyContract": "Poll only pending Key-expiry resource retirements in the durable offscreen host; stop when empty."
+    },
+    {
+      "pointId": "command.windows.maximum_dimension",
+      "family": "command",
+      "kind": "integer",
+      "defaultInteger": 131072,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1,
+      "maximumInteger": 2147483647,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": [
+        "extension/src/background/command-dispatcher.ts"
+      ],
+      "emitTargets": [
+        "typescript"
+      ],
+      "safetyContract": "Bounds window positions and dimensions in Chrome logical pixels. Negative screen positions remain valid."
     },
     {
       "pointId": "runtime.artifact.default_maximum_bytes",
@@ -2765,6 +5776,44 @@
         "javascript"
       ],
       "safetyContract": "Bounds connection and application handshake until role.ready. Failure closes this socket and resumes the independently configured fixed reconnect interval; business requests are never replayed."
+    },
+    {
+      "pointId": "transport.local_route.maximum_duration_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 1800000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 1000,
+      "maximumInteger": 3600000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": ["app/src/route_table.zig", "extension/src/background/local-route-client.ts"],
+      "emitTargets": ["typescript", "zig"],
+      "safetyContract": "App monotonic maximum lifetime for a local command route in the existing table. Expiry rejects new input, caps admitted native duration and never resets input resources."
+    },
+    {
+      "pointId": "transport.local_route.response_timeout_ms",
+      "family": "build",
+      "kind": "integer",
+      "defaultInteger": 5000,
+      "defaultString": null,
+      "defaultLoopbackBind": null,
+      "minimumInteger": 100,
+      "maximumInteger": 30000,
+      "contributesToSecurityTimeHorizon": false,
+      "allowedStrings": [],
+      "owner": "build_profile",
+      "updateClass": "rebuild",
+      "editableInSettings": false,
+      "status": "active",
+      "consumers": ["extension/src/offscreen.ts"],
+      "emitTargets": ["typescript"],
+      "safetyContract": "Bounds observation of one local route open or close receipt. A timeout never resends the request or extends its App-owned lifetime."
     },
     {
       "pointId": "transport.native_input.response_margin_ms",

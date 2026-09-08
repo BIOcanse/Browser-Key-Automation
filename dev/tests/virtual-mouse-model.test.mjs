@@ -48,11 +48,14 @@ test("shortcut validation is closed and capacity counts every expanded meta-acti
   assert.equal(expand("scroll", { at: null, deltaX: null, deltaY: 0 }), null);
 });
 
-test("mouse meta-actions have no hidden move, waits or input backend selection", () => {
+test("mouse meta-actions have only explicit motion, waits and no backend selection", () => {
   const actions = [{ kind: "move", x: 4, y: 8 }, { kind: "button", button: "left", action: "down" },
     { kind: "move", x: 9, y: 12 }, { kind: "button", button: "left", action: "up" }, { kind: "wheel", deltaX: 0, deltaY: -120 }];
   assert.deepEqual(parseMouseActions(actions, 5), actions);
   assert.equal(parseMouseActions(actions, 4), null);
+  assert.deepEqual(parseMouseActions([{kind:'wait',waitMs:100}],1,100),[{kind:'wait',waitMs:100}]);
+  assert.equal(parseMouseActions([{kind:'wait',waitMs:101}],1,100),null);
+  assert.equal(parseMouseActions([{kind:'wait',waitMs:100,x:0}],1,100),null);
   for (const action of [{ kind: "click" }, { kind: "button", button: "left" },
     { kind: "button", button: "left", action: "press", x: 1 }, { kind: "move", x: NaN, y: 1 },
     { kind: "move", x: 1, y: 1, backend: "auto" }, { kind: "wait", ms: 1 }, { kind: "wheel", deltaY: 120 }]) {

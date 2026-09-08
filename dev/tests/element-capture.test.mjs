@@ -3,6 +3,8 @@ import test from "node:test";
 import { collectDocumentGeometry } from "../../out/extension/background/capture/document-geometry.js";
 import { alphaBounds, containRect, paintGeometryMask } from "../../out/extension/background/capture/mask-image.js";
 import { borderPath, clipPath, overflowPath, shapeLength } from "../../out/extension/background/capture/shape-path.js";
+import { combineFrameGeometry } from "../../out/extension/background/capture/frame-geometry.js";
+import { clearFrameDocumentProof, readFrameDocumentChain, readFrameDocumentProof, setFrameDocumentProof } from "../../out/extension/background/capture/frame-identity.js";
 
 class RecordedPath {
   operations = [];
@@ -60,6 +62,44 @@ test("contain sizing centers the largest uniform fit and alpha bounds ignore tra
   pixels[(1 * 4 + 2) * 4 + 3] = 1;
   pixels[(3 * 4 + 1) * 4 + 3] = 255;
   assert.deepEqual(alphaBounds(pixels, 4, 5), { x: 1, y: 1, width: 2, height: 3 });
+});
+
+test("frame geometry composes exact transforms and clips fixed descendants at every document boundary", () => {
+  const viewport={x:0,y:0,width:800,height:600};
+  const parent={viewport,contentViewport:viewport,rootIndex:0,boxes:[box({width:110,height:90,matrix:[2,0,0,2,100,50],border:[2,2,2,2],padding:[3,3,3,3]})]};
+  const child={viewport:{x:0,y:0,width:100,height:80},contentViewport:{x:0,y:0,width:85,height:80},rootIndex:0,boxes:[box({width:20,height:10,matrix:[1,0,0,1,7,9],overflowEscape:-1})]};
+  const combined=combineFrameGeometry(child,parent);
+  assert.deepEqual(combined.boxes[1].matrix,[2,0,0,2,124,78]);assert.equal(combined.rootIndex,1);
+  assert.equal(combined.boxes[0].visible,false);assert.equal(combined.boxes[1].overflowEscape,0);
+  assert.deepEqual(combined.frameClips.map(clip=>clip.rect),[{x:5,y:5,width:100,height:80},{x:0,y:0,width:85,height:80}]);
+  const outer={viewport,contentViewport:viewport,rootIndex:0,boxes:[box({width:800,height:600,matrix:[0,1,-1,0,700,20]})]};
+  const nested=combineFrameGeometry(combined,outer);assert.deepEqual(nested.boxes[2].matrix,[0,2,-2,0,622,144]);assert.equal(nested.frameClips.length,4);
+  assert.throws(()=>combineFrameGeometry({...child,viewport:{...child.viewport,width:105}},parent),error=>error.details.feature==='frame-viewport-scale');
+  const fractional=combineFrameGeometry({...child,viewport:{...child.viewport,width:100.4}},parent);
+  assert.deepEqual(fractional.boxes[1].matrix,combined.boxes[1].matrix,"fractional viewport rounding must not rescale the element");
+});
+
+test("frame document proofs stay in their private slot and cleanup cannot remove another capture", () => globals({__BKA_CAPTURE_DOCUMENT_PROOF_V1__:undefined},()=>{
+  assert.equal(setFrameDocumentProof('capture-a','nonce-a',1000),true);
+  assert.deepEqual(readFrameDocumentProof(),{proofId:'capture-a',nonce:'nonce-a'});
+  assert.equal(setFrameDocumentProof('capture-b','nonce-b',1000),false);
+  clearFrameDocumentProof('capture-b','nonce-b');assert.ok(readFrameDocumentProof());
+  clearFrameDocumentProof('capture-a','nonce-a');assert.equal(readFrameDocumentProof(),null);
+  setFrameDocumentProof('expired','old',-1);assert.equal(readFrameDocumentProof(),null);assert.equal(setFrameDocumentProof('capture-b','nonce-b',1000),true);
+}));
+
+test("frame document chains use exact browser identities through duplicate URLs and reject replacement/cycles",async()=>{
+  const previous=globalThis.chrome;
+  let frames=[{frameId:0,parentFrameId:-1,documentId:'top',url:'https://same.test'},
+    {frameId:2,parentFrameId:0,documentId:'selected',url:'https://same.test'},
+    {frameId:3,parentFrameId:0,documentId:'sibling',url:'https://same.test'}];
+  globalThis.chrome={webNavigation:{async getAllFrames(){return frames;}}};
+  const target={tabId:1,frameId:2,documentId:'selected'};
+  try{
+    assert.deepEqual(await readFrameDocumentChain(target),[{frameId:2,parentFrameId:0,documentId:'selected'},{frameId:0,parentFrameId:-1,documentId:'top'}]);
+    frames[1]={...frames[1],documentId:'replacement'};await assert.rejects(readFrameDocumentChain(target),error=>error.code==='TARGET_REF_STALE');
+    frames[1]={...frames[1],documentId:'selected',parentFrameId:2};await assert.rejects(readFrameDocumentChain(target),error=>error.code==='TARGET_REF_STALE');
+  }finally{globalThis.chrome=previous;}
 });
 
 test("CSS shape paths preserve fill rules and normalize outer radii before insetting", () => globals({ Path2D: RecordedPath }, () => {

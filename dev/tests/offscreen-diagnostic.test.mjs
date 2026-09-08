@@ -4,8 +4,10 @@ import vm from "node:vm";
 import test from "node:test";
 import { isVirtualInputResponse, virtualInputFailure } from "../../out/extension/shared/virtual-input-protocol.js";
 import { TRANSPORT_CONFIG } from "../../out/extension/generated/transport-config.js";
+import { isLocalRouteRequest, isLocalRouteResponse, localRouteFailure } from "../../out/extension/shared/local-route-protocol.js";
+import { isNativeRecordingResponse, nativeRecordingFailure } from "../../out/extension/shared/native-recording-protocol.js";
 
-test("offscreen forwards requests without caching content and retires expired virtual mice without waking the background", async () => {
+test("offscreen preserves accepted input and finishes explicit resource cleanup without waking the background", async () => {
   const messages = [];
   const outbound = [];
   const listeners = new Map();
@@ -16,7 +18,7 @@ test("offscreen forwards requests without caching content and retires expired vi
   const intervals = new Map();
   let now = 100;
   const context = vm.createContext({
-    isVirtualInputResponse, virtualInputFailure, TRANSPORT_CONFIG,
+    isVirtualInputResponse, virtualInputFailure, TRANSPORT_CONFIG, isLocalRouteRequest, isLocalRouteResponse, localRouteFailure, isNativeRecordingResponse, nativeRecordingFailure,
     Date: { now: () => now },
     crypto: { randomUUID: () => `retirement-${++timerId}` },
     setInterval(callback) { timerId += 1; intervals.set(timerId, callback); return timerId; },
@@ -44,7 +46,8 @@ test("offscreen forwards requests without caching content and retires expired vi
      const isNativeInputKeyboardResponse = (value) => value?.kind === "native.keyboard.result" &&
        typeof value.requestId === "string" && typeof value.ok === "boolean";\n`,
   ).replace(/^import .*virtual-input-protocol\.js";\s*/mu, "")
-   .replace(/^import .*transport-config\.js";\s*/mu, "").replace("export {};", "");
+   .replace(/^import .*native-recording-protocol\.js";\s*/mu, "")
+   .replace(/^import .*transport-config\.js";\s*/mu, "").replace(/^import .*local-route-protocol\.js";\s*/mu, "").replace("export {};", "");
   vm.runInContext(executable, context);
   const inbound = { kind: "transport.inbound", connectionGeneration: 7,
     payload: { kind: "route.request", apiKey: "synthetic-secret-must-not-be-cached", params: { body: "private page" } } };
@@ -103,11 +106,11 @@ test("offscreen forwards requests without caching content and retires expired vi
   }
   assert.equal(messages.length, beforeLateReplies, "late native replies cannot enter routing and disconnect the extension with StaleRoute");
 
-  const createMouse = (id, retireAt) => {
+  const createMouse = id => {
     const requestId = `vm.create.${id}`;
     assert.equal(runtimeListener(
       { channel: "browser-key-automation.native-input.v1", connectionGeneration: 7,
-        timeoutMs: 1000, retireAt, payload: { kind: "native.virtualInput", requestId,
+        timeoutMs: 1000, payload: { kind: "native.virtualInput", requestId,
           routeId: "3", timeoutMs: 1000, operation: { kind: "create" } } },
       { id: "extension-id" }, (value) => { nativeResponse = value; },
     ), true);
@@ -119,14 +122,15 @@ test("offscreen forwards requests without caching content and retires expired vi
   };
   const backgroundCount = messages.length;
   const lastTitle = context.document.title;
-  createMouse(1, 200);
-  createMouse(2, 300);
-  assert.equal(intervals.size, 1, "all object deadlines share one bounded timer");
-  const sentBeforeExpiry = outbound.length;
-  intervals.values().next().value();
-  assert.equal(outbound.length, sentBeforeExpiry, "live objects are not retired early");
-  now = 200;
-  intervals.values().next().value();
+  createMouse(1);
+  createMouse(2);
+  assert.equal(intervals.size, 0, "accepted input is not assigned a Key expiry cleanup timer");
+  const explicitCleanup = id => runtimeListener(
+    { channel: "browser-key-automation.native-input.v1", connectionGeneration: 7, timeoutMs: 1000,
+      payload: { kind: "native.virtualInput", requestId: `vm.cleanup.${id}`, timeoutMs: 1000, operation: { kind: "cleanup", inputId: String(id) } } },
+    { id: "extension-id" }, value => { nativeResponse = value; });
+  now = 200; explicitCleanup(1);
+  assert.equal(intervals.size, 1, "explicit cleanup owns one bounded retry timer");
   assert.deepEqual(JSON.parse(JSON.stringify(outbound.at(-1).payload.operation)), { kind: "cleanup", inputId: "1" });
   assert.equal(outbound.at(-1).connectionGeneration, 7);
   assert.equal(outbound.at(-1).payload.routeId, undefined, "resource retirement is not a new Key command");
@@ -136,8 +140,7 @@ test("offscreen forwards requests without caching content and retires expired vi
   } } });
   assert.equal(messages.length, backgroundCount, "housekeeping must not dispatch into a sleeping worker");
   assert.equal(context.document.title, lastTitle, "housekeeping must not overwrite the connection diagnostic");
-  now = 300;
-  intervals.values().next().value();
+  now = 300; explicitCleanup(2);
   assert.equal(outbound.at(-1).payload.operation.inputId, "2");
   const firstCleanup = outbound.at(-1).payload;
   listeners.get("message")({ data: { kind: "transport.inbound", connectionGeneration: 7, payload: {
@@ -152,7 +155,7 @@ test("offscreen forwards requests without caching content and retires expired vi
   intervals.values().next().value();
   assert.equal(intervals.size, 0, "only acknowledged cleanup stops polling");
 
-  createMouse(3, 400);
+  createMouse(3); explicitCleanup(3);
   listeners.get("message")({ data: { kind: "transport.disconnected", connectionGeneration: 7 } });
   assert.equal(intervals.size, 1, "disconnect is not proof of native cleanup");
   listeners.get("message")({ data: { kind: "transport.connected", connectionGeneration: 8, relayEpoch: "A".repeat(22), capabilities: [] } });

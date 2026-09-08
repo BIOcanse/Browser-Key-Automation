@@ -1,4 +1,5 @@
 import { COMMAND_CATALOG } from "../generated/command-config.js";
+import { isExternalCondition, type ExternalCondition } from "./ensure-external.js";
 import type { PermissionId } from "../shared/admin-protocol.js";
 import {
   isNodeRefShape,
@@ -16,6 +17,7 @@ export type EnsureCompletion = "derive_active" | "derive_focus" | "derive_select
 export type EnsureRepeat = "never" | "safe";
 
 export type EnsureCondition =
+  | ExternalCondition
   | { readonly kind: "all" | "any"; readonly conditions: readonly EnsureCondition[] }
   | { readonly kind: "not"; readonly condition: EnsureCondition }
   | { readonly kind: "present" | "visible" | "enabled" | "unobstructed" | "stable" | "ready" | "focused"; readonly target: DomTarget }
@@ -43,6 +45,8 @@ export interface EnsureAction {
 }
 
 export interface EnsureRequest {
+  readonly corrections?: readonly EnsureAction[];
+  readonly correctionAttempts?: number;
   readonly mode: EnsureMode;
   readonly timeoutMs: number;
   readonly scrollIntoView: boolean;
@@ -58,6 +62,7 @@ export interface EnsurePublicError {
 }
 
 export interface EnsureResult {
+  readonly corrections?: { readonly attempts: number; readonly completed: number; readonly effectMayHaveRun: boolean };
   readonly status: "satisfied" | "failed" | "unknown";
   readonly stage: "condition" | "prepare" | "effect" | "verify";
   readonly effectSent: boolean;
@@ -87,6 +92,7 @@ export interface EnsureTraceEvent {
 }
 
 export interface EnsureDependencies {
+  readonly observeExternal?: (condition: ExternalCondition) => Promise<boolean | null>;
   readonly authorize: (permission: PermissionId) => Promise<void>;
   readonly observeTarget: (target: DomTarget) => Promise<DomTargetObservation>;
   readonly observeLoaded: (tabRef: string, state: "committed" | "domcontentloaded" | "complete") => Promise<boolean>;
@@ -169,6 +175,19 @@ function safeInteger(value: unknown, minimum: number, maximum: number): value is
   return typeof value === "number" && Number.isSafeInteger(value) && value >= minimum && value <= maximum;
 }
 
+export function parseDomFramePath(value: unknown): readonly DomFrameLocator[] | null {
+  if (!Array.isArray(value) || value.length > COMMAND_CATALOG.limits["command.ensure.maximum_frame_depth"]) return null;
+  const framePath: DomFrameLocator[] = [];
+  for (const segment of value) {
+    if (!isRecord(segment) || !hasOnlyKeys(segment, ["urlPattern", "urlMatch", "match"]) ||
+        !boundedString(segment.urlPattern, COMMAND_CATALOG.limits["command.tabs.maximum_text_bytes"]) ||
+        !(segment.urlMatch === undefined || segment.urlMatch === "glob" || segment.urlMatch === "exact") ||
+        !(segment.match === undefined || segment.match === "unique" || segment.match === "first")) return null;
+    framePath.push({ urlPattern: segment.urlPattern, ...(segment.urlMatch === undefined ? {} : { urlMatch: segment.urlMatch }), match: segment.match ?? "unique" });
+  }
+  return framePath;
+}
+
 export function parseDomTarget(value: unknown): DomTarget | null {
   if (!isRecord(value) || typeof value.kind !== "string") return null;
   if (value.kind === "node") {
@@ -176,8 +195,8 @@ export function parseDomTarget(value: unknown): DomTarget | null {
       ? { kind: "node", nodeRef: value.nodeRef }
       : null;
   }
-  if (value.kind !== "locator" || !hasOnlyKeys(value, ["kind", "tabRef", "framePath", "selector", "role", "name", "nameMatch", "match"]) ||
-      !hasExactKeys(Object.fromEntries(Object.entries(value).filter(([key]) => key !== "framePath")), ["kind", "tabRef", "selector", "role", "name", "nameMatch", "match"]) ||
+  if (value.kind !== "locator" || !hasOnlyKeys(value, ["kind", "tabRef", "framePath", "shadowPath", "selector", "role", "name", "nameMatch", "match"]) ||
+      !hasExactKeys(Object.fromEntries(Object.entries(value).filter(([key]) => key !== "framePath" && key !== "shadowPath")), ["kind", "tabRef", "selector", "role", "name", "nameMatch", "match"]) ||
       !isTabRefShape(value.tabRef) ||
       !(value.selector === null || boundedString(value.selector, COMMAND_CATALOG.limits["command.dom.maximum_value_bytes"])) ||
       !(value.role === null || boundedString(value.role, COMMAND_CATALOG.limits["command.dom.maximum_value_bytes"])) ||
@@ -185,24 +204,15 @@ export function parseDomTarget(value: unknown): DomTarget | null {
       (value.selector === null && value.role === null && value.name === null) ||
       (value.nameMatch !== "exact" && value.nameMatch !== "contains") ||
       (value.match !== "unique" && value.match !== "first")) return null;
-  const framePath: DomFrameLocator[] = [];
-  if (value.framePath !== undefined) {
-    if (!Array.isArray(value.framePath) ||
-        value.framePath.length > COMMAND_CATALOG.limits["command.ensure.maximum_frame_depth"]) return null;
-    let index = 0;
-    while (index < value.framePath.length) {
-      const segment = value.framePath[index];
-      if (!isRecord(segment) || !hasOnlyKeys(segment, ["urlPattern", "match"]) ||
-          !boundedString(segment.urlPattern, COMMAND_CATALOG.limits["command.tabs.maximum_text_bytes"]) ||
-          !(segment.match === undefined || segment.match === "unique" || segment.match === "first")) return null;
-      framePath.push({ urlPattern: segment.urlPattern, match: segment.match ?? "unique" });
-      index += 1;
-    }
-  }
+  if (value.shadowPath !== undefined && (!Array.isArray(value.shadowPath) || value.shadowPath.length > COMMAND_CATALOG.limits["command.ensure.maximum_frame_depth"] ||
+    value.shadowPath.some((selector) => !boundedString(selector, COMMAND_CATALOG.limits["command.dom.maximum_value_bytes"])))) return null;
+  const framePath = parseDomFramePath(value.framePath === undefined ? [] : value.framePath);
+  if (framePath === null) return null;
   return {
     kind: "locator",
     tabRef: value.tabRef,
     framePath,
+    ...(value.shadowPath === undefined ? {} : { shadowPath: value.shadowPath as readonly string[] }),
     selector: value.selector,
     role: value.role,
     name: value.name,
@@ -225,7 +235,7 @@ function validStringArray(value: unknown): value is readonly string[] {
   return true;
 }
 
-export function isEnsureCondition(value: unknown): value is EnsureCondition {
+export function isEnsureCondition(value: unknown, allowExternal = false): value is EnsureCondition {
   const stack: { readonly value: unknown; readonly depth: number }[] = [{ value, depth: 1 }];
   const seen = new WeakSet<object>();
   let count = 0;
@@ -238,6 +248,7 @@ export function isEnsureCondition(value: unknown): value is EnsureCondition {
         item.depth > COMMAND_CATALOG.limits["command.ensure.maximum_condition_depth"] ||
         typeof item.value.kind !== "string") return false;
     const node = item.value as Record<string, unknown> & { readonly kind: string };
+    if (allowExternal && isExternalCondition(node)) continue;
     if (node.kind === "all" || node.kind === "any") {
       if (!hasExactKeys(node, ["kind", "conditions"]) || !Array.isArray(node.conditions) || node.conditions.length === 0) return false;
       let index = node.conditions.length;
@@ -299,21 +310,36 @@ export function isEnsureCondition(value: unknown): value is EnsureCondition {
 export function parseEnsureParameters(
   value: unknown,
   parseAction: (value: unknown) => EnsureAction | null,
+  parseCorrection?: (value: unknown) => EnsureAction | null,
 ): EnsureRequest | null {
+  const version2 = parseCorrection !== undefined;
   if (!isRecord(value) || !hasExactKeys(value, [
     "action", "goal", "mode", "precondition", "scrollIntoView", "searchByScrolling", "timeoutMs",
+    ...(version2 ? ["corrections", "correctionAttempts"] : []),
   ]) || (value.mode !== "ensure" && value.mode !== "strict") ||
       typeof value.scrollIntoView !== "boolean" || typeof value.searchByScrolling !== "boolean" ||
       !safeInteger(value.timeoutMs, 1, COMMAND_CATALOG.limits["command.ensure.maximum_timeout_ms"]) ||
-      !(value.precondition === null || isEnsureCondition(value.precondition)) ||
-      !(value.goal === null || isEnsureCondition(value.goal))) return null;
+      !(value.precondition === null || isEnsureCondition(value.precondition, version2)) ||
+      !(value.goal === null || isEnsureCondition(value.goal, version2))) return null;
+  const corrections: EnsureAction[] = [];
+  if (version2) {
+    if (!Array.isArray(value.corrections) || value.corrections.length > COMMAND_CATALOG.limits["command.ensure.maximum_corrections"] ||
+      !safeInteger(value.correctionAttempts, 1, COMMAND_CATALOG.limits["command.ensure.maximum_correction_attempts"])) return null;
+    for (const candidate of value.corrections) {
+      const correction = parseCorrection(candidate);
+      if (correction === null || (value.correctionAttempts as number) > 1 && correction.policy.repeat !== "safe") return null;
+      corrections.push(correction);
+    }
+    if (corrections.length > 0 && (value.precondition === null || value.mode === "strict")) return null;
+  }
+  const additions = version2 ? { corrections, correctionAttempts: value.correctionAttempts as number } : {};
   const action = parseAction(value.action);
   if (action === null) return null;
   if (value.mode === "strict") {
     if (value.precondition === null || value.goal !== null) return null;
     return {
       mode: "strict", timeoutMs: value.timeoutMs, scrollIntoView: value.scrollIntoView,
-      searchByScrolling: value.searchByScrolling, precondition: value.precondition, goal: null, action,
+      searchByScrolling: value.searchByScrolling, precondition: value.precondition, goal: null, action, ...additions,
     };
   }
   const goal = value.goal ?? action.derivedGoal;
@@ -321,7 +347,7 @@ export function parseEnsureParameters(
       action.policy.completion.startsWith("derive_") && goal === null) return null;
   return {
     mode: "ensure", timeoutMs: value.timeoutMs, scrollIntoView: value.scrollIntoView,
-    searchByScrolling: value.searchByScrolling, precondition: value.precondition, goal, action,
+    searchByScrolling: value.searchByScrolling, precondition: value.precondition, goal, action, ...additions,
   };
 }
 
@@ -383,6 +409,11 @@ async function evaluateLeaf(
     throw new Error("Composite condition reached the leaf evaluator");
   }
   counts.observations += 1;
+  if (isExternalCondition(condition)) {
+    const satisfied = await dependencies.observeExternal?.(condition);
+    if (satisfied === null || satisfied === undefined) throw new EnsureWorkflowError("DOM_OPERATION_FAILED", "The external condition cannot be observed", { observation: "unknown", conditionKind: condition.kind });
+    return { satisfied, kind: condition.kind, matchedNodeRef: null, preparation: null };
+  }
   if (["present", "visible", "enabled", "unobstructed", "stable", "ready", "focused", "value_is", "selected_values_are", "text_contains"].includes(condition.kind)) {
     const targetCondition = condition as Extract<EnsureCondition, { readonly target: DomTarget }>;
     await dependencies.authorize("page.wait");
@@ -547,6 +578,7 @@ export async function runEnsure(request: EnsureRequest, dependencies: EnsureDepe
   let effectAttempts = 0;
   let actionResult: unknown = null;
   let currentStage: EnsureResult["stage"] = "condition";
+  const correctionProgress = { attempts: 0, completed: 0, effectMayHaveRun: false };
   const actionOwnsTargetScroll = request.action.method === "dom.scroll" ||
     request.action.method === "dom.click.real" && request.action.params.scrollIntoView === true;
   const emit = (event: EnsureTraceEvent): void => {
@@ -576,6 +608,7 @@ export async function runEnsure(request: EnsureRequest, dependencies: EnsureDepe
       matchedNodeRef,
       observedCondition: lastObservation === null ? null : { kind: lastObservation.kind, satisfied: lastObservation.satisfied },
       preparations: { ...counts },
+      ...(request.corrections === undefined ? {} : { corrections: { ...correctionProgress } }),
       actionResult,
       error,
     };
@@ -699,7 +732,7 @@ export async function runEnsure(request: EnsureRequest, dependencies: EnsureDepe
       return finish("satisfied", "effect");
     }
 
-    if (request.goal !== null) {
+    if (request.goal !== null && request.corrections === undefined) {
       currentStage = "condition";
       const initial = await observe(request.goal, "condition");
       if (initial === expired) return finish("failed", "condition");
@@ -712,6 +745,35 @@ export async function runEnsure(request: EnsureRequest, dependencies: EnsureDepe
       if (condition === expired) return finish("failed", "condition");
       if (condition.satisfied) break;
       currentStage = "prepare";
+      if (request.corrections !== undefined && request.corrections.length > 0) {
+        if (correctionProgress.attempts >= (request.correctionAttempts ?? 1)) return finish("failed", "condition", { code: "CONDITION_NOT_MET" });
+        correctionProgress.attempts += 1;
+        for (const correction of request.corrections) {
+          let targetRef: string | null = null;
+          if (correction.target !== null) {
+            if (await within(dependencies.authorize(correction.target.kind === "node" ? "dom.describe" : "dom.query")) === expired) return finish("failed", "prepare");
+            const target = await within(dependencies.observeTarget(correction.target));
+            if (target === expired) return finish("failed", "prepare");
+            if (target.nodeRef === null) return finish("failed", "prepare", { code: "DOM_OPERATION_FAILED", details: { reason: "CORRECTION_TARGET_ABSENT" } });
+            targetRef = target.nodeRef;
+          }
+          if (await within(dependencies.authorize(correction.requiredPermission)) === expired) return finish("failed", "prepare");
+          const budget = Math.floor(started + request.timeoutMs - dependencies.now());
+          if (ended || budget <= 0) return finish("failed", "prepare");
+          correctionProgress.effectMayHaveRun = true;
+          emit({ phase: "prepare", operation: "effect_entered", status: "started", nodeRef: targetRef, conditionKind: null, attempt: correctionProgress.attempts });
+          await dependencies.checkpointEffect();
+          let corrected: unknown | typeof expired;
+          try { corrected = await within(dependencies.executeAction(correction, targetRef, budget)); }
+          catch (error) { return finish("unknown", "prepare", dependencies.normalizeError(error)); }
+          if (corrected === expired) return finish("unknown", "prepare");
+          if (isRecord(corrected) && ["failed", "unknown", "interrupted", "rejected", "timed_out"].includes(corrected.status as string)) return finish("unknown", "prepare", { code: "DOM_OPERATION_FAILED", details: { reason: "CORRECTION_NOT_CONFIRMED" } });
+          correctionProgress.completed += 1;
+          emit({ phase: "prepare", operation: "effect_returned", status: "succeeded", nodeRef: targetRef, conditionKind: null, attempt: correctionProgress.attempts });
+        }
+        // Re-observe before the main action. Only explicitly repeatable corrections may form another attempt.
+        continue;
+      }
       if (await prepare(condition.preparation) === "deadline") return finish("failed", "prepare");
       if (!await pause()) return finish("failed", "condition");
     }
@@ -811,7 +873,7 @@ export async function runEnsure(request: EnsureRequest, dependencies: EnsureDepe
         conditionKind: observedConditionKind(lastObservation), attempt: effectAttempts });
       throw error;
     }
-    return finish(effectSent ? "unknown" : "failed", currentStage, dependencies.normalizeError(error));
+    return finish(effectSent || error instanceof EnsureWorkflowError && error.details?.observation === "unknown" ? "unknown" : "failed", currentStage, dependencies.normalizeError(error));
   } finally {
     ended = true;
     if (deadlineHandle !== undefined) dependencies.clearTimer(deadlineHandle);

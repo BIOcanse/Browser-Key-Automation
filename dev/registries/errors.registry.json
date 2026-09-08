@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "errors": [
     {
+      "errorId": "ACTION_OPERATION_FAILED",
+      "code": 1032,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Correct the reported input or state; never blindly repeat an effect.",
+      "effectEvidence": "Unknown",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "Action storage, compilation, binding, revision or execution preparation failed. The reason and optional step identify the failure."
+    },
+    {
       "errorId": "ADMIN_MUTATION_CONFLICT",
       "code": 1015,
       "status": "active",
@@ -39,6 +51,18 @@
       "effectEvidence": "KnownNoEffect",
       "secretRedaction": "all_diagnostics_only",
       "description": "The upload transition fails chunk, offset, length, completeness or integrity checks."
+    },
+    {
+      "errorId": "BROWSER_OPERATION_FAILED",
+      "code": 1034,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Correct the reported state; do not replay an operation that may have run.",
+      "effectEvidence": "Unknown",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A browser feature operation failed. Details carry a bounded reason and commandMayHaveRun."
     },
     {
       "errorId": "CAPABILITY_UNAVAILABLE",
@@ -268,6 +292,18 @@
       "description": "Native pointer or keyboard input could not be safely addressed or fully confirmed; command-specific details state the phase and delivery evidence."
     },
     {
+      "errorId": "RECORDING_OPERATION_FAILED",
+      "code": 1033,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Correct the reported input or state; never blindly repeat an effect.",
+      "effectEvidence": "Unknown",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "Recording source, scope, lifecycle, event sequence, transport or storage failed. Raw gaps are not silently compiled as continuous actions."
+    },
+    {
       "errorId": "RESULT_WITHHELD",
       "code": 1010,
       "status": "retired",
@@ -393,6 +429,18 @@
       "effectEvidence": "KnownNoEffect",
       "secretRedaction": "all_values",
       "description": "The supplied credential is malformed, unknown, revoked, unsupported, or has the wrong secret."
+    },
+    {
+      "errorId": "WINDOW_OPERATION_FAILED",
+      "code": 1031,
+      "status": "active",
+      "producerSurfaces": [
+        "extension"
+      ],
+      "retryCondition": "Correct the reported input or state; never blindly repeat an effect.",
+      "effectEvidence": "Unknown",
+      "secretRedaction": "all_diagnostics_only",
+      "description": "A window, viewport or zoom query/update failed. State changes are never silently restored or repeated."
     }
   ]
 }

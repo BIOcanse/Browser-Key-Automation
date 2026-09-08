@@ -57,6 +57,13 @@ node client/browser-key-cli.mjs call --method system.describe --schema-version 1
 | テキスト・ショートカット・キー解放 | `keyboard.type` · `keyboard.typeHuman` · `keyboard.press` · `keyboard.reset` |
 | 仮想マウス・キーボード | `virtualMouse.*` · `virtualKeyboard.*` |
 | 入力先の計測 | `input.calibrate` |
+| アクション庫 | `actions.create` · `actions.list/get` · `actions.run` |
+| DOM / Windows 記録 | `recording.start/pause/resume/stop` → `actions.compile` |
+| アップロード・ダウンロード・ダイアログ | `files.upload` · `downloads.*` · `dialogs.*` |
+| ネットワークと診断 | `network.*` · `console.*` · `performance.*` |
+| 全ページ / 領域 / 要素の画像 | `page.screenshot.fullPage/region/element` |
+| ブラウザーデータと検索 | `search.tabs` · `semantic.search` · `bookmarks.*` · `history.*` |
+| ウィンドウと表示領域 | `windows.*` · `page.viewport.get` · `page.zoom.set` |
 | 明示的な CDP 接続 | `debugger.attach` → `debugger.send` → `debugger.events.get` → `debugger.detach` |
 
 ```text
@@ -65,9 +72,12 @@ node client/browser-key-cli.mjs element-shot --node-ref <NodeRef> --width 800 --
 node client/browser-key-cli.mjs demo-open ./demo.html
 ```
 
+操作列を直接保存するか、記録をコンパイルし、条件を確認してアクション ID で再生できます。Windows の記録はウィンドウの変更を保持し、対象ウィンドウ外のマウス軌跡を除外します。App はウィンドウ内の相対座標と両方のサイドボタンを記録します。権限、準備と再生範囲は[アクションと記録](dev/skills/browser-key-automation/references/actions-and-recording.md)を参照してください。
+
 ## Key と入力の制約
 
 - Root は全有効権限を持ちます。Regular Key は展開可能な権限グループ、有効期限、再表示、無効化、失効に対応。JavaScript と実入力の権限は独立です。Key は支払い・投稿・削除の利用者同意を代替しません。
+- 認証はコマンドの送信時に一度だけ行います。受理後は待機中も実行中も送信時の権限を使い、Key の期限切れ・無効化・失効は新たな送信だけに影響します。各処理の実行期限と明示的な停止・解放操作は引き続き有効です。
 - 仮想入力状態は Key に属し、タブ間で保持されます。対象ウィンドウ全体の占有が必要です。通常の仮想入力には有効な `input.calibrate` が必要で、`ensure.run` は必要時に再計測します。実入力は前面ウィンドウを要求し、仮想入力は物理カーソルを動かしません。
 - Windows はネイティブ入力に対応。Linux は現在、ブラウザーへの中継とファイル処理のみです。最小化は非対応。初回計測には計測可能なページが必要で、遮蔽時の再利用は条件付きです。複数ウィンドウの初回計測と完全な HTML5/OLE ドロップには未解決例があります。
 - 要素画像は可視領域と対応形状のマスクを使い、隠れた画素を復元しません。制限ページ・サイト権限・ユーザースクリプトは Chrome が管理。`debugger.attach` の警告も残ります。合成イベントや仮想メッセージは万能な制限回避ではありません。

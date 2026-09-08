@@ -75,6 +75,32 @@ test("debugger is explicit, independently dispatch-gated, bounded and honest abo
     const bounded = await service.getDebuggerEvents(tabRef, 0, 1);
     assert.equal(bounded.items[0].params.index, 1); assert.ok(bounded.droppedThroughSequence > dropped.nextSequence);
 
+    const announce=(sessionId,parentSessionId=null,type="iframe")=>onEvent.fire({tabId:1,...(parentSessionId===null?{}:{sessionId:parentSessionId})},"Target.attachedToTarget",{sessionId,targetInfo:{type,targetId:`target-${sessionId}`}});
+    const beforeTracking=calls.length;
+    announce("parent");announce("grandchild","parent");announce("sibling");announce("worker",null,"worker");
+    assert.deepEqual((await service.getDebuggerFrameSessions(tabRef)).map(item=>item.sessionId),["grandchild","parent","sibling"]);
+    onEvent.fire({tabId:1},"oversized",{data:"x".repeat(COMMAND_CATALOG.limits["command.debugger.maximum_event_bytes"])});
+    assert.equal((await service.getDebuggerFrameSessions(tabRef)).length,3,"lossy diagnostic eviction cannot erase live session identity");
+    onEvent.fire({tabId:1},"Target.detachedFromTarget",{sessionId:"parent"});
+    assert.deepEqual((await service.getDebuggerFrameSessions(tabRef)).map(item=>item.sessionId),["sibling"]);
+    assert.equal(calls.length,beforeTracking,"session discovery never attaches or enables targets");
+    sendHook = async () => ({});
+    announce('raw-parent'); announce('raw-child','raw-parent');
+    await service.sendDebuggerProtocol({tabRef,method:'Runtime.enable',sessionId:'raw-child',params:{}},dispatch);
+    onEvent.fire({tabId:1},'Target.detachedFromTarget',{sessionId:'raw-parent'});
+    const afterChildDetach=await service.leaseDebuggerDomains(tabRef,['Runtime'],dispatch,()=>{});afterChildDetach.release();
+    announce('late-child');let finishEnable,enteredEnable;
+    const enableEntered=new Promise(resolve=>{enteredEnable=resolve;});
+    sendHook=async()=>{enteredEnable();return new Promise(resolve=>{finishEnable=resolve;});};
+    const lateEnable=service.sendDebuggerProtocol({tabRef,method:'Runtime.enable',sessionId:'late-child',params:{}},dispatch);
+    await enableEntered;onEvent.fire({tabId:1},'Target.detachedFromTarget',{sessionId:'late-child'});finishEnable({});await lateEnable;
+    const afterLateEnable=await service.leaseDebuggerDomains(tabRef,['Runtime'],dispatch,()=>{});afterLateEnable.release();
+    sendHook=async()=>({value:42});
+    const maximumSessions=COMMAND_CATALOG.limits["command.debugger.maximum_frame_sessions"];
+    COMMAND_CATALOG.limits["command.debugger.maximum_frame_sessions"]=1;
+    try{announce("over-limit");await assert.rejects(service.getDebuggerFrameSessions(tabRef),error=>error.details.reason==="SESSION_TRACKING_INCOMPLETE");}
+    finally{COMMAND_CATALOG.limits["command.debugger.maximum_frame_sessions"]=maximumSessions;}
+
     const bigResult = { body: "x".repeat(COMMAND_CATALOG.limits["command.inline.maximum_result_json_bytes"]) };
     sendHook = async () => bigResult;
     const beforeLarge = calls.length;
@@ -93,6 +119,7 @@ test("debugger is explicit, independently dispatch-gated, bounded and honest abo
     const disconnected = await service.getDebuggerEvents(tabRef, 0, 1);
     assert.equal(disconnected.attached, false); assert.equal(disconnected.detachedReason, "replaced_with_devtools");
     await service.attachDebugger(tabRef, dispatch);
+    assert.deepEqual(await service.getDebuggerFrameSessions(tabRef),[],"explicit reattachment restores a complete empty session inventory");
     onEvent.fire({ tabId: 1 }, "after-reattach", {});
     const reattached = await service.getDebuggerEvents(tabRef, bounded.nextSequence, 100);
     assert.ok(reattached.items[0].sequence > bounded.nextSequence, "reattachment does not reuse earlier cursors");

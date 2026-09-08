@@ -60,6 +60,7 @@ export interface DomLocatorTarget {
   readonly kind: "locator";
   readonly tabRef: string;
   readonly framePath: readonly DomFrameLocator[];
+  readonly shadowPath?: readonly string[];
   readonly selector: string | null;
   readonly role: string | null;
   readonly name: string | null;
@@ -69,6 +70,7 @@ export interface DomLocatorTarget {
 
 export interface DomFrameLocator {
   readonly urlPattern: string;
+  readonly urlMatch?: "glob" | "exact";
   readonly match: "unique" | "first";
 }
 
@@ -136,9 +138,13 @@ export interface KeyboardWindowMarker {
   readonly originalTitle: string;
 }
 
-type DomAction = "click" | "describe" | "focus" | "insertText" | "scroll" | "select" | "setValue";
+type DomAction = "click" | "describe" | "focus" | "insertText" | "scroll" | "scrollTo" | "select" | "setValue" | "edit";
+export interface DomEditOptions { readonly events: "input_change" | "input" | "change" | "none"; readonly inputType: string; readonly data: string | null }
 
 interface DomActionPayload {
+  readonly edit?: DomEditOptions;
+  readonly left?: number;
+  readonly top?: number;
   readonly text?: string;
   readonly value?: string;
   readonly values?: readonly string[];
@@ -474,7 +480,7 @@ function queryDocument(
 
 function observeTargetDocument(
   nodeRef: string | null,
-  locator: Pick<DomLocatorTarget, "selector" | "role" | "name" | "nameMatch" | "match"> | null,
+  locator: Pick<DomLocatorTarget, "selector" | "role" | "name" | "nameMatch" | "match" | "shadowPath"> | null,
   maximumScanNodes: number,
   maximumRegistryEntries: number,
   ttlMs: number,
@@ -496,13 +502,14 @@ function observeTargetDocument(
     readonly labels?: Iterable<ElementLike>;
     readonly options?: Iterable<{ readonly value: string; readonly selected: boolean }>;
     readonly value?: unknown;
-    readonly shadowRoot?: { elementFromPoint(x: number, y: number): ElementLike | null } | null;
+    readonly shadowRoot?: ShadowLike | null;
     getAttribute(name: string): string | null;
     getBoundingClientRect(): RectLike;
     getClientRects(): Iterable<RectLike> & { readonly length: number };
     matches(selector: string): boolean;
     contains(node: object | null): boolean;
   };
+  type ShadowLike = { readonly activeElement?: ElementLike | null; elementFromPoint(x: number, y: number): ElementLike | null };
   type TextNodeLike = { readonly nodeValue: string | null };
   interface RegistryEntry { readonly element: ElementLike; readonly expiresAt: number }
   interface Registry { readonly nodes: Map<string, RegistryEntry>; readonly reverse: WeakMap<object, string> }
@@ -514,7 +521,7 @@ function observeTargetDocument(
     readonly document: {
       readonly documentElement?: ElementLike | null;
       readonly activeElement?: ElementLike | null;
-      createTreeWalker(root: ElementLike, whatToShow: number): { nextNode(): ElementLike | TextNodeLike | null };
+      createTreeWalker(root: ElementLike | ShadowLike, whatToShow: number): { nextNode(): ElementLike | TextNodeLike | null };
       elementFromPoint(x: number, y: number): ElementLike | null;
       getElementById(id: string): ElementLike | null;
     };
@@ -624,9 +631,27 @@ function observeTargetDocument(
       try { root.matches(requestedSelector); }
       catch { return failure("selector", "The locator CSS selector is invalid"); }
     }
-    const walker = page.document.createTreeWalker(root, page.NodeFilter.SHOW_ELEMENT);
-    let current: ElementLike | null = root;
     let scanned = 0;
+    let scope: ElementLike | ShadowLike = root;
+    let scopeIsElement = true;
+    for (const selector of locator.shadowPath ?? []) {
+      try { root.matches(selector); } catch { return failure("selector", "A shadow host selector is invalid"); }
+      const hosts = page.document.createTreeWalker(scope, page.NodeFilter.SHOW_ELEMENT);
+      let candidate: ElementLike | null = scopeIsElement ? scope as ElementLike : hosts.nextNode() as ElementLike | null;
+      let host: ElementLike | null = null;
+      while (candidate !== null) {
+        if (++scanned > maximumScanNodes) return failure("scan_limit", "The shadow locator scan bound was reached");
+        if (candidate.matches(selector)) {
+          if (host !== null) return failure("ambiguous", "A shadow host selector matched multiple elements");
+          host = candidate;
+        }
+        candidate = hosts.nextNode() as ElementLike | null;
+      }
+      if (host?.shadowRoot === null || host?.shadowRoot === undefined) return absent();
+      scope = host.shadowRoot; scopeIsElement = false;
+    }
+    const walker = page.document.createTreeWalker(scope, page.NodeFilter.SHOW_ELEMENT);
+    let current: ElementLike | null = scopeIsElement ? scope as ElementLike : walker.nextNode() as ElementLike | null;
     while (current !== null) {
       scanned += 1;
       if (scanned > maximumScanNodes) return failure("scan_limit", "The locator scan bound was reached");
@@ -719,13 +744,15 @@ function observeTargetDocument(
   }
   const text = textPreview(matchedElement);
   if (textScanExhausted) return failure("scan_limit", "The matched target text scan bound was reached");
+  let focusedElement = page.document.activeElement;
+  for (let depth = 0; depth < 32 && focusedElement?.shadowRoot?.activeElement !== undefined && focusedElement.shadowRoot.activeElement !== null; depth += 1) focusedElement = focusedElement.shadowRoot.activeElement;
   return {
     status: "matched",
     nodeRef: resolvedNodeRef,
     visible,
     enabled,
     unobstructed,
-    focused: page.document.activeElement === matchedElement,
+    focused: focusedElement === matchedElement,
     text: text.length === 0 ? null : text,
     value: typeof matchedElement.value === "string" ? matchedElement.value.slice(0, maximumTextCharacters) : null,
     selectedValues,
@@ -853,7 +880,7 @@ function runNodeAction(
   payload: DomActionPayload,
   maximumTextCharacters: number,
 ):
-  | { readonly ok: true; readonly descriptor: DomDescriptor }
+  | { readonly ok: true; readonly descriptor: DomDescriptor; readonly scroll?: { readonly left: number; readonly top: number } }
   | { readonly ok: false; readonly reason: "action" | "stale" } {
   type EventTargetLike = { dispatchEvent(event: Event): boolean };
   type RangeLike = {
@@ -884,6 +911,8 @@ function runNodeAction(
     checked?: unknown;
     disabled?: unknown;
     selected?: unknown;
+    scrollLeft?: number;
+    scrollTop?: number;
     readonly options?: Iterable<{ value: string; selected: boolean }>;
     contains(node: unknown): boolean;
     click?: () => void;
@@ -899,7 +928,7 @@ function runNodeAction(
   const page = globalThis as unknown as {
     readonly performance: { now(): number };
     readonly Event: new (type: string, init?: { bubbles?: boolean }) => Event;
-    readonly InputEvent: new (type: string, init?: { bubbles?: boolean; cancelable?: boolean; composed?: boolean; inputType?: string; data?: string }) => Event;
+    readonly InputEvent: new (type: string, init?: { bubbles?: boolean; cancelable?: boolean; composed?: boolean; inputType?: string; data?: string | null }) => Event;
     readonly document: {
       activeElement: ElementLike | null;
       createRange(): RangeLike;
@@ -921,6 +950,18 @@ function runNodeAction(
     if (action === "click") {
       if (element.click === undefined || element.matches(":disabled")) return { ok: false, reason: "action" };
       element.click();
+    } else if (action === "edit") {
+      if (typeof payload.value !== "string" || payload.edit === undefined || element.matches(":disabled") || element.getAttribute("readonly") !== null) return { ok: false, reason: "action" };
+      if ("value" in element) element.value = payload.value;
+      else if (element.isContentEditable === true) element.textContent = payload.value;
+      else return { ok: false, reason: "action" };
+      if (payload.edit.events === "input" || payload.edit.events === "input_change") element.dispatchEvent(new page.InputEvent("input", {
+        bubbles: true, composed: true, inputType: payload.edit.inputType, data: payload.edit.data,
+      }));
+      if (payload.edit.events === "change" || payload.edit.events === "input_change") element.dispatchEvent(new page.Event("change", { bubbles: true }));
+    } else if (action === "scrollTo") {
+      if (typeof element.scrollLeft !== "number" || typeof element.scrollTop !== "number" || typeof payload.left !== "number" || typeof payload.top !== "number") return { ok: false, reason: "action" };
+      element.scrollLeft = payload.left; element.scrollTop = payload.top;
     } else if (action === "setValue") {
       if (typeof payload.value !== "string") return { ok: false, reason: "action" };
       if ("value" in element) {
@@ -1009,6 +1050,7 @@ function runNodeAction(
   const labelled = element.getAttribute("aria-label") ?? element.getAttribute("title") ?? text;
   return {
     ok: true,
+    ...(action === "scrollTo" ? { scroll: { left: element.scrollLeft!, top: element.scrollTop! } } : {}),
     descriptor: {
       tagName: element.tagName.toLowerCase().slice(0, maximumTextCharacters),
       id: element.id.length === 0 ? null : element.id.slice(0, maximumTextCharacters),
@@ -1395,7 +1437,7 @@ export function resolveLocatorFrameSnapshot(
     const segment = framePath[pathIndex];
     if (segment === undefined) return null;
     const matches = frames
-      .filter((frame) => frame.parentFrameId === selected.frameId && linearGlobMatch(frame.url, segment.urlPattern))
+      .filter((frame) => frame.parentFrameId === selected.frameId && (segment.urlMatch === "exact" ? frame.url === segment.urlPattern : linearGlobMatch(frame.url, segment.urlPattern)))
       .sort((left, right) => left.frameId - right.frameId);
     if (matches.length === 0) return null;
     if ((segment.match ?? "unique") === "unique" && matches.length !== 1) {
@@ -1447,6 +1489,7 @@ export async function observeDomTarget(target: DomTarget): Promise<DomTargetObse
   await assertScriptingTargetAvailable(tabTarget);
   assertResolvedTabTarget(tabTarget);
   const locator = target.kind === "locator" ? {
+    shadowPath: target.shadowPath ?? [],
     selector: target.selector,
     role: target.role,
     name: target.name,
@@ -1631,7 +1674,7 @@ async function executeNodeAction(
   nodeRef: string,
   action: DomAction,
   payload: DomActionPayload,
-): Promise<{ readonly nodeRef: string; readonly applied: boolean; readonly descriptor: DomDescriptor }> {
+): Promise<{ readonly nodeRef: string; readonly applied: boolean; readonly descriptor: DomDescriptor; readonly scroll?: { readonly left: number; readonly top: number } }> {
   const nodeTarget = requiredNode(nodeRef);
   const tabTarget = await resolveTabTarget(nodeTarget.tabRef);
   await assertScriptingTargetAvailable(tabTarget);
@@ -1663,7 +1706,7 @@ async function executeNodeAction(
     nodes.delete(nodeRef);
     throw new DomServiceError("TARGET_REF_STALE", "NodeRef is no longer live in the target document");
   }
-  return { nodeRef, applied: action !== "describe", descriptor: entry.result.descriptor };
+  return { nodeRef, applied: action !== "describe", descriptor: entry.result.descriptor, ...(entry.result.scroll === undefined ? {} : { scroll: entry.result.scroll }) };
 }
 
 export async function describeDomNode(nodeRef: string): Promise<{ readonly nodeRef: string; readonly descriptor: DomDescriptor }> {
@@ -1677,6 +1720,15 @@ export function clickDomNode(nodeRef: string): Promise<{ readonly nodeRef: strin
 
 export function setDomNodeValue(nodeRef: string, value: string): Promise<{ readonly nodeRef: string; readonly applied: boolean; readonly descriptor: DomDescriptor }> {
   return executeNodeAction(nodeRef, "setValue", { value });
+}
+
+export function editDomNode(nodeRef: string, value: string, edit: DomEditOptions) {
+  return executeNodeAction(nodeRef, "edit", { value, edit });
+}
+export async function scrollDomNodeTo(nodeRef: string, left: number, top: number) {
+  const result = await executeNodeAction(nodeRef, "scrollTo", { left, top });
+  if (result.scroll === undefined) throw new DomServiceError("DOM_OPERATION_FAILED", "The scroll observation is unavailable");
+  return { nodeRef, applied: result.applied, left: result.scroll.left, top: result.scroll.top };
 }
 
 export function insertDomNodeText(nodeRef: string, text: string): Promise<{ readonly nodeRef: string; readonly applied: boolean; readonly descriptor: DomDescriptor }> {

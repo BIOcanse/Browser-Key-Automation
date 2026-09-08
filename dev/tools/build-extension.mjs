@@ -13,6 +13,8 @@ const staticFiles = [
   [path.join("static", "admin", "index.html"), path.join("admin", "index.html")],
   [path.join("static", "admin", "welcome.html"), path.join("admin", "welcome.html")],
   [path.join("static", "admin", "admin.css"), path.join("admin", "admin.css")],
+  [path.join("static", "admin", "actions.html"), path.join("admin", "actions.html")],
+  [path.join("static", "admin", "actions.css"), path.join("admin", "actions.css")],
   [path.join("static", "offscreen", "index.html"), path.join("offscreen", "index.html")],
   ...[16, 32, 48, 128].map((size) => [path.join("static", "icons", `icon-${size}.png`), path.join("icons", `icon-${size}.png`)]),
   ...["index.html", "sandbox.html", "viewer.css"].map((name) => [path.join("static", "demo", name), path.join("demo", name)]),
@@ -53,6 +55,7 @@ await mkdir(path.join(stagingRoot, "icons"), { recursive: true });
 await runTypeScript(path.join("extension", "tsconfig.background.json"), stagingRoot);
 await runTypeScript(path.join("extension", "tsconfig.admin.json"), stagingRoot);
 await runTypeScript(path.join("extension", "tsconfig.transport.json"), stagingRoot);
+await runTypeScript(path.join("extension", "tsconfig.content.json"), stagingRoot);
 
 for (const [sourceRelative, outputRelative] of staticFiles) {
   await copyFile(

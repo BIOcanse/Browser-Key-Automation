@@ -9,6 +9,7 @@ typedef struct VmTarget {
     HWND hwnd;
     UINT control;
     unsigned dispatching, retired;
+    LRESULT last_mouse_hit;
 } VmTarget;
 
 /* Use the C11 storage specifier: __declspec(thread) was ignored by the GNU
@@ -60,6 +61,12 @@ static int active(VmTarget *t) {
 static int virtual_point(POINT *p) {
     if (!scope || !active(scope) || !p) return 0;
     p->x = scope->shared->x; p->y = scope->shared->y;
+    if (scope->shared->window_coordinates) {
+        RECT rect;
+        if (!GetWindowRect(scope->hwnd, &rect)) return 0;
+        p->x += rect.left; p->y += rect.top;
+        return 1;
+    }
     return ClientToScreen(scope->hwnd, p);
 }
 static BOOL WINAPI hooked_cursor(LPPOINT p) {
@@ -245,13 +252,22 @@ static void free_target(VmTarget *t) {
 }
 static int deliver(VmTarget *t) {
     VmShared *s = t->shared;
+    if (s->event_kind == VM_KEYBOARD_MESSAGE) {
+        DefSubclassProc(t->hwnd, s->keyboard_message, s->keyboard_value, (LPARAM)(LONG)s->keyboard_bits);
+        return IsWindow(t->hwnd) ? VM_OK : VM_TARGET_LOST;
+    }
+    if (s->event_kind == VM_CHAR) {
+        DefSubclassProc(t->hwnd, WM_CHAR, s->character, 1);
+        return IsWindow(t->hwnd) ? VM_OK : VM_TARGET_LOST;
+    }
     if (s->event_kind == VM_KEY_DOWN || s->event_kind == VM_KEY_UP) {
         int down = s->event_kind == VM_KEY_DOWN;
         int alt = (s->keys[VK_MENU] & 0x80) || s->key_vk == VK_LMENU || s->key_vk == VK_RMENU;
-        HKL layout = GetKeyboardLayout(0);
-        UINT scan = MapVirtualKeyExW(s->key_vk, MAPVK_VK_TO_VSC, layout);
+        HKL layout = s->key_layout ? (HKL)s->key_layout : GetKeyboardLayout(0);
+        UINT scan = s->key_has_scan ? s->key_scan : MapVirtualKeyExW(s->key_vk, MAPVK_VK_TO_VSC, layout);
+        s->key_scan = scan & 0xff; s->key_has_scan = 1;
         LPARAM bits = 1 | ((LPARAM)(scan & 0xff) << 16) | ((LPARAM)s->key_extended << 24) |
-            (alt ? (1L << 29) : 0) | (down ? 0 : ((LPARAM)3 << 30));
+            (alt ? (1L << 29) : 0) | (down ? (s->key_repeat ? ((LPARAM)1 << 30) : 0) : ((LPARAM)3 << 30));
         DefSubclassProc(t->hwnd, alt ? (down ? WM_SYSKEYDOWN : WM_SYSKEYUP) : (down ? WM_KEYDOWN : WM_KEYUP), s->key_vk, bits);
         if (down && IsWindow(t->hwnd)) {
             WCHAR text[8];
@@ -263,14 +279,36 @@ static int deliver(VmTarget *t) {
     WPARAM flags = vm_button_flags(s->buttons);
     if (s->keys[VK_SHIFT] & 0x80) flags |= MK_SHIFT;
     if (s->keys[VK_CONTROL] & 0x80) flags |= MK_CONTROL;
-    LPARAM point = MAKELPARAM((SHORT)s->x, (SHORT)s->y);
+    POINT client = {s->x, s->y}, screen;
+    LRESULT hit = HTCLIENT;
+    if (s->window_coordinates) {
+        if (!virtual_point(&screen) || screen.x < -32768 || screen.x > 32767 || screen.y < -32768 || screen.y > 32767) return VM_INVALID;
+        client = screen;
+        if (!ScreenToClient(t->hwnd, &client)) return VM_TARGET_LOST;
+        if (s->release_only) hit = t->last_mouse_hit;
+        else if (!s->captured) hit = DefSubclassProc(t->hwnd, WM_NCHITTEST, 0, MAKELPARAM((SHORT)screen.x, (SHORT)screen.y));
+        if (hit == HTNOWHERE || hit == HTTRANSPARENT || hit == HTERROR) return VM_INVALID;
+    }
+    LPARAM point = MAKELPARAM((SHORT)client.x, (SHORT)client.y);
+    t->last_mouse_hit = hit;
+    if (hit != HTCLIENT && s->event_kind != VM_WHEEL) {
+        point = MAKELPARAM((SHORT)screen.x, (SHORT)screen.y);
+        WPARAM nc_flags = (WPARAM)hit;
+        UINT message = WM_NCMOUSEMOVE;
+        if (s->event_kind == VM_DOWN || s->event_kind == VM_UP) {
+            message = vm_button_message(s->button, s->event_kind == VM_DOWN) - (WM_MOUSEMOVE - WM_NCMOUSEMOVE);
+            if (s->button == 8 || s->button == 16) nc_flags |= (WPARAM)(s->button == 8 ? XBUTTON1 : XBUTTON2) << 16;
+        }
+        DefSubclassProc(t->hwnd, message, nc_flags, point);
+        return VM_OK;
+    }
     if (s->event_kind == VM_MOVE) { DefSubclassProc(t->hwnd, WM_MOUSEMOVE, flags, point); return VM_OK; }
     if (s->event_kind == VM_DOWN || s->event_kind == VM_UP) {
         if (s->button == 8 || s->button == 16) flags |= (WPARAM)(s->button == 8 ? XBUTTON1 : XBUTTON2) << 16;
         DefSubclassProc(t->hwnd, vm_button_message(s->button, s->event_kind == VM_DOWN), flags, point);
         return VM_OK;
     }
-    POINT p = {s->x, s->y};
+    POINT p = client;
     if (!ClientToScreen(t->hwnd, &p) || p.x < -32768 || p.x > 32767 || p.y < -32768 || p.y > 32767) return VM_INVALID;
     point = MAKELPARAM((SHORT)p.x, (SHORT)p.y);
     if (s->delta_y) DefSubclassProc(t->hwnd, WM_MOUSEWHEEL, flags | ((WPARAM)(WORD)(SHORT)s->delta_y << 16), point);

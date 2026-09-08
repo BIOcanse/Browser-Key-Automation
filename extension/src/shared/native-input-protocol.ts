@@ -13,11 +13,18 @@ export interface NativeInputClickRequest {
 export interface NativeKeyboardKey {
   readonly virtualKey: number;
   readonly extended: boolean;
+  readonly scanCode?: number;
+  readonly layout?: string | null;
+}
+export interface NativeKeyboardMessage {
+  readonly message: number; readonly value: number; readonly bits: number; readonly layout: string | null;
 }
 
 export type NativeKeyboardAction =
   | { readonly kind: "press"; readonly keys: readonly NativeKeyboardKey[]; readonly holdMs: number }
-  | { readonly kind: "down" | "up"; readonly keys: readonly NativeKeyboardKey[] }
+  | { readonly kind: "down" | "up" | "repeat"; readonly keys: readonly NativeKeyboardKey[] }
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "message"; readonly message: NativeKeyboardMessage }
   | { readonly kind: "wait"; readonly waitMs: number };
 
 export interface NativeKeyboardMistake {

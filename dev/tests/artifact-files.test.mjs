@@ -92,6 +92,8 @@ test("CLI and direct function share argument validation; importing starts no con
   const shot = parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x.png", "--width", "400", "--height", "300",
     "--region-json", '{"x":5,"y":6,"width":10,"height":20}']);
   assert.equal(shot.width, 400); assert.equal(shot.height, 300);
+  assert.equal(parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x.png", "--frame-mapping", "debugger"]).frameMapping, "debugger");
+  assert.throws(() => parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x.png", "--frame-mapping", "automatic"]));
   assert.deepEqual(shot.region, { x: 5, y: 6, width: 10, height: 20 });
   assert.throws(() => parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x", "--width", "0"]));
   assert.throws(() => parseArguments(["element-shot", "--node-ref", nodeRef, "--output", "x", "--format", "jpeg"]));
@@ -99,7 +101,7 @@ test("CLI and direct function share argument validation; importing starts no con
 });
 
 test("element-shot captures once, preserves sizing and region, and returns geometry with the verified file", async () => {
-  for (const options of [{}, { width: 800, height: 600, region: { x: 4, y: 5, width: 20, height: 30 } }]) {
+  for (const options of [{}, { width: 800, height: 600, region: { x: 4, y: 5, width: 20, height: 30 }, frameMapping: "debugger" }]) {
     const bytes = Buffer.from("element-png-fixture");
     const output = await destination("元素.png");
     const fixture = source(bytes);

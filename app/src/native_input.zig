@@ -143,7 +143,7 @@ fn validMarker(marker: []const u8) bool {
 }
 
 fn validKey(key: KeyboardKey) bool {
-    return key.virtualKey > 0 and key.virtualKey < 256;
+    return key.virtualKey > 0 and key.virtualKey < 256 and !(key.virtualKey >= 0x10 and key.virtualKey <= 0x12);
 }
 
 fn validUniqueKeys(keys: []const KeyboardKey) bool {
@@ -206,17 +206,42 @@ fn validateKeyboard(request: KeyboardRequest) bool {
     if (!std.mem.eql(u8, operation.kind, "press") or operation.text != null or
         operation.delaysMs != null or operation.mistakes != null) return false;
     const actions = operation.actions orelse return false;
-    return validKeyboardActions(actions);
+    return validKeyboardActions(actions, false);
 }
 
-pub fn validKeyboardActions(actions: []const KeyboardAction) bool {
+pub fn validKeyboardActions(actions: []const KeyboardAction, advanced: bool) bool {
     if (actions.len == 0 or actions.len > config.native_keyboard_maximum_wire_actions) return false;
     for (actions) |action| {
+        if (std.mem.eql(u8, action.kind, "message")) {
+            const message = action.message orelse return false;
+            if (!advanced or action.keys != null or action.holdMs != null or action.waitMs != null or action.text != null) return false;
+            _ = logical.messageKey(message) catch return false;
+            if (message.layout) |layout| {
+                if (layout.len != 16 or (std.fmt.parseUnsigned(u64, layout, 16) catch return false) == 0) return false;
+            }
+            continue;
+        }
+        if (action.message != null) return false;
+        if (std.mem.eql(u8, action.kind, "text")) {
+            const text = action.text orelse return false;
+            if (!advanced or action.keys != null or action.holdMs != null or action.waitMs != null or text.len == 0 or text.len > config.native_keyboard_maximum_text_bytes or !std.unicode.utf8ValidateSlice(text)) return false;
+            continue;
+        }
+        if (action.text != null) return false;
+        if (action.keys) |keys| for (keys) |key| {
+            if (!advanced and (key.scanCode != null or key.layout != null)) return false;
+            if (key.scanCode) |scan| if (scan > 255) return false;
+            if (key.layout) |layout| {
+                if (layout.len != 16) return false;
+                const handle = std.fmt.parseUnsigned(u64, layout, 16) catch return false;
+                if (handle == 0) return false;
+            }
+        };
         if (std.mem.eql(u8, action.kind, "press")) {
             if (action.waitMs != null or action.holdMs == null or
                 action.holdMs.? > config.native_keyboard_maximum_wait_ms or
                 !validUniqueKeys(action.keys orelse return false)) return false;
-        } else if (std.mem.eql(u8, action.kind, "down") or std.mem.eql(u8, action.kind, "up")) {
+        } else if (std.mem.eql(u8, action.kind, "down") or std.mem.eql(u8, action.kind, "up") or advanced and std.mem.eql(u8, action.kind, "repeat")) {
             if (action.waitMs != null or action.holdMs != null or
                 !validUniqueKeys(action.keys orelse return false)) return false;
         } else if (std.mem.eql(u8, action.kind, "wait")) {

@@ -1,6 +1,6 @@
 # Privacy — Browser Key Automation
 
-Effective date: September 5, 2026
+Effective date: September 7, 2026
 
 Browser Key Automation connects Key-authenticated clients to an existing Chromium browser through an extension and a separately installed local App. There is no developer-operated cloud service, telemetry service or advertising system.
 
@@ -13,10 +13,12 @@ Depending on requested operations and Key permissions, the product handles:
 - Requested resources, MHTML archives, screenshots, element images, uploaded HTML demonstrations, and files explicitly transferred by a client.
 - Commands and results, supplied JavaScript, CDP events/results, conditions, bounded execution traces and error diagnostics.
 - Local operation-tree state, tab/window/global occupation, native-window geometry, calibration, and Key-owned virtual mouse/keyboard state.
+- Saved action names, descriptions and instruction sequences; explicitly started DOM or Windows native recordings, including form input, keyboard messages, in-window pointer positions and window changes.
+- Requested browser history/bookmarks and tab-search indexes; explicitly captured network requests/responses, console output, performance measurements and downloads.
 
 Selected pages and results can contain personal information, private messages, financial or health information, location data or authentication information. Local processing is still data handling; it does not make those contents non-sensitive.
 
-The extension does not use Chrome's cookies API. It does not continuously log the user's browsing input. Explicit Windows native-input commands inspect the target window and relevant input state. Enabling virtual-input interception loads the bundled hook into the targeted process to serve virtual cursor/key state through supported APIs; this is not a general-purpose activity recording service.
+The extension does not use Chrome's cookies API. Input recording starts only through an explicit recording command or management action, within its selected scope and duration. Native recording is observed by the external App. Only pointer events in the selected window's visible, unobscured area are retained, as native pixels relative to that window; both side buttons and both wheel axes are included. Window changes are recorded independently. Keyboard events are retained while the target window has foreground input. Recordings may contain entered text and other sensitive data. Virtual-input interception separately serves virtual cursor/key state through supported APIs.
 
 ## Where data goes
 
@@ -30,11 +32,15 @@ A connected Agent or automation client may send results to an AI provider or ano
 
 Keys, their administrative metadata, settings and bounded Artifacts are stored in the extension's browser profile. Keys can be revealed again. Revocation prevents authentication but keeps the local administrative record and revealable value until extension data is cleared or the extension is uninstalled.
 
+The action library is shared within one extension instance. Recordings belong to the selected Key, have explicit retention bounds, and can be stopped and deleted. Compiling or deleting a recording does not delete an action already saved from it. Captures and search indexes use their command-specific local limits; requested files and exported data remain with their recipients.
+
 Document references and tree data follow the relevant document lifecycle. Input state is owned by the Key and can persist across tab changes and extension worker restarts; explicit reset/release and runtime cleanup rules apply. Artifacts and execution traces have local count, size and lifetime bounds. The App holds live routing and native-input state, not a separate Key database.
 
 Files saved to disk remain until the user deletes them. Clients control their own copies of returned data. Stopping the App or revoking a Key does not erase those copies.
 
 ## Controls and boundaries
+
+Commands are authenticated once when submitted. Later Key expiry, disabling, revocation or permission edits affect new submissions; they do not cancel commands already queued or running. Accepted recordings and capture sessions use their requested duration and explicit stop controls. Input resources remain subject to explicit reset/release and runtime cleanup.
 
 Use permission groups and individual permissions, expiry, disable or revoke to limit access. Reset held input state, release occupations and Artifacts, stop the App or disable/uninstall the extension to end the corresponding operation paths. Avoid clearing or stopping components while an input gesture is intentionally held; release/reset first when possible.
 

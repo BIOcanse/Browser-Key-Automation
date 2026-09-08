@@ -42,6 +42,8 @@ export interface CaptureGeometry {
   readonly contentViewport: CaptureRect;
   readonly rootIndex: number;
   readonly boxes: readonly CaptureBox[];
+  // Frame boundaries always clip, including fixed descendants that escape local overflow.
+  readonly frameClips?: readonly { readonly matrix: CaptureMatrix; readonly rect: CaptureRect }[];
 }
 
 export class ElementScreenshotError extends Error {

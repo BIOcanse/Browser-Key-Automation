@@ -1,7 +1,7 @@
 import { COMMAND_CATALOG } from "../generated/command-config.js";
 import { assertScriptingTargetAvailable } from "./browser-service.js";
 import { CapabilityUnavailableError } from "./capability-error.js";
-import { DomServiceError } from "./dom-service.js";
+import { DomServiceError, resolveLocatorFrameSnapshot, type DomFrameLocator } from "./dom-service.js";
 import { assertResolvedTabTarget, resolveTab } from "./tab-service.js";
 
 export type PageWaitUntil = "committed" | "domcontentloaded" | "complete" | "url" |
@@ -15,6 +15,7 @@ export interface PageWaitRequest {
   readonly url?: string;
   readonly selector?: string;
   readonly text?: string;
+  readonly framePath?: readonly DomFrameLocator[];
 }
 
 export interface PageWaitObservation {
@@ -72,17 +73,20 @@ function inspectWaitCondition(until: PageWaitUntil, selector: string | null, tex
   return { invalidSelector: false, readyState: page.document.readyState, domContentLoaded, conditionSatisfied };
 }
 
-async function mainFrame(tabId: number): Promise<ChromeWebNavigationFrame | undefined> {
-  try { return (await chrome.webNavigation.getAllFrames({ tabId }))?.find((frame) => frame.frameId === 0); }
+async function selectedFrame(tabId: number, framePath: readonly DomFrameLocator[]): Promise<ChromeWebNavigationFrame | undefined> {
+  let frames: readonly ChromeWebNavigationFrame[];
+  try { frames = await chrome.webNavigation.getAllFrames({ tabId }) ?? []; }
   catch {
-    throw new CapabilityUnavailableError("platform.extension.web_navigation", "CHROMIUM_API_FAILED", "Could not read main-document metadata");
+    throw new CapabilityUnavailableError("platform.extension.web_navigation", "CHROMIUM_API_FAILED", "Could not read document metadata");
   }
+  return resolveLocatorFrameSnapshot(frames, framePath, COMMAND_CATALOG.limits["command.ensure.maximum_frame_candidates"]) ?? undefined;
 }
 
 async function observe(request: PageWaitRequest, ended: () => boolean): Promise<PageWaitObservation | null> {
   const { tab, target } = await resolveTab(request.tabRef);
   if (ended()) return null;
-  const frame = await mainFrame(target.tabId);
+  const framePath = request.framePath ?? [], child = framePath.length > 0;
+  const frame = await selectedFrame(target.tabId, framePath);
   assertResolvedTabTarget(target);
   if (ended()) return null;
   const documentId = frame?.documentId ?? null;
@@ -98,13 +102,13 @@ async function observe(request: PageWaitRequest, ended: () => boolean): Promise<
       });
       assertResolvedTabTarget(target);
       if (ended()) return null;
-      if (entries.length === 1 && entries[0]?.documentId === documentId && entries[0].frameId === 0) {
+      if (entries.length === 1 && entries[0]?.documentId === documentId && entries[0].frameId === frame?.frameId) {
         probe = entries[0].result;
       }
     } catch {
       const current = await resolveTab(request.tabRef);
       if (ended()) return null;
-      const currentFrame = await mainFrame(current.target.tabId);
+      const currentFrame = await selectedFrame(current.target.tabId, framePath);
       assertResolvedTabTarget(target);
       // A genuine navigation can retire the exact document between calls.
       if (currentFrame?.documentId !== documentId) return null;
@@ -116,13 +120,13 @@ async function observe(request: PageWaitRequest, ended: () => boolean): Promise<
   if (ended()) return null;
   const current = await resolveTab(request.tabRef);
   if (ended()) return null;
-  const currentFrame = await mainFrame(target.tabId);
+  const currentFrame = await selectedFrame(target.tabId, framePath);
   assertResolvedTabTarget(target);
   // Never combine A's DOM with B's URL/readiness, including same-URL reloads.
-  if (ended() || currentFrame?.documentId !== frame?.documentId || current.tab.url !== tab.url) return null;
-  const pending = typeof current.tab.pendingUrl === "string" ||
+  if (ended() || currentFrame?.documentId !== frame?.documentId || currentFrame?.url !== frame?.url || current.tab.url !== tab.url) return null;
+  const pending = child ? probe?.readyState === "loading" : typeof current.tab.pendingUrl === "string" ||
     (current.tab.status === "loading" && probe?.readyState === "complete");
-  const url = current.tab.url ?? null;
+  const url = child ? currentFrame?.url ?? null : current.tab.url ?? null;
   const maximumUrlBytes = COMMAND_CATALOG.limits["command.tabs.maximum_text_bytes"];
   let boundedUrl = "";
   let urlBytes = 0;
@@ -138,7 +142,7 @@ async function observe(request: PageWaitRequest, ended: () => boolean): Promise<
   if (activeDocument && !pending && (request.url === undefined || url === request.url)) {
     if (request.until === "committed" || request.until === "url") conditionSatisfied = true;
     else if (request.until === "domcontentloaded") conditionSatisfied = probe?.domContentLoaded === true;
-    else if (request.until === "complete") conditionSatisfied = current.tab.status === "complete" && probe?.readyState === "complete";
+    else if (request.until === "complete") conditionSatisfied = (child || current.tab.status === "complete") && probe?.readyState === "complete";
     else conditionSatisfied = probe?.conditionSatisfied === true;
   }
   return {

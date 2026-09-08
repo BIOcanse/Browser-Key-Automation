@@ -21,6 +21,7 @@ test "product identity is explicit" {
 }
 
 comptime {
+    _ = server;
     _ = websocket;
     _ = registry;
     _ = route_table;

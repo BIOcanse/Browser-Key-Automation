@@ -87,7 +87,27 @@ export interface RevokeKeyParams {
   readonly expectedRevision: number;
 }
 
+export interface AdminCommand {
+  readonly method: string;
+  readonly schemaVersion: number;
+  readonly params: Readonly<Record<string, unknown>>;
+}
+
+export interface AdminCommandParams {
+  readonly keyId: string;
+  readonly command: AdminCommand;
+}
+
+export type AdminCommandResult = {
+  readonly clientRequestId: string;
+  readonly trace: { readonly state: string; readonly traceRef: string | null };
+} & (
+  | { readonly ok: true; readonly result: unknown }
+  | { readonly ok: false; readonly error: { readonly code: string; readonly details?: Readonly<Record<string, unknown>> } }
+);
+
 export interface AdminMethodMap {
+  readonly "commands.execute": { readonly params: AdminCommandParams; readonly result: AdminCommandResult };
   readonly "keys.create": { readonly params: CreateKeyParams; readonly result: CreateKeyResult };
   readonly "keys.list": { readonly params: ListKeysParams; readonly result: AdminListKeysResult };
   readonly "keys.reveal": { readonly params: RevealKeyParams; readonly result: RevealKeyResult };
@@ -232,9 +252,20 @@ function isRevokeParams(value: unknown): value is RevokeKeyParams {
   );
 }
 
+function isCommandParams(value: unknown): value is AdminCommandParams {
+  if (!isObject(value) || !hasOnlyKeys(value, ["keyId", "command"]) ||
+      typeof value.keyId !== "string" || !keyIdPattern.test(value.keyId)) return false;
+  const command = value.command;
+  return isObject(command) && hasOnlyKeys(command, ["method", "schemaVersion", "params"]) &&
+    typeof command.method === "string" && command.method.length <= 128 &&
+    Number.isSafeInteger(command.schemaVersion) && typeof command.schemaVersion === "number" &&
+    command.schemaVersion > 0 && isObject(command.params);
+}
+
 export function parseAdminRequest(value: unknown): AdminRequest | null {
   if (!isObject(value) || !hasOnlyKeys(value, ["requestId", "method", "params"])) return null;
   if (typeof value.requestId !== "string" || !requestIdPattern.test(value.requestId)) return null;
+  if (value.method === "commands.execute" && isCommandParams(value.params)) return value as unknown as AdminRequest;
   if (value.method === "keys.create" && isCreateParams(value.params)) return value as unknown as AdminRequest;
   if (value.method === "keys.list" && isListParams(value.params)) return value as unknown as AdminRequest;
   if (value.method === "keys.reveal" && isRevealParams(value.params)) return value as unknown as AdminRequest;

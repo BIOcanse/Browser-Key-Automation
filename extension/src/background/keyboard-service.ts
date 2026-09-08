@@ -24,11 +24,14 @@ import { assertResolvedTabTarget, isTabRefShape, resolveTabTarget } from "./tab-
 import { assertNativeInputKeyboardAvailable, requestNativeKeyboard } from "./transport-controller.js";
 import type { PublicKeyRecord } from "../shared/admin-protocol.js";
 import { ensureKeyInput, resetKeyInput } from "./virtual-input-service.js";
+import type { AcquireNativeRoute } from "./local-route-client.js";
 
 export interface KeyboardDispatchContext {
   readonly routeId: string;
   readonly timeoutMs: number;
-  readonly revalidateAuthority: () => Promise<void>;
+  readonly deadlineMs?: number | undefined;
+  readonly acquireNativeRoute?: AcquireNativeRoute | undefined;
+  readonly validateControl?: () => Promise<void>;
   readonly key: PublicKeyRecord;
 }
 
@@ -105,7 +108,9 @@ async function executeTargeted(
   context: KeyboardTargetDispatchContext,
   operation: NativeKeyboardOperation,
 ): Promise<Extract<Awaited<ReturnType<typeof requestNativeKeyboard>>, { readonly ok: true }>["result"]> {
-  const deadline = performance.now() + context.timeoutMs;
+  const deadline = Math.min(performance.now() + context.timeoutMs, context.deadlineMs ?? Infinity);
+  const route = await context.acquireNativeRoute?.(deadline);
+  remainingMs(deadline);
   assertNativeInputKeyboardAvailable();
   const nodeTarget = isNodeRefShape(context.targetRef) ? resolveNodeRefTarget(context.targetRef) : null;
   const tabRef = nodeTarget?.tabRef ?? context.targetRef;
@@ -118,7 +123,7 @@ async function executeTargeted(
   let windowMarker = await markKeyboardWindow(tabRef, marker);
   try {
     remainingMs(deadline);
-    await context.revalidateAuthority();
+    await context.validateControl?.();
     const currentTab = await resolveTabTarget(tabRef);
     assertResolvedTabTarget(currentTab);
     if (nodeTarget !== null) {
@@ -128,7 +133,8 @@ async function executeTargeted(
     }
     const verifiedMarker = await markKeyboardWindow(tabRef, marker);
     if (verifiedMarker.originalTitle !== marker) windowMarker = verifiedMarker;
-    const binding = await ensureKeyInput(context);
+    const binding = await ensureKeyInput({ ...context, deadlineMs: deadline,
+      ...(route === undefined ? {} : { routeId: route.routeId, routeConnection: route.connection, acquireNativeRoute: undefined }) });
     const liveTab = await chrome.tabs.get(currentTab.tabId);
     if (liveTab.windowId !== context.admittedWindowId) throw failure("target_changed");
     const timeoutMs = remainingMs(deadline);
@@ -137,7 +143,7 @@ async function executeTargeted(
     const request: NativeInputKeyboardRequest = {
       kind: "native.input.keyboard",
       requestId: randomToken("nk1."),
-      routeId: context.routeId,
+      routeId: route?.routeId ?? context.routeId,
       timeoutMs: nativeTimeoutMs,
       marker,
       operation,
@@ -146,7 +152,7 @@ async function executeTargeted(
       viewport: verifiedMarker.viewport,
       documentId: verifiedMarker.documentId,
     };
-    return (await requestNativeKeyboard(request, timeoutMs)).result;
+    return (await requestNativeKeyboard(request, timeoutMs, route?.connection)).result;
   } finally {
     await restoreKeyboardWindow(windowMarker, marker, Math.max(0, deadline - performance.now()));
   }

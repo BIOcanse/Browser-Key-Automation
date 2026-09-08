@@ -54,6 +54,8 @@ The CLI enumerates current instances before reading the Key. Keep the exact inst
 
 ## Read and operate pages
 
+For reusable operations, recordings and window preparation, read [references/actions-and-recording.md](references/actions-and-recording.md). Save existing instructions with `actions.create`, browse with `actions.list/get`, and execute by the returned unique ID using `actions.run`. Instructions are authorized once on submission; Key changes do not cancel an already accepted queue item. Compile recordings before saving, inspect diagnostics, and add appropriate conditions and explicit corrections.
+
 Use the operation tree as the normal page-discovery path. Read [references/operation-tree.md](references/operation-tree.md) before traversing a page.
 
 For persistent Key-owned virtual mouse/keyboard state, read [references/virtual-mouse.md](references/virtual-mouse.md). Acquire the entire Chromium window first, then use `virtualMouse.*` or `virtualKeyboard.*` with an explicit target tab. Reads do not create objects, and no mouseRef is needed. State survives tab/worker changes without replay. Interception is separate; this is not a `.real` suffix or an automatic debugger route.

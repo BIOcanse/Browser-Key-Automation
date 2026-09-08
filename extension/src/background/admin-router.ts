@@ -13,6 +13,7 @@ import {
   revokeKey,
   updateKey,
 } from "./key-service.js";
+import { dispatchAdminCommand } from "./command-dispatcher.js";
 
 const MAX_IN_FLIGHT_PER_ADMIN_PORT = 8;
 const requestIdPattern = /^ui1\.[A-Za-z0-9_-]{22}$/u;
@@ -61,6 +62,12 @@ async function dispatchRequest(port: ChromeRuntimePort, message: unknown): Promi
   try {
     let result: unknown;
     switch (request.method) {
+      case "commands.execute": {
+        const { apiKey } = await revealKey({ keyId: request.params.keyId });
+        const response = await dispatchAdminCommand(request.requestId, apiKey, request.params.command);
+        result = (response as { readonly payload: unknown }).payload;
+        break;
+      }
       case "keys.create":
         result = await createKey(request.params);
         break;

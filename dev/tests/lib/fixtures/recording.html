@@ -1,0 +1,40 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>BKA recording fixture</title>
+<style>
+  body { font:16px system-ui; margin:20px; }
+  input,button,select,[contenteditable] { margin:6px; padding:8px; }
+  #editor { width:200px; min-height:25px; border:1px solid gray; }
+  #pad { width:300px; height:65px; background:#def; touch-action:none; user-select:none; }
+  #drag-source,#drop { display:inline-block; width:130px; height:45px; margin:6px; background:#efd; user-select:none; }
+  iframe { width:220px; height:75px; }
+</style>
+<input id="field" aria-label="Text field">
+<label><input id="check" type="checkbox">Toggle</label>
+<button id="click">Count</button>
+<a id="navigate" href="/recording?stage=next">Next</a>
+<select id="select" multiple size="2"><option value="a">A</option><option value="b">B</option></select>
+<div id="editor" contenteditable="true" aria-label="Plain editor"></div>
+<div id="shadow"></div>
+<div id="pad">Pointer area</div>
+<div id="drag-source" draggable="true">Card</div><div id="drop">Drop here</div>
+<div id="frames"></div>
+<script>
+  window.count=0;window.evidence=[];
+  window.pointerPath=[];window.pointerDrawing=false;window.dropData=null;
+  const pad=document.querySelector('#pad');
+  pad.addEventListener('pointerdown',()=>{window.pointerDrawing=true;window.pointerPath=[];});
+  pad.addEventListener('pointermove',event=>{if(window.pointerDrawing){const bounds=pad.getBoundingClientRect();window.pointerPath.push([Math.round(event.clientX-bounds.x),Math.round(event.clientY-bounds.y)]);}});
+  pad.addEventListener('pointerup',()=>window.pointerDrawing=false);
+  document.querySelector('#drag-source').addEventListener('dragstart',event=>{event.dataTransfer.setData('text/plain','recorded-card');event.dataTransfer.effectAllowed='move';});
+  document.querySelector('#drop').addEventListener('dragover',event=>event.preventDefault());
+  document.querySelector('#drop').addEventListener('drop',event=>{event.preventDefault();window.dropData=event.dataTransfer.getData('text/plain');});
+  const field=document.querySelector('#field'),check=document.querySelector('#check'),button=document.querySelector('#click');
+  button.addEventListener('click',()=>window.count++);
+  for(const type of ['click','input','change','compositionstart','compositionend','pointerdown','pointerup'])document.addEventListener(type,event=>window.evidence.push({type,trusted:event.isTrusted,target:event.composedPath()[0].id??null}));
+  const shadow=document.querySelector('#shadow').attachShadow({mode:'open'});
+  shadow.innerHTML='<style>#scroll{width:320px;height:65px;overflow:auto;border:1px solid gray}#tall{height:500px}input{padding:8px}</style><input id="shadow-field" aria-label="Shadow field"><div id="scroll"><div id="tall">Shadow scroll</div></div>';
+  window.snapshot=()=>({count:window.count,value:field.value,checked:check.checked,selected:[...document.querySelector('#select').selectedOptions].map(o=>o.value),editor:document.querySelector('#editor').innerText,shadowValue:shadow.querySelector('input').value,shadowScroll:shadow.querySelector('#scroll').scrollTop,evidence:[...window.evidence]});
+  window.reset=()=>{document.activeElement?.blur();window.count=0;window.evidence=[];field.value='';check.checked=false;document.querySelector('#select').selectedIndex=-1;document.querySelector('#editor').textContent='';shadow.querySelector('input').value='';shadow.querySelector('#scroll').scrollTop=0;};
+  if(new URL(location.href).searchParams.has('frames'))document.querySelector('#frames').innerHTML='<iframe src="/recording-frame"></iframe><iframe src="/recording-frame"></iframe>';
+</script>

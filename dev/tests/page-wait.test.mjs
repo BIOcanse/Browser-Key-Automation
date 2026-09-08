@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { COMMAND_CATALOG } from "../../out/extension/generated/command-config.js";
+import { resolveLocatorFrameSnapshot } from "../../out/extension/background/dom-service.js";
 
 const source = readFileSync(new URL("../../out/extension/background/page-wait-service.js", import.meta.url), "utf8")
   .replace(/^import .*;\r?$/gm, "").replaceAll("export ", "");
@@ -11,16 +12,16 @@ const turn = () => new Promise((resolve) => setImmediate(resolve));
 function harness() {
   const state = { now: 0, readyState: "complete", dcl: 1, documentId: "doc-A", status: "complete",
     url: "https://fixture.test/A", pendingUrl: undefined, element: null, removed: false, probes: 0,
-    beforeProbe: null, afterProbe: null, hang: false, framesError: false };
+    beforeProbe: null, afterProbe: null, hang: false, framesError: false, child: null, extraFrames: [], inspectingChild: false };
   const timers = new Map();
   let sequence = 0;
   class DomServiceError extends Error { constructor(code) { super(code); this.code = code; } }
   class CapabilityUnavailableError extends Error { constructor(capabilityId, reason) { super(reason); this.code = "CAPABILITY_UNAVAILABLE"; this.details = { capabilityId, reason }; } }
   const assertLive = () => { if (state.removed) throw new DomServiceError("TAB_REF_STALE"); };
   const context = vm.createContext({
-    COMMAND_CATALOG, DomServiceError, CapabilityUnavailableError, TextEncoder,
+    COMMAND_CATALOG, DomServiceError, CapabilityUnavailableError, TextEncoder, resolveLocatorFrameSnapshot,
     performance: { now: () => state.now, getEntriesByType: () => [{ domContentLoadedEventStart: state.dcl }] },
-    document: { get readyState() { return state.readyState; }, querySelector(selector) {
+    document: { get readyState() { return state.inspectingChild ? state.child.readyState : state.readyState; }, querySelector(selector) {
       if (selector === "[") throw new Error("invalid selector"); return state.element;
     } },
     getComputedStyle: () => ({ visibility: "visible", display: "block" }),
@@ -35,17 +36,20 @@ function harness() {
     chrome: {
       webNavigation: { getAllFrames: async () => {
         if (state.framesError) throw new Error("API failed");
-        return [{ frameId: 0, documentId: state.documentId, documentLifecycle: "active" }, { frameId: 1, documentId: "child-complete" }];
+        return [{ frameId: 0, parentFrameId: -1, url: state.url, documentId: state.documentId, documentLifecycle: "active" },
+          ...(state.child ? [state.child] : [{ frameId: 1, documentId: "child-complete" }]), ...state.extraFrames];
       } },
       scripting: { executeScript: async (injection) => {
         state.probes += 1;
         await state.beforeProbe?.();
         if (state.hang) return new Promise(() => {});
-        const documentId = state.documentId;
+        state.inspectingChild = state.child?.documentId === injection.target.documentIds[0];
+        const selected = state.inspectingChild ? state.child : { documentId: state.documentId, frameId: 0 };
+        const documentId = selected.documentId;
         assert.deepEqual(Array.from(injection.target.documentIds), [documentId]);
         const result = await injection.func(...injection.args);
         await state.afterProbe?.();
-        return [{ frameId: 0, documentId, result }];
+        return [{ frameId: selected.frameId, documentId, result }];
       } },
     },
   });
@@ -63,6 +67,32 @@ function harness() {
     },
   };
 }
+
+test("child waits share exact frame selection and never substitute the main document", async () => {
+  const h = harness(), url = 'https://child.test/ready', framePath = [{urlPattern:url,urlMatch:'exact',match:'unique'}];
+  h.state.child = {frameId:1,parentFrameId:0,documentId:'child-A',url,readyState:'complete'};
+  h.state.status = 'loading';
+  const child = await h.wait({framePath,url});
+  assert.equal(child.status,'already_satisfied');assert.equal(child.observation.documentId,'child-A');assert.equal(child.observation.url,url);
+  h.state.child = null;
+  const missing = h.wait({framePath,until:'url',url,timeoutMs:100});
+  await h.advance(100);
+  const absent = await missing;
+  assert.equal(absent.status,'timed_out');assert.equal(absent.observation.documentId,null);assert.equal(absent.observation.url,null);
+  h.state.child = {frameId:1,parentFrameId:0,documentId:'child-A',url,readyState:'complete'};
+  h.state.extraFrames = [{...h.state.child,frameId:2,documentId:'child-B'}];
+  await assert.rejects(h.wait({framePath,url}),error=>error.code==='TARGET_AMBIGUOUS');
+});
+
+test("child replacement during observation cannot combine the old DOM with the replacement document", async () => {
+  const h = harness(), url='https://child.test/ready', framePath=[{urlPattern:url,urlMatch:'exact',match:'unique'}];
+  h.state.child={frameId:1,parentFrameId:0,documentId:'child-A',url,readyState:'complete'};
+  h.state.afterProbe=()=>{h.state.afterProbe=null;h.state.child={...h.state.child,documentId:'child-B'};};
+  const pending=h.wait({framePath,url});
+  await h.advance(COMMAND_CATALOG.limits['command.page.wait.poll_interval_ms']);
+  const result=await pending;
+  assert.equal(result.status,'satisfied');assert.equal(result.observation.documentId,'child-B');assert.equal(h.state.probes,2);
+});
 
 test("complete is immediately already_satisfied, including repeated calls; no page action", async () => {
   const h = harness();
