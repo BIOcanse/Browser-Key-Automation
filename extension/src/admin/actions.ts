@@ -62,7 +62,10 @@ async function perform(task: (context: KeyContext) => Promise<void>, needsKey = 
   catch (error) {
     if (!current(context) || error instanceof ChangedContext) return;
     status.dataset.kind = "error";
-    if (error instanceof AdminRequestUncertainError) message("operationUnknown", "error");
+    if (error instanceof AdminClientError && error.adminError.code === "KEY_NOT_FOUND") {
+      keys.delete(context.keyId); keySelect.value = ""; clearKeyContent(); renderKeys(); message("chooseKey", "error");
+    }
+    else if (error instanceof AdminRequestUncertainError) message("operationUnknown", "error");
     else if (error instanceof CommandError) status.textContent = `${error.response.error.code}: ${encode(error.response.error.details ?? {})}`;
     else if (error instanceof AdminClientError) status.textContent = `${error.adminError.code}: ${error.adminError.message}`;
     else if (error instanceof SyntaxError) message("invalidJson", "error");
@@ -92,6 +95,7 @@ function resetEditor(): void {
   updateControls();
 }
 function clearKeyContent(): void {
+  status.textContent = "";
   ++generation; actions.clear(); recordings.clear(); selectedRecording = null;
   nextAction = null; nextRecording = null; nextEvent = null; nextTab = null;
   actionQuery = "";
@@ -109,7 +113,7 @@ function renderKeys(): void {
     option.disabled = !key.secretAvailable || !key.enabled || key.status !== "active" || key.expiresAt !== null && key.expiresAt <= Date.now();
     keySelect.add(option);
   }
-  keySelect.value = keys.has(selected) ? selected : "";
+  keySelect.value = [...keySelect.options].some(option => option.value === selected && !option.disabled) ? selected : "";
 }
 async function loadKeys(after: string | null): Promise<void> {
   const response = await client.request("keys.list", { afterKeyId: after, limit: 100 });
@@ -144,6 +148,7 @@ async function listRecordings(context: KeyContext, after: string | null): Promis
   if (after === null) recordings.clear();
   for (const row of page.items) recordings.set(row.recordingId, row);
   nextRecording = page.nextAfterRecordingId; more("recordings-more", nextRecording); renderRecordings();
+  if (after === null && selectedRecording !== null) await loadRecording(context, selectedRecording.recordingId);
 }
 async function listTabs(context: KeyContext, after: number | null): Promise<void> {
   const page = await command<{ items: { tabRef: string; title: string | null; url: string | null; windowId: number }[]; nextAfterTabId: number | null }>(context, "tabs.list", { afterTabId: after });
@@ -214,7 +219,15 @@ async function save(context: KeyContext): Promise<void> {
   element("[data-action-identity]").textContent = `#${saved.action.actionId} · v${saved.action.revision}`; renderActions();
 }
 async function loadRecording(context: KeyContext, id: string): Promise<void> {
-  const response = await command<{ recording: RecordingRow }>(context, "recording.get", { recordingId: id });
+  let response: { recording: RecordingRow };
+  try { response = await command(context, "recording.get", { recordingId: id }); }
+  catch (error) {
+    if (!(error instanceof CommandError) || error.response.error.code !== "RECORDING_OPERATION_FAILED" || error.response.error.details?.reason !== "NOT_FOUND") throw error;
+    recordings.delete(id); selectedRecording = null; nextEvent = null;
+    element<HTMLElement>("[data-record-details]").hidden = true;
+    element("[data-record-identity]").textContent = ""; element("[data-record-summary]").textContent = "";
+    element("[data-record-events-output]").textContent = ""; more("events-more", null); renderRecordings(); return;
+  }
   selectedRecording = response.recording; recordings.set(id, response.recording);
   element<HTMLElement>("[data-record-details]").hidden = false;
   element("[data-record-identity]").textContent = id;
@@ -294,6 +307,7 @@ element("[data-record-form]").addEventListener("submit", event => {
 source.addEventListener("input", () => { compiledInstructions = null; updateControls(); });
 tabSelect.addEventListener("change", updateControls);
 keySelect.addEventListener("change", () => { clearKeyContent(); status.textContent = ""; updateControls(); });
+window.addEventListener("focus", () => { if (busy === 0) void perform(() => loadKeys(null), false); });
 onLocaleChanged(() => { renderKeys(); renderActions(); renderRecordings(); updateControls(); });
 input("action-timeout").value = String(COMMAND_CATALOG.parameterDefaultsByMethod["actions.run"].timeoutMs);
 input("action-timeout").max = String(limits["command.actions.maximum_timeout_ms"]);

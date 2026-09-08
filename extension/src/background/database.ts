@@ -1,5 +1,5 @@
 export const DATABASE_NAME = "browser-key-automation";
-export const DATABASE_VERSION = 6;
+export const DATABASE_VERSION = 7;
 export const KEY_STORE = "keys";
 export const ADMIN_MUTATION_STORE = "admin_mutations";
 export const ARTIFACT_STORE = "artifacts";
@@ -44,7 +44,7 @@ function transactionCompletion(transaction: IDBTransaction): Promise<void> {
 
 function openDatabase(): Promise<IDBDatabase> {
   const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
-  request.addEventListener("upgradeneeded", () => {
+  request.addEventListener("upgradeneeded", (event) => {
     const database = request.result;
     if (!database.objectStoreNames.contains(KEY_STORE)) {
       database.createObjectStore(KEY_STORE, { keyPath: "keyId" });
@@ -71,6 +71,15 @@ function openDatabase(): Promise<IDBDatabase> {
     if (!database.objectStoreNames.contains(SEMANTIC_MODEL_STORE)) database.createObjectStore(SEMANTIC_MODEL_STORE, { keyPath: "ownerKeyId" });
     if (!database.objectStoreNames.contains(SEMANTIC_INDEX_STORE)) database.createObjectStore(SEMANTIC_INDEX_STORE, { keyPath: "indexId" });
     if (!database.objectStoreNames.contains(SEMANTIC_CHUNK_STORE)) database.createObjectStore(SEMANTIC_CHUNK_STORE, { keyPath: ["indexId", "generation", "chunkIndex"] });
+    if (event.oldVersion < 7) {
+      const cursorRequest = request.transaction!.objectStore(KEY_STORE).openCursor();
+      cursorRequest.addEventListener("success", () => {
+        const cursor = cursorRequest.result;
+        if (cursor === null) return;
+        if ((cursor.value as { status: string }).status === "revoked") cursor.delete();
+        cursor.continue();
+      });
+    }
   });
   return new Promise<IDBDatabase>((resolve, reject) => {
     let settled = false;

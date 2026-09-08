@@ -24,7 +24,7 @@ test('semantic indexes persist verified generations with private ownership, canc
   await t.test('v5 migration retains old actions and adds the new semantic stores',async()=>{
    const old=await new Promise((resolve,reject)=>{const request=indexedDB.open('browser-key-automation',5);request.onupgradeneeded=()=>request.result.createObjectStore('actions',{keyPath:'actionId',autoIncrement:true});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
    await new Promise((resolve,reject)=>{const tx=old.transaction('actions','readwrite');tx.objectStore('actions').put({actionId:41,name:'retained action'});tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error);});old.close();
-   const db=await import('../../out/extension/background/database.js'),opened=await db.getDatabase();assert.equal(opened.version,6);
+   const db=await import('../../out/extension/background/database.js'),opened=await db.getDatabase();assert.equal(opened.version,7);
    assert.deepEqual(Array.from(opened.objectStoreNames).filter(name=>name.startsWith('semantic_')),['semantic_chunks','semantic_indexes','semantic_models']);
    assert.equal((await db.withReadOnly(['actions'],tx=>db.requestResult(tx.objectStore('actions').get(41)))).name,'retained action');
   });

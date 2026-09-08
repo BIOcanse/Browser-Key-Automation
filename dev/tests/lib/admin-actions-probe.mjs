@@ -19,7 +19,11 @@ export async function runAdminActionsProbe({ forward, browserClient, connectPage
   };
   const ready = async (timeoutMs = 8000) => until(() => pageEvaluate(ui, () => !document.querySelector('[data-keys-refresh]').disabled), 'Admin operation did not settle', timeoutMs);
   const click = async name => {
-    await pageEvaluate(ui, name => { const button = document.querySelector(`[data-${name}]`); if (!button || button.disabled) throw new Error(`Disabled or missing ${name}`); button.click(); }, name);
+    await until(() => pageEvaluate(ui, name => {
+      const button = document.querySelector(`[data-${name}]`);
+      if (!button || button.disabled) return false;
+      button.click(); return true;
+    }, name), `Disabled or missing ${name}`);
     await ready(name === 'action-run' ? 25000 : 8000);
   };
   const fill = (name, value) => pageEvaluate(ui, ({ name, value }) => {
@@ -100,6 +104,14 @@ export async function runAdminActionsProbe({ forward, browserClient, connectPage
     await submit('record-form'); const id = (await response('recording.start')).result.recording.recordingId; openedRecordings.add(id);
     await fixtureClick('#click'); await click('record-pause'); await response('recording.pause');
     await fixtureClick('#click'); await click('record-resume'); await response('recording.resume');
+    await call('recording.pause', { recordingId: id }); await click('recordings-refresh');
+    const refreshedRecording = await pageEvaluate(ui, () => ({
+      state: JSON.parse(document.querySelector('[data-record-summary]').textContent).state,
+      pauseDisabled: document.querySelector('[data-record-pause]').disabled,
+      resumeDisabled: document.querySelector('[data-record-resume]').disabled,
+    }));
+    assert.deepEqual(refreshedRecording, { state: 'paused', pauseDisabled: true, resumeDisabled: false });
+    await click('record-resume'); await response('recording.resume');
     await fixtureClick('#click'); await click('record-stop'); openedRecordings.delete(id);
     assert.equal((await response('recording.stop')).result.recording.state, 'stopped');
     await click('record-events');
@@ -111,6 +123,10 @@ export async function runAdminActionsProbe({ forward, browserClient, connectPage
     await pageEvaluate(page, () => window.reset()); await click('action-run'); assert.equal((await response('actions.run')).result.status, 'succeeded');
     assert.equal(await pageEvaluate(page, () => window.snapshot().count), 2);
     evidence.checks.push('DOM recording UI start, pause, resume, stop, raw events, compile, save and actual replay');
+    await call('recording.delete', { recordingId: id }); await click('recordings-refresh');
+    assert.equal(await pageEvaluate(ui, () => document.querySelector('[data-record-details]').hidden &&
+      document.querySelector('[data-record-delete]').disabled && document.querySelector('[data-record-summary]').textContent === ''), true);
+    evidence.checks.push('Refreshing selected recording synchronizes external state changes and deletion');
 
     await pageEvaluate(ui,()=>{const mode=document.querySelector('[data-record-mode]');if(mode.querySelector('[value="real"]').disabled)throw new Error('Real recording option unavailable');mode.value='real';});
     await submit('record-form');const nativeId=(await response('recording.start')).result.recording.recordingId;openedRecordings.add(nativeId);
@@ -213,6 +229,29 @@ export async function runAdminActionsProbe({ forward, browserClient, connectPage
     await click('recordings-refresh');
     assert.equal(await pageEvaluate(ui, () => document.querySelectorAll('[data-recording-list] li').length), 0);
     evidence.checks.push('Key switching clears owned content and rejects a delayed old-Key read');
+
+    const setOtherEnabled = enabled => pageEvaluate(ui, async ({ id, enabled }) => {
+      const service = await import(chrome.runtime.getURL('background/key-service.js'));
+      const record = await service.getPublicKey(id);
+      await service.updateKey({ mutationId: `am1.${Date.now()}.${'T'.repeat(22)}`, keyId: id, expectedRevision: record.recordRevision,
+        patch: { displayName: record.displayName, permissions: record.permissions, expiresAt: record.expiresAt, enabled } });
+    }, { id: other, enabled });
+    await setOtherEnabled(false); await click('keys-refresh');
+    const invalidSelection = await pageEvaluate(ui, () => ({ key: document.querySelector('[data-action-key]').value,
+      status: document.querySelector('[data-action-status]').textContent, runDisabled: document.querySelector('[data-action-run]').disabled }));
+    assert.deepEqual(invalidSelection, { key: '', status: '', runDisabled: true });
+    await setOtherEnabled(true); await click('keys-refresh'); await chooseKey(other);
+    await pageEvaluate(ui, async id => {
+      const service = await import(chrome.runtime.getURL('background/key-service.js'));
+      const record = await service.getPublicKey(id);
+      await service.revokeKey({ mutationId: `am1.${Date.now()}.${'U'.repeat(22)}`, keyId: id, expectedRevision: record.recordRevision });
+    }, other);
+    await click('keys-refresh');
+    const deletedSelection = await pageEvaluate(ui, id => ({ key: document.querySelector('[data-action-key]').value,
+      status: document.querySelector('[data-action-status]').textContent, option: !!document.querySelector(`[data-action-key] option[value="${id}"]`),
+      busy: document.querySelector('[data-keys-refresh]').disabled }), other);
+    assert.deepEqual(deletedSelection, { key: '', status: '', option: false, busy: false });
+    evidence.checks.push('Disabled/deleted selected Keys clear content and complete refresh without a stuck status');
 
     await chooseKey(keyId);
     const locales = await pageEvaluate(ui, async () => {

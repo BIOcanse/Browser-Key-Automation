@@ -152,7 +152,7 @@ function ensureMutationMatches(existing: AdminMutationRecord, method: MutationMe
 function normalizeMutationResult(record: PublicKeyRecord): PublicKeyRecord {
   return {
     ...record,
-    secretAvailable: record.secretAvailable === true,
+    secretAvailable: record.status === "active" && record.secretAvailable === true,
   };
 }
 
@@ -176,10 +176,11 @@ async function addMutation(transaction: IDBTransaction, mutation: AdminMutationR
 export async function initializePublicTrialKey(reason: ChromeInstalledDetails["reason"]): Promise<boolean> {
   if (reason !== "install") return false;
   const material = await createKeyMaterial(PUBLIC_TRIAL_KEY);
-  return withStrictReadWrite([KEY_STORE], async (transaction) => {
+  return withStrictReadWrite([KEY_STORE, ADMIN_MUTATION_STORE], async (transaction) => {
     const store = transaction.objectStore(KEY_STORE);
-    // Revocation retains its ordinary record. Never reset existing user choices.
-    if (await requestResult(store.count()) !== 0) return false;
+    // Only a fresh installation has neither Keys nor committed admin mutations.
+    if (await requestResult(store.count()) !== 0 ||
+      await requestResult(transaction.objectStore(ADMIN_MUTATION_STORE).count()) !== 0) return false;
     await requestResult(store.add(createKeyRecord({
       keyId: material.keyId, displayName: PUBLIC_TRIAL_KEY_NAME, keyKind: "root",
       permissions: [], expiresAt: null, enabled: true, createdAt: Date.now(),
@@ -545,26 +546,23 @@ export async function revokeKey(params: RevokeKeyParams): Promise<PublicKeyRecor
     }
 
     const revokedAt = Date.now();
-    const next: KeyRecord = current.status === "revoked"
-      ? current
-      : {
-          ...current,
-          secretVerifier: null,
-          enabled: false,
-          status: "revoked",
-          revokedAt,
-          recordRevision: current.recordRevision + 1,
-          credentialRevision: current.credentialRevision + 1,
-          authorizationRevision: current.authorizationRevision + 1,
-          controlEligibilityRevision: current.controlEligibilityRevision + 1,
-        };
-    const publicRecord = toPublicKeyRecord(next);
-    if (next !== current) await requestResult(transaction.objectStore(KEY_STORE).put(next));
+    const publicRecord: PublicKeyRecord = {
+      ...toPublicKeyRecord(current),
+      secretAvailable: false,
+      enabled: false,
+      status: "revoked",
+      revokedAt,
+      recordRevision: current.recordRevision + 1,
+      credentialRevision: current.credentialRevision + 1,
+      authorizationRevision: current.authorizationRevision + 1,
+      controlEligibilityRevision: current.controlEligibilityRevision + 1,
+    };
+    await requestResult(transaction.objectStore(KEY_STORE).delete(current.keyId));
     await addMutation(transaction, {
       mutationId: params.mutationId,
       method: "keys.revoke",
       intentDigest,
-      keyId: next.keyId,
+      keyId: current.keyId,
       result: publicRecord,
       committedAt: revokedAt,
     });

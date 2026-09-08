@@ -239,6 +239,7 @@ function releaseNotes(releaseVersion, assets) {
     "",
     "## New in this release",
     "",
+    "- Key management now deletes a revoked Key and its stored token. Previously revoked records are removed on upgrade. Refresh clears revealed values; deleted or disabled Keys leave the action manager selection, and recording refresh updates details and buttons. Already submitted actions continue under their original admission.",
     "- Shared action library: save command sequences with a unique action ID, name and description; browse paginated lists, inspect and edit instructions, preview compilation, and run an action by ID. The management page and Agent commands use the same library.",
     "- DOM recording and Windows real recording: pause, resume and stop a recording, then compile it into editable commands for saving and replay. DOM recordings preserve supported frame and shadow-root targets. The external Windows App records mouse input only inside the selected window's visible, unobscured area and records window changes independently.",
     "- Window-relative virtual mouse input: `virtualMouse.moveWindow` uses native pixels from the window's outer top-left, supports left/right/middle/back/forward buttons and both wheel axes, and shares the existing virtual pointer. Replay follows recorded window changes without moving the physical cursor.",

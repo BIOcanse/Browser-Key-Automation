@@ -71,8 +71,8 @@ test('selected Key uses real dispatcher, stable IDs, revision checks, child perm
   const writeDenied = (await bridge.request(params(limited.key.keyId, 'actions.create', { name: 'forbidden', description: '', instructions: [instruction] }))).result;
   assert.equal(writeDenied.ok, false); assert.equal(writeDenied.error.code, 'FORBIDDEN');
   await revokeKey({ mutationId: mutation(), keyId: owner.key.keyId, expectedRevision: owner.key.recordRevision });
-  const revoked = await call('actions.list', {});
-  assert.equal(revoked.ok, false); assert.equal(revoked.error.code, 'UNAUTHENTICATED');
+  const revoked = await bridge.request(params(owner.key.keyId, 'actions.list'));
+  assert.equal(revoked.ok, false); assert.equal(revoked.error.code, 'KEY_NOT_FOUND');
 });
 
 test('empty virtual input reads and reset remain local without an App or offscreen API', async () => {

@@ -378,11 +378,14 @@ async function main() {
     const trialSnapshot = async () => {
       const service = await import(chrome.runtime.getURL("background/key-service.js"));
       const { PUBLIC_TRIAL_KEY, PUBLIC_TRIAL_KEY_ID } = await import(chrome.runtime.getURL("shared/trial-key.js"));
-      const key = await service.getPublicKey(PUBLIC_TRIAL_KEY_ID);
+      const key = await service.getPublicKey(PUBLIC_TRIAL_KEY_ID).catch(error => {
+        if (error.code === "KEY_NOT_FOUND") return null;
+        throw error;
+      });
       const auth = await service.authenticateApiKey(PUBLIC_TRIAL_KEY, "debugger");
       const notice = document.querySelector("[data-trial-key-warning]");
       return { key, auth: auth.ok ? "accepted" : auth.code,
-        fixedSecretMatches: key.status === "active" ? (await service.revealKey({ keyId: key.keyId })).apiKey === PUBLIC_TRIAL_KEY : null,
+        fixedSecretMatches: key?.status === "active" ? (await service.revealKey({ keyId: key.keyId })).apiKey === PUBLIC_TRIAL_KEY : null,
         warning: notice.textContent, warningVisible: !notice.hidden && notice.getBoundingClientRect().height > 0,
         lang: document.documentElement.lang };
     };
@@ -541,8 +544,16 @@ async function main() {
       document.querySelector("[data-open-revoke]").click();
       document.querySelector("[data-confirm-revoke]").click();
     }, { id: trialKeyId });
-    await waitForCondition(pageClient, ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-state]`)?.dataset.keyState,
-      (value) => value === "revoked", "public trial Key revoked by normal UI", { id: trialKeyId });
+    await waitForCondition(pageClient, ({ id }) => document.querySelector(`[data-key-id="${id}"]`) === null &&
+      !document.querySelector("[data-revoke-dialog]").open,
+      (value) => value, "public trial Key deleted by normal UI", { id: trialKeyId });
+    const emptyKeys = await pageEvaluate(pageClient, () => ({
+      count: document.querySelector("[data-key-count]").textContent,
+      empty: !document.querySelector("[data-empty-state]").hidden,
+      create: !document.querySelector("[data-empty-create]").hidden,
+      revokedFilter: !!document.querySelector('[data-status-filter] option[value="revoked"]'),
+    }));
+    assert.deepEqual(emptyKeys, { count: "0", empty: true, create: true, revokedFilter: false });
     await browserClient.send("Target.closeTarget", { targetId: restartedWorker.target.id });
     workerClient.close(); workerClient = null;
     await waitForCondition(pageClient, () => document.querySelector("[data-connection]")?.dataset.state,
@@ -553,7 +564,7 @@ async function main() {
     const revokedTrial = await pageEvaluate(pageClient, trialSnapshot);
     assert.equal(revokedTrial.auth, "UNAUTHENTICATED");
     assert.equal(revokedTrial.warningVisible, false);
-    assert.equal(revokedTrial.key.recordRevision, enabledTrial.key.recordRevision + 1);
+    assert.equal(revokedTrial.key, null);
     trialSamples.push({ step: "revoked_after_worker_restart", ...revokedTrial });
     const trialSamplesPath = path.join(workspaceRoot, "out/test-artifacts/public-trial-key-interaction.json");
     await writeFile(trialSamplesPath, JSON.stringify(trialSamples, null, 2) + "\n");
@@ -581,7 +592,7 @@ async function main() {
         rowCount: document.querySelectorAll("[data-key-rows] tr").length,
         secretOpen: document.querySelector("[data-secret-dialog]")?.open === true,
       }),
-      (value) => API_KEY_PATTERN.test(value.apiKey) && value.rowCount === 2 && value.secretOpen,
+      (value) => API_KEY_PATTERN.test(value.apiKey) && value.rowCount === 1 && value.secretOpen,
       "first Key creation",
     );
     const apiKey = createdSnapshot.apiKey;
@@ -626,6 +637,12 @@ async function main() {
       { id: keyId },
     );
     assert.equal(firstReveal, apiKey);
+    await pageEvaluate(pageClient, () => document.querySelector('[data-refresh]').click());
+    await waitForAdminReady(pageClient);
+    assert.equal(await pageEvaluate(pageClient, ({ id, key }) => document.querySelector(`[data-key-id="${id}"] [data-key-token]`).textContent.includes(key), { id: keyId, key: apiKey }), false);
+    await pageEvaluate(pageClient, ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-reveal]`).click(), { id: keyId });
+    await waitForCondition(pageClient, ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-token]`).textContent,
+      value => value === apiKey, 'reveal after clearing refresh', { id: keyId });
     await pageEvaluate(pageClient, ({ id }) => {
       document.querySelector(`[data-key-id="${id}"] [data-key-reveal]`)?.click();
     }, { id: keyId });
@@ -701,7 +718,7 @@ async function main() {
     const reloaded = await waitForAdminReady(pageClient);
     assert.equal(reloaded.secretHidden, true);
     assert.equal(reloaded.secretValue, "");
-    assert.equal(reloaded.rowCount, 3);
+    assert.equal(reloaded.rowCount, 2);
     assert.equal(reloaded.statusKind, "error");
     assert.equal(reloaded.statusVisible, "true");
     const reloadLeakCheck = await pageEvaluate(pageClient, ({ key }) => ({
@@ -732,7 +749,7 @@ async function main() {
       };
     });
     assert.deepEqual(recoveryConflict, { selected: ["system.read"], pageGroupMixed: true, scriptChecked: false,
-      rowCount: 3, dialogOpen: true, error: "error" });
+      rowCount: 2, dialogOpen: true, error: "error" });
 
     await pageEvaluate(pageClient, () => {
       document.querySelector("[data-open-create]")?.click();
@@ -745,10 +762,10 @@ async function main() {
         pendingStored: sessionStorage.getItem("browser-key-automation.pending-create.v1") !== null,
         rowCount: document.querySelectorAll("[data-key-rows] tr").length,
       }),
-      (value) => API_KEY_PATTERN.test(value.recoveredKey) && !value.pendingStored && value.rowCount === 3,
+      (value) => API_KEY_PATTERN.test(value.recoveredKey) && !value.pendingStored && value.rowCount === 2,
       "unknown create recovery",
     );
-    assert.equal(recoveredOutcome.rowCount, 3);
+    assert.equal(recoveredOutcome.rowCount, 2);
     await pageEvaluate(pageClient, () => document.querySelector("[data-done-secret]")?.click());
 
     const madeLegacy = await pageEvaluate(pageClient, async ({ id, key }) => {
@@ -871,6 +888,17 @@ async function main() {
     }, { id: keyId, key: apiKey });
     assert.deepEqual(editedPermissions, { permissions: [...permissionGroupsSamples.finalSelection, "js.execute"].sort(), javascript: true, native: false });
 
+    await pageEvaluate(pageClient, async ({ id }) => {
+      const { AdminPortClient } = await import(chrome.runtime.getURL('admin/port-client.js'));
+      const original = AdminPortClient.prototype.request;
+      window.restoreKeyRead = () => { AdminPortClient.prototype.request = original; };
+      AdminPortClient.prototype.request = function (method, ...args) {
+        const response = original.call(this, method, ...args);
+        return method === 'keys.reveal' ? response.then(value => new Promise(resolve => { window.releaseKeyRead = () => resolve(value); })) : response;
+      };
+      document.querySelector(`[data-key-id="${id}"] [data-key-reveal]`).click();
+    }, { id: keyId });
+    await waitForCondition(pageClient, () => typeof window.releaseKeyRead === 'function', value => value, 'delayed reveal before deletion');
     const revokeDialogOpened = await pageEvaluate(pageClient, ({ id }) => {
       document.querySelector(`[data-key-id="${id}"] [data-key-edit]`)?.click();
       document.querySelector("[data-open-revoke]")?.click();
@@ -883,37 +911,28 @@ async function main() {
     await pageEvaluate(pageClient, () => document.querySelector("[data-confirm-revoke]")?.click());
     await waitForCondition(
       pageClient,
-      ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-state]`)?.dataset.keyState ?? "",
-      (value) => value === "revoked",
-      "Key revoke",
+      ({ id }) => document.querySelector(`[data-key-id="${id}"]`) === null && !document.querySelector("[data-revoke-dialog]").open,
+      (value) => value,
+      "Key delete after revoke",
       { id: keyId },
     );
+    const deletedUi = await pageEvaluate(pageClient, async ({ id, key }) => {
+      window.restoreKeyRead(); window.releaseKeyRead(); await new Promise(resolve => setTimeout(resolve, 0));
+      return { row: !!document.querySelector(`[data-key-id="${id}"]`), token: document.body.textContent.includes(key) };
+    }, { id: keyId, key: apiKey });
+    assert.deepEqual(deletedUi, { row: false, token: false });
     const revokedAuth = await pageEvaluate(pageClient, async ({ apiKey: key }) => {
       const service = await import(chrome.runtime.getURL("background/key-service.js"));
       return service.authenticateApiKey(key, "system.read");
     }, { apiKey });
     assert.deepEqual(revokedAuth, { ok: false, code: "UNAUTHENTICATED" });
 
-    await pageEvaluate(pageClient, ({ id }) => {
-      document.querySelector(`[data-key-id="${id}"] [data-key-reveal]`)?.click();
+    const deletedReveal = await pageEvaluate(pageClient, async ({ id }) => {
+      const service = await import(chrome.runtime.getURL("background/key-service.js"));
+      try { await service.revealKey({ keyId: id }); return "unexpected-secret"; }
+      catch (error) { return error.code; }
     }, { id: keyId });
-    await waitForCondition(
-      pageClient,
-      ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-token]`)?.textContent ?? "",
-      (value) => value === apiKey,
-      "revoked Key administrative reveal",
-      { id: keyId },
-    );
-    await pageEvaluate(pageClient, ({ id }) => {
-      document.querySelector(`[data-key-id="${id}"] [data-key-reveal]`)?.click();
-    }, { id: keyId });
-    await waitForCondition(
-      pageClient,
-      ({ id }) => document.querySelector(`[data-key-id="${id}"] [data-key-token]`)?.textContent ?? "",
-      (value) => !API_KEY_PATTERN.test(value),
-      "revoked Key hide",
-      { id: keyId },
-    );
+    assert.equal(deletedReveal, "KEY_NOT_FOUND");
 
     const storedRevoked = await pageEvaluate(pageClient, async ({ id, key }) => {
       const opened = indexedDB.open("browser-key-automation");
@@ -929,17 +948,13 @@ async function main() {
       });
       database.close();
       return {
-        status: target?.status ?? null,
-        verifierCleared: target?.secretVerifier === null,
+        recordDeleted: target === undefined,
         storedTokenMatches: target?.storedApiKey === key,
-        hasPlainApiKeyField: target ? Object.hasOwn(target, "apiKey") : true,
       };
     }, { id: keyId, key: apiKey });
     assert.deepEqual(storedRevoked, {
-      status: "revoked",
-      verifierCleared: true,
-      storedTokenMatches: true,
-      hasPlainApiKeyField: false,
+      recordDeleted: true,
+      storedTokenMatches: false,
     });
 
     const publicBoundary = await pageEvaluate(pageClient, async ({ key }) => {
@@ -1053,7 +1068,7 @@ async function main() {
       welcomeScreenshot: path.relative(workspaceRoot, welcomeScreenshotPath),
       welcomeMobileScreenshot: path.relative(workspaceRoot, welcomeMobileScreenshotPath),
       welcomeSamples: path.relative(workspaceRoot, welcomeSamplesPath),
-      persistedKeyCount: 3,
+      persistedKeyCount: 1,
       publicTrialKey: { fixed: true, observations: trialSamples.length, samples: path.relative(workspaceRoot, trialSamplesPath) },
       repeatableRevealAndHide: true,
       adminPortRecoversAfterWorkerRestart: true,
@@ -1061,7 +1076,7 @@ async function main() {
       unknownCreateRecoveredWithoutDuplicate: true,
       legacyAttachValidated: true,
       revokeUsesConfirmationDialog: true,
-      revokedTokenRetainedForAdminReveal: true,
+      revokedKeyAndTokenDeleted: true,
       publicListRedacted: true,
       permissionGroups: { groups: permissionGroupsSamples.initial.groups, scopedPermissions: scopedPermissions.length,
         samples: path.relative(workspaceRoot, permissionGroupsSamplesPath), screenshot: path.relative(workspaceRoot, permissionGroupsScreenshotPath) },

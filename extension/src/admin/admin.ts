@@ -17,7 +17,7 @@ const PENDING_CREATE_STORAGE_KEY = "browser-key-automation.pending-create.v1";
 const RECOVERY_VALIDATION_REQUEST_ID = "ui1.AAAAAAAAAAAAAAAAAAAAAA";
 const API_KEY_PATTERN = /^bk1\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}$/u;
 
-type ViewStatus = "active" | "disabled" | "expired" | "revoked";
+type ViewStatus = "active" | "disabled" | "expired";
 
 function requiredElement<ElementType extends Element>(selector: string): ElementType {
   const element = document.querySelector<ElementType>(selector);
@@ -74,7 +74,7 @@ const revokeSummary = requiredElement<HTMLElement>("[data-revoke-summary]");
 const confirmRevokeButton = requiredElement<HTMLButtonElement>("[data-confirm-revoke]");
 
 const client = new AdminPortClient(setConnectionState);
-const records = new Map<string, PublicKeyRecord>();
+let records = new Map<string, PublicKeyRecord>();
 const revealedKeys = new Map<string, string>();
 const createPermissions = createPermissionPicker(createPermissionsNode, CURRENT_PERMISSION_IDS);
 const editPermissions = createPermissionPicker(editPermissionsNode, []);
@@ -271,7 +271,6 @@ function closeCreatedSecret(): void {
 }
 
 function recordViewStatus(record: PublicKeyRecord): ViewStatus {
-  if (record.status === "revoked") return "revoked";
   if (record.expiresAt !== null && Date.now() >= record.expiresAt) return "expired";
   return record.enabled ? "active" : "disabled";
 }
@@ -336,25 +335,25 @@ function revealIcon(): SVGSVGElement {
 }
 
 async function revealOrHide(record: PublicKeyRecord): Promise<void> {
+  if (records.get(record.keyId) !== record) return;
   if (revealedKeys.has(record.keyId)) {
     revealedKeys.delete(record.keyId);
     renderRows();
     return;
   }
   const result = await client.request("keys.reveal", { keyId: record.keyId });
+  if (records.get(record.keyId) !== record) return;
   if (result.keyId !== record.keyId || !API_KEY_PATTERN.test(result.apiKey)) throw new Error("扩展后台返回了无效的 Key");
   revealedKeys.set(record.keyId, result.apiKey);
   renderRows();
 }
 
 async function copyKey(record: PublicKeyRecord): Promise<void> {
-  let apiKey = revealedKeys.get(record.keyId) ?? null;
-  if (apiKey === null) {
-    const result = await client.request("keys.reveal", { keyId: record.keyId });
-    if (result.keyId !== record.keyId || !API_KEY_PATTERN.test(result.apiKey)) throw new Error("扩展后台返回了无效的 Key");
-    apiKey = result.apiKey;
-  }
-  await navigator.clipboard.writeText(apiKey);
+  if (records.get(record.keyId) !== record) return;
+  const result = await client.request("keys.reveal", { keyId: record.keyId });
+  if (records.get(record.keyId) !== record) return;
+  if (result.keyId !== record.keyId || !API_KEY_PATTERN.test(result.apiKey)) throw new Error("扩展后台返回了无效的 Key");
+  await navigator.clipboard.writeText(result.apiKey);
   setStatus(() => t("copied", { name: record.displayName }));
 }
 
@@ -496,8 +495,7 @@ function renderKey(record: PublicKeyRecord): void {
   editButton.type = "button";
   editButton.className = "button button-quiet edit-button";
   editButton.dataset.keyEdit = "";
-  editButton.textContent = record.status === "revoked" ? t("revoked") : t("editTitle");
-  editButton.disabled = record.status === "revoked";
+  editButton.textContent = t("editTitle");
   editButton.addEventListener("click", () => openEditDialog(record));
   actions.append(editButton);
   actionsCell.append(actions);
@@ -545,10 +543,14 @@ function setLoadedStatus(): void {
 async function loadKeyPage(reset: boolean): Promise<void> {
   if (reset) {
     nextAfterKeyId = null;
-    records.clear();
+    records = new Map();
+    revealedKeys.clear();
+    renderRows();
     keyTableBody.dataset.loaded = "false";
   }
+  const pageRecords = records;
   const result = await client.request("keys.list", { afterKeyId: nextAfterKeyId, limit: 100 });
+  if (records !== pageRecords) return;
   publicTrialKeyActive = result.publicTrialKeyActive;
   for (const record of result.items) records.set(record.keyId, record);
   nextAfterKeyId = result.nextAfterKeyId;
@@ -724,7 +726,10 @@ confirmRevokeButton.addEventListener("click", () => {
     keyId: record.keyId,
     expectedRevision: record.recordRevision,
   }).then(async () => {
+    records.delete(record.keyId);
     revealedKeys.delete(record.keyId);
+    if (record.keyId === PUBLIC_TRIAL_KEY_ID) publicTrialKeyActive = false;
+    renderRows();
     closeDialog(revokeDialog);
     revokingKeyId = null;
     await refreshKeys();
@@ -743,6 +748,7 @@ requiredElement<HTMLAnchorElement>("[data-open-actions]").addEventListener("clic
 searchInput.addEventListener("input", renderRows);
 statusFilter.addEventListener("change", renderRows);
 refreshButton.addEventListener("click", () => void refreshKeys());
+window.addEventListener("focus", () => { if (!refreshButton.disabled) void refreshKeys(); });
 loadMoreButton.addEventListener("click", () => {
   loadMoreButton.disabled = true;
   void loadKeyPage(false).catch((error: unknown) => {

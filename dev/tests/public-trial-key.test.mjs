@@ -60,7 +60,8 @@ test("ordinary disable, expiry and revoke remain authoritative across initializa
     for (const reason of ["install", "update", "chrome_update", "shared_module_update"]) {
       assert.equal(await initializePublicTrialKey(reason), false);
     }
-    assert.deepEqual(await getPublicKey(record.keyId), record);
+    if (record.status === "revoked") await assert.rejects(getPublicKey(record.keyId), { code: "KEY_NOT_FOUND" });
+    else assert.deepEqual(await getPublicKey(record.keyId), record);
   };
   await change(false, null);
   await unchangedAfterInstall();
@@ -77,6 +78,14 @@ test("ordinary disable, expiry and revoke remain authoritative across initializa
   await unchangedAfterInstall();
   assert.equal((await authenticateApiKey(PUBLIC_TRIAL_KEY, "system.read")).code, "UNAUTHENTICATED");
   assert.equal((await authenticateApiKey(privateKey.apiKey, "system.read")).ok, true);
+});
+
+test("deleting the only trial Key leaves an empty list and never recreates it", async () => {
+  await initializePublicTrialKey("install");
+  await revokeKey({ mutationId: mutationId(), keyId: PUBLIC_TRIAL_KEY_ID, expectedRevision: 1 });
+  for (const reason of ["install", "update", "chrome_update"]) assert.equal(await initializePublicTrialKey(reason), false);
+  assert.deepEqual(await listKeys({ afterKeyId: null, limit: 100 }), { items: [], nextAfterKeyId: null });
+  await assert.rejects(revealKey({ keyId: PUBLIC_TRIAL_KEY_ID }), { code: "KEY_NOT_FOUND" });
 });
 
 test("fixed material and the packaged skill match the canonical build freedom point", async () => {

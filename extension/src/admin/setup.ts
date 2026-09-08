@@ -1,4 +1,5 @@
 import { isUserScriptsAvailable } from "../shared/user-scripts.js";
+import { AdminPortClient } from "./port-client.js";
 import { applyTranslations, onLocaleChanged, t, type UiMessageKey } from "../ui/page-ui.js";
 
 const setupCandidate = document.querySelector<HTMLElement>("[data-user-scripts-setup]");
@@ -30,6 +31,9 @@ address.addEventListener("click", () => address.select());
 let available = false;
 let checking = false;
 let resultKey: UiMessageKey | null = null;
+const welcomeNotice = document.querySelector<HTMLElement>(".welcome-shell [data-trial-key-warning]");
+const welcomeClient = welcomeNotice === null ? null : new AdminPortClient();
+if (welcomeNotice !== null) welcomeNotice.hidden = true;
 
 function render(): void {
   status.textContent = t(available ? "setupReady" : "setupRequired");
@@ -44,6 +48,10 @@ async function check(): Promise<void> {
   status.textContent = t("setupChecking");
   try {
     available = await isUserScriptsAvailable();
+    if (welcomeClient !== null && welcomeNotice !== null) {
+      const keys = await welcomeClient.request("keys.list", { afterKeyId: null, limit: 1 }).catch(() => null);
+      if (keys !== null) welcomeNotice.hidden = !keys.publicTrialKeyActive;
+    }
     setup.setAttribute("data-user-scripts-state", available ? "ready" : "required");
     render();
   } finally { checking = false; }

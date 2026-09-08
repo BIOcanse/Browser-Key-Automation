@@ -481,7 +481,7 @@ try {
   assert.equal(coreTabStatus, "complete", "HTTP core probe did not finish loading");
 
   let pointerSequence = 0;
-  const domPointer = debuggerElementOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly ? null : await runDomPointerProbe({
+  const domPointer = debuggerElementOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly || adminActionsOnly ? null : await runDomPointerProbe({
     forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `pointer-${++pointerSequence}`, method, params),
     scopedForward: async (permissions) => {
       const scoped = await pageEvaluate(pageClient, async ({ permissions, mutationId }) => {
@@ -511,7 +511,7 @@ try {
     debugPort, browserClient, windowId: coreTab.windowId, ordinaryTabRef: coreTab.tabRef,
   });
   let captureSequence = 0;
-  const debuggerElement = domPointerOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly ? null : await runDebuggerElementProbe({
+  const debuggerElement = domPointerOnly || virtualMouseOnly || pageSaveInvestigation || recordingOnly || browserFeaturesOnly || adminActionsOnly ? null : await runDebuggerElementProbe({
     forward: (method, params) => forwardCommand(nativeClient, targetInstance, createdKey.apiKey, `capture-${++captureSequence}`, method, params),
     scopedForward: async (permissions) => {
       const scoped = await pageEvaluate(pageClient, async ({ permissions, mutationId }) => {

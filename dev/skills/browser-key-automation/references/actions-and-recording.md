@@ -6,6 +6,8 @@ Use `actions.create` to save a sequence directly, `actions.list` to search and p
 
 The command and all its action requirements are authorized once before entering the existing Key queue. Later Key expiry, disabling, revocation or permission edits affect new submissions. An accepted action continues under its command deadline; a target failure, explicit stop or App loss remains a real execution failure. Read the returned step results and trace before deciding any recovery.
 
+Revoking a Key deletes its record and stored token. It disappears from Key management and the action manager's Key selector; later get/reveal calls cannot recover it. Disabling remains reversible. Upgrading removes revoked records left by earlier releases.
+
 Start a recording with `recording.start` using a current `tabRef`, scope, mode and maximum duration. `recording.pause/resume/stop` control sampling; `recording.list/read` page through metadata and raw events. Stop before compiling or deleting. Recordings are local and belong to the selected Key.
 
 - `mode: "dom"` records supported interactions as editable DOM operations and locators. Shadow roots and identifiable frames retain their target path. Child history/hash and document navigation compile to `page.wait` with a frame path; later steps resolve the updated child document. Ambiguous frames, unsupported pointer paths and unfinished gestures remain explicit compile diagnostics.
