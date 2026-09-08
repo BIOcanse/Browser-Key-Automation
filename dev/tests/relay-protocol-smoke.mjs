@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { NativeWebSocket } from "../../app/client/src/native-websocket.mjs";
 import { assertIsolatedFixture } from "./lib/isolation.mjs";
+import { TRANSPORT } from "../../app/client/src/generated-config.mjs";
 
 const workspaceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 assertIsolatedFixture(workspaceRoot);
@@ -33,6 +34,12 @@ relay.stderr.on("data", (chunk) => {
 const sockets = [];
 try {
   await waitUntil(() => relayOutput.includes("relay listening"), 5000, "relay startup");
+  const probe = await fetch(`http://${TRANSPORT.host}:${TRANSPORT.port}/v1/extension`, {
+    method: "HEAD", cache: "no-store", credentials: "omit", redirect: "error", signal: AbortSignal.timeout(5000),
+  });
+  assert.equal(probe.status, 204);
+  assert.equal(probe.headers.get("X-Browser-Key-Transport"), TRANSPORT.profile);
+  assert.equal(await probe.text(), "");
 
   const client = await NativeWebSocket.connect({
     path: "/v1/client",
@@ -47,7 +54,7 @@ try {
   client.sendJson({ kind: "instances.list" });
   const emptyList = await client.readJson();
   assert.equal(emptyList.kind, "instances.list.result");
-  assert.deepEqual(emptyList.instances, []);
+  assert.deepEqual(emptyList.instances, [], "HEAD must not register an extension instance");
 
   await assert.rejects(
     NativeWebSocket.connect({
@@ -194,7 +201,7 @@ async function connectExtension() {
   assert.deepEqual(await socket.readJson(), {
     kind: "role.ready",
     role: "extension",
-    capabilities: process.platform === "win32" ? ["native.input.click.v1", "native.input.keyboard.v1", "native.virtualMouse.v1", "route.local.v1"] : ["route.local.v1"],
+    capabilities: process.platform === "win32" ? ["native.input.click.v1", "native.input.keyboard.v1", "native.virtualMouse.v1", "route.local.v1", "native.recording.v1"] : ["route.local.v1"],
   });
   return socket;
 }

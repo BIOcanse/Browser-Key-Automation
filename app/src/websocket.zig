@@ -63,7 +63,8 @@ pub fn readHttpHead(reader: *std.Io.Reader, buffer: []u8) ![]u8 {
     return error.HeaderTooLarge;
 }
 
-pub fn parseUpgradeRequest(head: []const u8, profile: UpgradeProfile) !UpgradeRequest {
+// A valid HEAD availability check returns null; GET returns a full upgrade.
+pub fn parseUpgradeRequest(head: []const u8, profile: UpgradeProfile) !?UpgradeRequest {
     if (head.len < 4 or !std.mem.endsWith(u8, head, "\r\n\r\n")) {
         return error.BadHttpRequest;
     }
@@ -75,7 +76,8 @@ pub fn parseUpgradeRequest(head: []const u8, profile: UpgradeProfile) !UpgradeRe
     const method = request_parts.next() orelse return error.BadHttpRequest;
     const target = request_parts.next() orelse return error.BadHttpRequest;
     const version = request_parts.next() orelse return error.BadHttpRequest;
-    if (request_parts.next() != null or !std.mem.eql(u8, method, "GET") or !std.mem.eql(u8, version, "HTTP/1.1")) {
+    const is_probe = std.mem.eql(u8, method, "HEAD");
+    if (request_parts.next() != null or (!is_probe and !std.mem.eql(u8, method, "GET")) or !std.mem.eql(u8, version, "HTTP/1.1")) {
         return error.BadHttpRequest;
     }
 
@@ -126,6 +128,13 @@ pub fn parseUpgradeRequest(head: []const u8, profile: UpgradeProfile) !UpgradeRe
     }
 
     if (!std.mem.eql(u8, host orelse return error.MissingHeader, profile.host)) return error.BadHttpRequest;
+    if (is_probe) {
+        if (role != .extension or upgrade != null or web_socket_version != null or web_socket_key != null or subprotocol != null) return error.BadHttpRequest;
+        if (origin) |value| {
+            if (!std.mem.eql(u8, value, profile.expected_extension_origin)) return error.InvalidOrigin;
+        }
+        return null;
+    }
     if (!std.ascii.eqlIgnoreCase(upgrade orelse return error.MissingHeader, "websocket")) return error.BadHttpRequest;
     if (!containsAsciiToken(connection orelse return error.MissingHeader, "upgrade")) return error.BadHttpRequest;
     if (!std.mem.eql(u8, web_socket_version orelse return error.MissingHeader, "13")) return error.BadHttpRequest;
@@ -315,7 +324,7 @@ test "upgrade parser separates extension and native roles" {
         "Sec-WebSocket-Protocol: browser-key-extension-v1\r\n" ++
         "Origin: chrome-extension://dbbbehdkedibhielmkaoohbeebnbfjbo\r\n\r\n";
     const parsed_extension = try parseUpgradeRequest(extension_request, profile);
-    try std.testing.expectEqual(Role.extension, parsed_extension.role);
+    try std.testing.expectEqual(Role.extension, parsed_extension.?.role);
 
     const wrong_extension_origin =
         "GET /v1/extension HTTP/1.1\r\n" ++
@@ -337,7 +346,27 @@ test "upgrade parser separates extension and native roles" {
         "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" ++
         "Sec-WebSocket-Protocol: browser-key-client-v1\r\n\r\n";
     const parsed_client = try parseUpgradeRequest(client_request, profile);
-    try std.testing.expectEqual(Role.client, parsed_client.role);
+    try std.testing.expectEqual(Role.client, parsed_client.?.role);
+}
+
+test "HEAD availability checks share strict HTTP validation without opening a role" {
+    const profile: UpgradeProfile = .{
+        .host = "127.0.0.1:32189",
+        .extension_path = "/v1/extension",
+        .client_path = "/v1/client",
+        .extension_subprotocol = "browser-key-extension-v1",
+        .client_subprotocol = "browser-key-client-v1",
+        .expected_extension_origin = "chrome-extension://dbbbehdkedibhielmkaoohbeebnbfjbo",
+    };
+    const probe = "HEAD /v1/extension HTTP/1.1\r\nHost: 127.0.0.1:32189\r\n";
+    try std.testing.expectEqual(null, try parseUpgradeRequest(probe ++ "\r\n", profile));
+    try std.testing.expectEqual(null, try parseUpgradeRequest(probe ++ "Origin: chrome-extension://dbbbehdkedibhielmkaoohbeebnbfjbo\r\n\r\n", profile));
+    try std.testing.expectError(error.InvalidOrigin, parseUpgradeRequest(probe ++ "Origin: https://example.test\r\n\r\n", profile));
+    try std.testing.expectError(error.DuplicateHeader, parseUpgradeRequest(probe ++ "Host: localhost:32189\r\n\r\n", profile));
+    try std.testing.expectError(error.BadHttpRequest, parseUpgradeRequest(probe ++ "Upgrade: websocket\r\n\r\n", profile));
+    try std.testing.expectError(error.ForbiddenHeader, parseUpgradeRequest(probe ++ "Content-Length: 1\r\n\r\n", profile));
+    try std.testing.expectError(error.BadHttpRequest, parseUpgradeRequest("HEAD /v1/client HTTP/1.1\r\nHost: 127.0.0.1:32189\r\n\r\n", profile));
+    try std.testing.expectError(error.BadHttpRequest, parseUpgradeRequest("HEAD /v1/extension HTTP/1.1\r\nHost: localhost:32189\r\n\r\n", profile));
 }
 
 test "upgrade parser rejects duplicate singleton and web origin on client path" {

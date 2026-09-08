@@ -10,6 +10,7 @@ const workspace = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const suites = {
   protocol: "relay-protocol-smoke.mjs", client: "client-cli-smoke.mjs",
   extension: "extension-key-smoke.mjs", "extension-relay": "extension-relay-smoke.mjs",
+  "transport-offline": "transport-offline-smoke.mjs",
 };
 const selected = process.argv[2] ?? "all";
 const selectedArguments = process.argv.slice(3);

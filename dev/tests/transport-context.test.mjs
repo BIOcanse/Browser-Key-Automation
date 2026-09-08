@@ -11,6 +11,10 @@ test("transport isolates generations and bounds handshake, error and stop lifecy
   const originalAddEventListener = globalThis.addEventListener;
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
+  const originalFetch = globalThis.fetch;
+  const availableResponse = { status: 204, headers: { get: () => "browser-key-loopback-v1" } };
+  let fetchResponse = async () => availableResponse;
+  const settle = () => new Promise((resolve) => setImmediate(resolve));
   const workerListeners = new Map();
   const published = [];
   const timers = [];
@@ -51,6 +55,14 @@ test("transport isolates generations and bounds handshake, error and stop lifecy
   }
 
   globalThis.WebSocket = FakeWebSocket;
+  globalThis.fetch = (url, options) => {
+    assert.equal(String(url), "http://127.0.0.1:32189/v1/extension");
+    assert.equal(options.method, "HEAD");
+    assert.equal(options.cache, "no-store");
+    assert.equal(options.credentials, "omit");
+    assert.equal(options.redirect, "error");
+    return fetchResponse(options.signal);
+  };
   globalThis.postMessage = (value) => published.push(value);
   globalThis.addEventListener = (type, listener) => workerListeners.set(type, listener);
   globalThis.setTimeout = (callback, milliseconds) => {
@@ -65,6 +77,7 @@ test("transport isolates generations and bounds handshake, error and stop lifecy
       path.join(workspaceRoot, "out", "extension", "transport-worker.js"),
     );
     await import(`${workerUrl.href}?test=${Date.now()}`);
+    await settle();
 
     assert.equal(FakeWebSocket.instances.length, 1);
     const first = FakeWebSocket.instances[0];
@@ -88,6 +101,7 @@ test("transport isolates generations and bounds handshake, error and stop lifecy
     assert.equal(pendingTimers[0].milliseconds, 10_000);
     pendingTimers[0].active = false;
     pendingTimers[0].callback();
+    await settle();
 
     assert.equal(FakeWebSocket.instances.length, 2);
     const second = FakeWebSocket.instances[1];
@@ -120,52 +134,84 @@ test("transport isolates generations and bounds handshake, error and stop lifecy
     assert.equal(second.sent.length, sentBeforeStaleResponse + 1);
     assert.match(second.sent.at(-1), /"value":"current"/u);
 
-    const fireOnlyTimer = () => {
+    const fireOnlyTimer = async () => {
       const active = timers.filter((timer) => timer.active);
       assert.equal(active.length, 1);
       assert.equal(active[0].milliseconds, 10_000);
       active[0].active = false;
       active[0].callback();
+      await settle();
     };
     second.close();
-    fireOnlyTimer(); // reconnect
+    await fireOnlyTimer(); // reconnect
     const connecting = FakeWebSocket.instances.at(-1);
-    fireOnlyTimer(); // no WebSocket open before handshake deadline
+    await fireOnlyTimer(); // no WebSocket open before handshake deadline
     assert.equal(connecting.readyState, 3);
-    fireOnlyTimer(); // reconnect
+    await fireOnlyTimer(); // reconnect
     const noHello = FakeWebSocket.instances.at(-1);
     noHello.readyState = FakeWebSocket.OPEN;
     noHello.emit("open");
-    fireOnlyTimer(); // open socket, no relay hello
+    await fireOnlyTimer(); // open socket, no relay hello
     assert.equal(noHello.readyState, 3);
-    fireOnlyTimer();
+    await fireOnlyTimer();
     const noReady = FakeWebSocket.instances.at(-1);
     noReady.readyState = FakeWebSocket.OPEN;
     noReady.emit("open");
     noReady.emit("message", { data: binaryJson({ kind: "relay.hello", product: "browser-key-automation",
       transportProfile: "browser-key-loopback-v1", protocolVersion: 1, relayEpoch: "no-ready" }) });
-    fireOnlyTimer(); // hello is not application readiness
+    await fireOnlyTimer(); // hello is not application readiness
     assert.equal(noReady.readyState, 3);
-    fireOnlyTimer();
+    await fireOnlyTimer();
     const errored = FakeWebSocket.instances.at(-1);
     errored.close = () => { errored.readyState = 3; }; // no close callback ever arrives
     errored.emit("error");
     assert.equal(errored.readyState, 3);
     readySocket(noReady, "late-ready"); // stale callbacks must not clear the new reconnect timer
     assert.equal(timers.filter((timer) => timer.active).length, 1);
-    fireOnlyTimer();
+    await fireOnlyTimer();
     const invalidHello = FakeWebSocket.instances.at(-1);
     invalidHello.readyState = FakeWebSocket.OPEN;
     invalidHello.emit("open");
     invalidHello.emit("message", { data: binaryJson({ kind: "wrong-hello" }) });
     assert.equal(invalidHello.readyState, 3);
-    fireOnlyTimer();
+    await fireOnlyTimer();
     const malformed = FakeWebSocket.instances.at(-1);
     readySocket(malformed, "malformed-body");
     malformed.emit("message", { data: new Uint8Array([0xc3, 0x28]).buffer });
     assert.equal(malformed.readyState, 3);
     assert.equal(timers.filter((timer) => timer.active).length, 1);
+
+    const beforeOffline = FakeWebSocket.instances.length;
+    fetchResponse = async () => { throw new TypeError("App offline"); };
+    await fireOnlyTimer();
+    assert.equal(FakeWebSocket.instances.length, beforeOffline, "offline retries do not create failing WebSockets");
+    assert.equal(published.at(-1).kind, "transport.disconnected");
+    fetchResponse = async () => ({ status: 204, headers: { get: () => "wrong-service" } });
+    await fireOnlyTimer();
+    assert.equal(FakeWebSocket.instances.length, beforeOffline);
+    assert.equal(published.at(-2).kind, "transport.protocol-error", "a live wrong service remains diagnosable");
+    fetchResponse = async () => availableResponse;
+    await fireOnlyTimer();
+    assert.equal(FakeWebSocket.instances.length, beforeOffline + 1);
+    const recovered = FakeWebSocket.instances.at(-1);
+    readySocket(recovered, "recovered");
+    assert.equal(published.at(-1).kind, "transport.connected");
+    recovered.close();
+
+    fetchResponse = (signal) => new Promise((resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+    await fireOnlyTimer(); // start a hanging availability check
+    await fireOnlyTimer(); // abort the check at its deadline
+    assert.equal(FakeWebSocket.instances.length, beforeOffline + 1);
+    assert.equal(published.at(-1).kind, "transport.disconnected");
+    let finishProbe;
+    let probeSignal;
+    fetchResponse = (signal) => { probeSignal = signal; return new Promise((resolve) => { finishProbe = resolve; }); };
+    await fireOnlyTimer();
     messageListener({ data: { kind: "transport.stop" } });
+    assert.equal(probeSignal.aborted, true);
+    finishProbe(availableResponse); // even a late successful response cannot restart transport
+    await settle();
+    assert.equal(FakeWebSocket.instances.length, beforeOffline + 1);
     assert.equal(timers.filter((timer) => timer.active).length, 0);
   } finally {
     globalThis.WebSocket = originalWebSocket;
@@ -173,6 +219,7 @@ test("transport isolates generations and bounds handshake, error and stop lifecy
     globalThis.addEventListener = originalAddEventListener;
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
+    globalThis.fetch = originalFetch;
   }
 });
 

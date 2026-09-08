@@ -20,8 +20,11 @@ type TransportState =
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
+const availabilityUrl = new URL(TRANSPORT_CONFIG.webSocketUrl);
+availabilityUrl.protocol = "http:";
 
 let activeSocket: WebSocket | undefined;
+let activeProbe: AbortController | undefined;
 let reconnectTimer: number | undefined;
 let handshakeTimer: number | undefined;
 let stopped = false;
@@ -108,13 +111,36 @@ function sendRoleHello(socket: WebSocket): void {
   );
 }
 
-function connect(): void {
-  if (stopped || activeSocket !== undefined) return;
+async function connect(): Promise<void> {
+  if (stopped || activeSocket !== undefined || activeProbe !== undefined) return;
   generation += 1;
   applicationReady = false;
   applicationCapabilities = [];
   const connectionGeneration = generation;
   publish({ kind: "transport.connecting" });
+
+  // A refused WebSocket is logged by Chromium even with an error listener.
+  // Check the same App endpoint first; offline is an expected retry state.
+  const probe = new AbortController();
+  activeProbe = probe;
+  const probeTimer = setTimeout(() => probe.abort(), TRANSPORT_CONFIG.handshakeTimeoutMs);
+  let available = false;
+  try {
+    const response = await fetch(availabilityUrl, {
+      method: "HEAD", cache: "no-store", credentials: "omit", redirect: "error", signal: probe.signal,
+    });
+    available = response.status === 204 && response.headers.get("X-Browser-Key-Transport") === TRANSPORT_CONFIG.profileId;
+    if (!stopped && !probe.signal.aborted && !available) {
+      publish({ kind: "transport.protocol-error", detail: "unexpected relay availability response" });
+    }
+  } catch {
+    // The App may be stopped or still starting.
+  } finally {
+    clearTimeout(probeTimer);
+    activeProbe = undefined;
+  }
+  if (stopped) return;
+  if (!available || probe.signal.aborted) { scheduleReconnect(); return; }
 
   let socket: WebSocket;
   try {
@@ -219,6 +245,7 @@ addEventListener("message", (event: MessageEvent<unknown>) => {
   }
   if (event.data.kind !== "transport.stop") return;
   stopped = true;
+  activeProbe?.abort();
   if (reconnectTimer !== undefined) {
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;

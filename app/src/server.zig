@@ -158,14 +158,18 @@ fn serveConnection(state: *ServerState, stream: net.Stream) !void {
         "{s}:{d}",
         .{ config.loopback_host, config.loopback_port },
     );
-    const upgrade = try websocket.parseUpgradeRequest(head, .{
+    const upgrade = (try websocket.parseUpgradeRequest(head, .{
         .host = expected_host,
         .extension_path = config.extension_path,
         .client_path = config.client_path,
         .extension_subprotocol = config.extension_subprotocol,
         .client_subprotocol = config.client_subprotocol,
         .expected_extension_origin = config.expected_extension_origin,
-    });
+    })) orelse {
+        try writer.writeAll("HTTP/1.1 204 No Content\r\nConnection: close\r\nCache-Control: no-store\r\nX-Browser-Key-Transport: " ++ config.profile_id ++ "\r\n\r\n");
+        try writer.flush();
+        return;
+    };
     try websocket.writeUpgradeResponse(writer, upgrade.key, upgrade.subprotocol);
 
     var hello_buffer: [512]u8 = undefined;
